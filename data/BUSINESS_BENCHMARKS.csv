@@ -1,5 +1,0 @@
-channel,expected_roas_min,expected_roas_max,expected_cvr_min,expected_cvr_max,typical_incrementality_min,typical_incrementality_max
-Meta Ads,1.5,3.5,0.015,0.045,0.4,0.65
-Google Ads,2.0,4.5,0.02,0.06,0.5,0.75
-TikTok Ads,1.0,2.5,0.008,0.03,0.3,0.55
-Netflix Ads,0.8,2.0,0.005,0.02,0.2,0.45
