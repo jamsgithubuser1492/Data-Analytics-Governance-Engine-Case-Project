@@ -1,0 +1,596 @@
+{
+  "report": "MMGE Governance Audit",
+  "campaigns_audited": 8,
+  "average_trust_score": 87.5,
+  "verdict_counts": {
+    "TRUSTED": 6,
+    "CAUTION": 2,
+    "UNTRUSTED": 0
+  },
+  "campaigns": [
+    {
+      "campaign_id": "GOOGLE_ADS_CMP_01",
+      "channel": "Google Ads",
+      "trust_score": 93.8,
+      "verdict": "TRUSTED",
+      "recommendation": "SCALE: iROAS 5.67x.",
+      "checks": [
+        {
+          "check_id": 1,
+          "name": "Pre-period parallel trend validation",
+          "status": "PASS",
+          "value": 1.0,
+          "threshold": "p > 0.05",
+          "detail": "Treatment and control moved together before launch."
+        },
+        {
+          "check_id": 2,
+          "name": "Sample size adequacy",
+          "status": "PASS",
+          "value": 6.1,
+          "threshold": "MDE <= 25% (80% power), >= 28 days per period",
+          "detail": "Smallest detectable lift is 6.1% over 60 test days."
+        },
+        {
+          "check_id": 3,
+          "name": "CI width precision",
+          "status": "PASS",
+          "value": 0.43,
+          "threshold": "CI width / |estimate| <= 1.0",
+          "detail": "95% CI [363, 561] around 462 incremental conversions."
+        },
+        {
+          "check_id": 4,
+          "name": "Business benchmark range adherence",
+          "status": "WARN",
+          "value": 5.67,
+          "threshold": "iROAS in [2.0, 4.5]",
+          "detail": "iROAS 5.67x is above the Google Ads expected ROAS band."
+        },
+        {
+          "check_id": 5,
+          "name": "Seasonality contamination check",
+          "status": "PASS",
+          "value": -9.5,
+          "threshold": "|control drift pre -> post| <= 10%",
+          "detail": "Unexposed control geo moved -9.5% between periods."
+        },
+        {
+          "check_id": 6,
+          "name": "Cross-source directional alignment",
+          "status": "PASS",
+          "value": 2,
+          "threshold": "MTA and holdout both <= platform claims",
+          "detail": "2/2 independent sources agree the platform over-claims (platform 11200, MTA 9488, holdout 10140)."
+        },
+        {
+          "check_id": 7,
+          "name": "Attribution inflation plausibility",
+          "status": "PASS",
+          "value": 1.1,
+          "threshold": "1.0 <= ratio < 1.5 (>= 3.0 critical)",
+          "detail": "Platform claims 1.10x the holdout conversions."
+        },
+        {
+          "check_id": 8,
+          "name": "Decision usefulness under uncertainty",
+          "status": "PASS",
+          "value": true,
+          "threshold": "CI lower bound > 0 and no failed checks",
+          "detail": "Lift interval excludes zero and no check failed: safe to act."
+        }
+      ]
+    },
+    {
+      "campaign_id": "GOOGLE_ADS_CMP_02",
+      "channel": "Google Ads",
+      "trust_score": 93.8,
+      "verdict": "TRUSTED",
+      "recommendation": "SCALE: iROAS 5.76x.",
+      "checks": [
+        {
+          "check_id": 1,
+          "name": "Pre-period parallel trend validation",
+          "status": "PASS",
+          "value": 1.0,
+          "threshold": "p > 0.05",
+          "detail": "Treatment and control moved together before launch."
+        },
+        {
+          "check_id": 2,
+          "name": "Sample size adequacy",
+          "status": "PASS",
+          "value": 5.7,
+          "threshold": "MDE <= 25% (80% power), >= 28 days per period",
+          "detail": "Smallest detectable lift is 5.7% over 60 test days."
+        },
+        {
+          "check_id": 3,
+          "name": "CI width precision",
+          "status": "PASS",
+          "value": 0.4,
+          "threshold": "CI width / |estimate| <= 1.0",
+          "detail": "95% CI [375, 565] around 470 incremental conversions."
+        },
+        {
+          "check_id": 4,
+          "name": "Business benchmark range adherence",
+          "status": "WARN",
+          "value": 5.76,
+          "threshold": "iROAS in [2.0, 4.5]",
+          "detail": "iROAS 5.76x is above the Google Ads expected ROAS band."
+        },
+        {
+          "check_id": 5,
+          "name": "Seasonality contamination check",
+          "status": "PASS",
+          "value": 1.7,
+          "threshold": "|control drift pre -> post| <= 10%",
+          "detail": "Unexposed control geo moved +1.7% between periods."
+        },
+        {
+          "check_id": 6,
+          "name": "Cross-source directional alignment",
+          "status": "PASS",
+          "value": 2,
+          "threshold": "MTA and holdout both <= platform claims",
+          "detail": "2/2 independent sources agree the platform over-claims (platform 11068, MTA 9468, holdout 10025)."
+        },
+        {
+          "check_id": 7,
+          "name": "Attribution inflation plausibility",
+          "status": "PASS",
+          "value": 1.1,
+          "threshold": "1.0 <= ratio < 1.5 (>= 3.0 critical)",
+          "detail": "Platform claims 1.10x the holdout conversions."
+        },
+        {
+          "check_id": 8,
+          "name": "Decision usefulness under uncertainty",
+          "status": "PASS",
+          "value": true,
+          "threshold": "CI lower bound > 0 and no failed checks",
+          "detail": "Lift interval excludes zero and no check failed: safe to act."
+        }
+      ]
+    },
+    {
+      "campaign_id": "META_ADS_CMP_01",
+      "channel": "Meta Ads",
+      "trust_score": 100.0,
+      "verdict": "TRUSTED",
+      "recommendation": "SCALE: iROAS 3.19x.",
+      "checks": [
+        {
+          "check_id": 1,
+          "name": "Pre-period parallel trend validation",
+          "status": "PASS",
+          "value": 1.0,
+          "threshold": "p > 0.05",
+          "detail": "Treatment and control moved together before launch."
+        },
+        {
+          "check_id": 2,
+          "name": "Sample size adequacy",
+          "status": "PASS",
+          "value": 8.7,
+          "threshold": "MDE <= 25% (80% power), >= 28 days per period",
+          "detail": "Smallest detectable lift is 8.7% over 60 test days."
+        },
+        {
+          "check_id": 3,
+          "name": "CI width precision",
+          "status": "PASS",
+          "value": 0.62,
+          "threshold": "CI width / |estimate| <= 1.0",
+          "detail": "95% CI [143, 269] around 206 incremental conversions."
+        },
+        {
+          "check_id": 4,
+          "name": "Business benchmark range adherence",
+          "status": "PASS",
+          "value": 3.19,
+          "threshold": "iROAS in [1.5, 3.5]",
+          "detail": "iROAS 3.19x is inside the Meta Ads expected ROAS band."
+        },
+        {
+          "check_id": 5,
+          "name": "Seasonality contamination check",
+          "status": "PASS",
+          "value": -0.9,
+          "threshold": "|control drift pre -> post| <= 10%",
+          "detail": "Unexposed control geo moved -0.9% between periods."
+        },
+        {
+          "check_id": 6,
+          "name": "Cross-source directional alignment",
+          "status": "PASS",
+          "value": 2,
+          "threshold": "MTA and holdout both <= platform claims",
+          "detail": "2/2 independent sources agree the platform over-claims (platform 5463, MTA 4648, holdout 4415)."
+        },
+        {
+          "check_id": 7,
+          "name": "Attribution inflation plausibility",
+          "status": "PASS",
+          "value": 1.24,
+          "threshold": "1.0 <= ratio < 1.5 (>= 3.0 critical)",
+          "detail": "Platform claims 1.24x the holdout conversions."
+        },
+        {
+          "check_id": 8,
+          "name": "Decision usefulness under uncertainty",
+          "status": "PASS",
+          "value": true,
+          "threshold": "CI lower bound > 0 and no failed checks",
+          "detail": "Lift interval excludes zero and no check failed: safe to act."
+        }
+      ]
+    },
+    {
+      "campaign_id": "META_ADS_CMP_02",
+      "channel": "Meta Ads",
+      "trust_score": 100.0,
+      "verdict": "TRUSTED",
+      "recommendation": "SCALE: iROAS 3.31x.",
+      "checks": [
+        {
+          "check_id": 1,
+          "name": "Pre-period parallel trend validation",
+          "status": "PASS",
+          "value": 1.0,
+          "threshold": "p > 0.05",
+          "detail": "Treatment and control moved together before launch."
+        },
+        {
+          "check_id": 2,
+          "name": "Sample size adequacy",
+          "status": "PASS",
+          "value": 8.7,
+          "threshold": "MDE <= 25% (80% power), >= 28 days per period",
+          "detail": "Smallest detectable lift is 8.7% over 60 test days."
+        },
+        {
+          "check_id": 3,
+          "name": "CI width precision",
+          "status": "PASS",
+          "value": 0.61,
+          "threshold": "CI width / |estimate| <= 1.0",
+          "detail": "95% CI [150, 280] around 215 incremental conversions."
+        },
+        {
+          "check_id": 4,
+          "name": "Business benchmark range adherence",
+          "status": "PASS",
+          "value": 3.31,
+          "threshold": "iROAS in [1.5, 3.5]",
+          "detail": "iROAS 3.31x is inside the Meta Ads expected ROAS band."
+        },
+        {
+          "check_id": 5,
+          "name": "Seasonality contamination check",
+          "status": "PASS",
+          "value": -3.3,
+          "threshold": "|control drift pre -> post| <= 10%",
+          "detail": "Unexposed control geo moved -3.3% between periods."
+        },
+        {
+          "check_id": 6,
+          "name": "Cross-source directional alignment",
+          "status": "PASS",
+          "value": 2,
+          "threshold": "MTA and holdout both <= platform claims",
+          "detail": "2/2 independent sources agree the platform over-claims (platform 5694, MTA 4833, holdout 4608)."
+        },
+        {
+          "check_id": 7,
+          "name": "Attribution inflation plausibility",
+          "status": "PASS",
+          "value": 1.24,
+          "threshold": "1.0 <= ratio < 1.5 (>= 3.0 critical)",
+          "detail": "Platform claims 1.24x the holdout conversions."
+        },
+        {
+          "check_id": 8,
+          "name": "Decision usefulness under uncertainty",
+          "status": "PASS",
+          "value": true,
+          "threshold": "CI lower bound > 0 and no failed checks",
+          "detail": "Lift interval excludes zero and no check failed: safe to act."
+        }
+      ]
+    },
+    {
+      "campaign_id": "NETFLIX_ADS_CMP_01",
+      "channel": "Netflix Ads",
+      "trust_score": 62.5,
+      "verdict": "CAUTION",
+      "recommendation": "REDUCE: iROAS 0.34x after a confirmation test.",
+      "checks": [
+        {
+          "check_id": 1,
+          "name": "Pre-period parallel trend validation",
+          "status": "PASS",
+          "value": 1.0,
+          "threshold": "p > 0.05",
+          "detail": "Treatment and control moved together before launch."
+        },
+        {
+          "check_id": 2,
+          "name": "Sample size adequacy",
+          "status": "WARN",
+          "value": 28.9,
+          "threshold": "MDE <= 25% (80% power), >= 28 days per period",
+          "detail": "Smallest detectable lift is 28.9% over 60 test days."
+        },
+        {
+          "check_id": 3,
+          "name": "CI width precision",
+          "status": "FAIL",
+          "value": 12.8,
+          "threshold": "CI width / |estimate| <= 1.0",
+          "detail": "95% CI [-16, 22] around 3 incremental conversions."
+        },
+        {
+          "check_id": 4,
+          "name": "Business benchmark range adherence",
+          "status": "WARN",
+          "value": 0.34,
+          "threshold": "iROAS in [0.800000011920929, 2.0]",
+          "detail": "iROAS 0.34x is below the Netflix Ads expected ROAS band."
+        },
+        {
+          "check_id": 5,
+          "name": "Seasonality contamination check",
+          "status": "PASS",
+          "value": -1.0,
+          "threshold": "|control drift pre -> post| <= 10%",
+          "detail": "Unexposed control geo moved -1.0% between periods."
+        },
+        {
+          "check_id": 6,
+          "name": "Cross-source directional alignment",
+          "status": "PASS",
+          "value": 2,
+          "threshold": "MTA and holdout both <= platform claims",
+          "detail": "2/2 independent sources agree the platform over-claims (platform 425, MTA 357, holdout 365)."
+        },
+        {
+          "check_id": 7,
+          "name": "Attribution inflation plausibility",
+          "status": "PASS",
+          "value": 1.16,
+          "threshold": "1.0 <= ratio < 1.5 (>= 3.0 critical)",
+          "detail": "Platform claims 1.16x the holdout conversions."
+        },
+        {
+          "check_id": 8,
+          "name": "Decision usefulness under uncertainty",
+          "status": "FAIL",
+          "value": false,
+          "threshold": "CI lower bound > 0 and no failed checks",
+          "detail": "Lift interval includes zero: result cannot support a budget decision."
+        }
+      ]
+    },
+    {
+      "campaign_id": "NETFLIX_ADS_CMP_02",
+      "channel": "Netflix Ads",
+      "trust_score": 62.5,
+      "verdict": "CAUTION",
+      "recommendation": "REDUCE: iROAS 0.36x after a confirmation test.",
+      "checks": [
+        {
+          "check_id": 1,
+          "name": "Pre-period parallel trend validation",
+          "status": "PASS",
+          "value": 1.0,
+          "threshold": "p > 0.05",
+          "detail": "Treatment and control moved together before launch."
+        },
+        {
+          "check_id": 2,
+          "name": "Sample size adequacy",
+          "status": "WARN",
+          "value": 26.9,
+          "threshold": "MDE <= 25% (80% power), >= 28 days per period",
+          "detail": "Smallest detectable lift is 26.9% over 60 test days."
+        },
+        {
+          "check_id": 3,
+          "name": "CI width precision",
+          "status": "FAIL",
+          "value": 5.43,
+          "threshold": "CI width / |estimate| <= 1.0",
+          "detail": "95% CI [-12, 26] around 7 incremental conversions."
+        },
+        {
+          "check_id": 4,
+          "name": "Business benchmark range adherence",
+          "status": "WARN",
+          "value": 0.36,
+          "threshold": "iROAS in [0.800000011920929, 2.0]",
+          "detail": "iROAS 0.36x is below the Netflix Ads expected ROAS band."
+        },
+        {
+          "check_id": 5,
+          "name": "Seasonality contamination check",
+          "status": "PASS",
+          "value": 7.4,
+          "threshold": "|control drift pre -> post| <= 10%",
+          "detail": "Unexposed control geo moved +7.4% between periods."
+        },
+        {
+          "check_id": 6,
+          "name": "Cross-source directional alignment",
+          "status": "PASS",
+          "value": 2,
+          "threshold": "MTA and holdout both <= platform claims",
+          "detail": "2/2 independent sources agree the platform over-claims (platform 443, MTA 373, holdout 388)."
+        },
+        {
+          "check_id": 7,
+          "name": "Attribution inflation plausibility",
+          "status": "PASS",
+          "value": 1.14,
+          "threshold": "1.0 <= ratio < 1.5 (>= 3.0 critical)",
+          "detail": "Platform claims 1.14x the holdout conversions."
+        },
+        {
+          "check_id": 8,
+          "name": "Decision usefulness under uncertainty",
+          "status": "FAIL",
+          "value": false,
+          "threshold": "CI lower bound > 0 and no failed checks",
+          "detail": "Lift interval includes zero: result cannot support a budget decision."
+        }
+      ]
+    },
+    {
+      "campaign_id": "TIKTOK_ADS_CMP_01",
+      "channel": "TikTok Ads",
+      "trust_score": 93.8,
+      "verdict": "TRUSTED",
+      "recommendation": "MAINTAIN: iROAS 2.08x.",
+      "checks": [
+        {
+          "check_id": 1,
+          "name": "Pre-period parallel trend validation",
+          "status": "PASS",
+          "value": 1.0,
+          "threshold": "p > 0.05",
+          "detail": "Treatment and control moved together before launch."
+        },
+        {
+          "check_id": 2,
+          "name": "Sample size adequacy",
+          "status": "PASS",
+          "value": 13.7,
+          "threshold": "MDE <= 25% (80% power), >= 28 days per period",
+          "detail": "Smallest detectable lift is 13.7% over 60 test days."
+        },
+        {
+          "check_id": 3,
+          "name": "CI width precision",
+          "status": "PASS",
+          "value": 0.94,
+          "threshold": "CI width / |estimate| <= 1.0",
+          "detail": "95% CI [41, 113] around 77 incremental conversions."
+        },
+        {
+          "check_id": 4,
+          "name": "Business benchmark range adherence",
+          "status": "PASS",
+          "value": 2.08,
+          "threshold": "iROAS in [1.0, 2.5]",
+          "detail": "iROAS 2.08x is inside the TikTok Ads expected ROAS band."
+        },
+        {
+          "check_id": 5,
+          "name": "Seasonality contamination check",
+          "status": "WARN",
+          "value": 10.2,
+          "threshold": "|control drift pre -> post| <= 10%",
+          "detail": "Unexposed control geo moved +10.2% between periods."
+        },
+        {
+          "check_id": 6,
+          "name": "Cross-source directional alignment",
+          "status": "PASS",
+          "value": 2,
+          "threshold": "MTA and holdout both <= platform claims",
+          "detail": "2/2 independent sources agree the platform over-claims (platform 2034, MTA 1732, holdout 1570)."
+        },
+        {
+          "check_id": 7,
+          "name": "Attribution inflation plausibility",
+          "status": "PASS",
+          "value": 1.3,
+          "threshold": "1.0 <= ratio < 1.5 (>= 3.0 critical)",
+          "detail": "Platform claims 1.30x the holdout conversions."
+        },
+        {
+          "check_id": 8,
+          "name": "Decision usefulness under uncertainty",
+          "status": "PASS",
+          "value": true,
+          "threshold": "CI lower bound > 0 and no failed checks",
+          "detail": "Lift interval excludes zero and no check failed: safe to act."
+        }
+      ]
+    },
+    {
+      "campaign_id": "TIKTOK_ADS_CMP_02",
+      "channel": "TikTok Ads",
+      "trust_score": 93.8,
+      "verdict": "TRUSTED",
+      "recommendation": "MAINTAIN: iROAS 2.22x.",
+      "checks": [
+        {
+          "check_id": 1,
+          "name": "Pre-period parallel trend validation",
+          "status": "PASS",
+          "value": 1.0,
+          "threshold": "p > 0.05",
+          "detail": "Treatment and control moved together before launch."
+        },
+        {
+          "check_id": 2,
+          "name": "Sample size adequacy",
+          "status": "PASS",
+          "value": 12.8,
+          "threshold": "MDE <= 25% (80% power), >= 28 days per period",
+          "detail": "Smallest detectable lift is 12.8% over 60 test days."
+        },
+        {
+          "check_id": 3,
+          "name": "CI width precision",
+          "status": "PASS",
+          "value": 0.91,
+          "threshold": "CI width / |estimate| <= 1.0",
+          "detail": "95% CI [45, 119] around 82 incremental conversions."
+        },
+        {
+          "check_id": 4,
+          "name": "Business benchmark range adherence",
+          "status": "PASS",
+          "value": 2.22,
+          "threshold": "iROAS in [1.0, 2.5]",
+          "detail": "iROAS 2.22x is inside the TikTok Ads expected ROAS band."
+        },
+        {
+          "check_id": 5,
+          "name": "Seasonality contamination check",
+          "status": "WARN",
+          "value": 14.9,
+          "threshold": "|control drift pre -> post| <= 10%",
+          "detail": "Unexposed control geo moved +14.9% between periods."
+        },
+        {
+          "check_id": 6,
+          "name": "Cross-source directional alignment",
+          "status": "PASS",
+          "value": 2,
+          "threshold": "MTA and holdout both <= platform claims",
+          "detail": "2/2 independent sources agree the platform over-claims (platform 2203, MTA 1875, holdout 1698)."
+        },
+        {
+          "check_id": 7,
+          "name": "Attribution inflation plausibility",
+          "status": "PASS",
+          "value": 1.3,
+          "threshold": "1.0 <= ratio < 1.5 (>= 3.0 critical)",
+          "detail": "Platform claims 1.30x the holdout conversions."
+        },
+        {
+          "check_id": 8,
+          "name": "Decision usefulness under uncertainty",
+          "status": "PASS",
+          "value": true,
+          "threshold": "CI lower bound > 0 and no failed checks",
+          "detail": "Lift interval excludes zero and no check failed: safe to act."
+        }
+      ]
+    }
+  ]
+}
