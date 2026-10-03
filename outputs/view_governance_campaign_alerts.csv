@@ -1,0 +1,9 @@
+channel,campaign_id,total_spend,total_platform_conversions,total_mta_conversions,total_holdout_conversions,reported_roas,mta_roas,incremental_roas,inflation_ratio,governance_status
+Google Ads,GOOGLE_ADS_CMP_01,134196.19,11200.0,9488.0,10140.0,6.26,5.3,5.67,1.1,PASS ✅
+Google Ads,GOOGLE_ADS_CMP_02,130522.02,11068.0,9468.0,10025.0,6.36,5.44,5.76,1.1,PASS ✅
+Meta Ads,META_ADS_CMP_01,103696.57,5463.0,4648.0,4415.0,3.95,3.36,3.19,1.24,PASS ✅
+Meta Ads,META_ADS_CMP_02,104276.52,5694.0,4833.0,4607.5,4.1,3.48,3.31,1.24,PASS ✅
+Netflix Ads,NETFLIX_ADS_CMP_01,80742.96,425.0,357.0,365.0,0.39,0.33,0.34,1.16,PASS ✅
+Netflix Ads,NETFLIX_ADS_CMP_02,80852.55,443.0,373.0,387.5,0.41,0.35,0.36,1.14,PASS ✅
+TikTok Ads,TIKTOK_ADS_CMP_01,56555.29,2034.0,1732.0,1570.0,2.7,2.3,2.08,1.3,PASS ✅
+TikTok Ads,TIKTOK_ADS_CMP_02,57298.32,2203.0,1875.0,1697.5,2.88,2.45,2.22,1.3,PASS ✅
