@@ -99,6 +99,7 @@ def run_pipeline(inputs: SourceTables, settings: Optional[PolicySettings] = None
     mgr = DatabaseManager(settings=settings, frames=inputs.as_dict()).build()
     try:
         tables = {name: mgr.view(name) for name in OUTPUT_VIEWS}
+        tables.update({f"INPUT_{k}": v for k, v in inputs.as_dict().items()})  # kept so a run can be re-run under another policy
         tables["CAUSAL_IMPACT"] = run_all(mgr.view("RAW_HOLDOUT_DATA"), settings.pre_period_days)
         audit = run_audit(mgr, settings)
         packets = AgentOrchestrator.from_audit(tables["ANALYTICS_MEASUREMENT_RECONCILIATION"], audit,

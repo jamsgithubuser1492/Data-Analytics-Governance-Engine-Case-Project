@@ -101,6 +101,21 @@ Agents: `CAPITAL_PRESERVATION_AGENT` (reported ROAS >= 1.5 and iROAS < 1.0), `AT
 
 The planted lift is 1.20x, so only about one sixth of treatment geo revenue is truly incremental. Under strict lift no channel clears breakeven on revenue, which changes the budget story: the +$667.5k reallocation figure holds only under the spec view (about +$124k under strict lift).
 
+## Runs, onboarding and the multipage app (Phases 1 and 2)
+
+The dashboard is now a product loop: **Upload, Map, Check, Run, Decide, Act.**
+
+| Page | What it does |
+| --- | --- |
+| Dashboard (`app/app.py`) | Plain English briefing, KPIs, trust gated agent packets with approve then execute, charts, scenario simulator, all read from a stored run |
+| Upload (`app/pages/1_Upload.py`) | Templates, CSV or Excel upload, column mapping with confidence scores, totals row detection, validation report, preview, acknowledge warnings, run |
+| Runs (`app/pages/2_Runs.py`) | Run history, compare two runs, agent inbox, audit log, safe CSV and JSON export |
+| Settings (`app/pages/3_Settings.py`) | Data declarations (currency, timezone, spend unit, decimal and date format, channel aliases) and measurement policy, saved as versions |
+
+Backend modules: `python/pipeline.py` (`run_pipeline`), `python/run_store.py` (SQLite WAL metadata plus Parquet artifacts, atomic commits, idempotent run keys, workspace scoping, inbox lifecycle, audit log), `python/job_runner.py` (background runs with a concurrency limit), `python/mapping.py` (file reading, mapping suggestions, number and date standardization) and `python/run_compare.py`.
+
+Run data is stored under `var/` (set `MMGE_DATA_DIR` to change it). `PostgresRunStore` is the same code on Postgres but has **not** been exercised against a live database; real object storage, a login provider (Streamlit `st.login`) and Slack or email delivery are deployment steps still to do.
+
 ## Caveats
 
 * The synthetic data is deliberately clean: control equals treatment before launch (zero pre-period variance) and the lift is exactly 1.20x. The causal runner applies a Poisson noise floor so intervals stay honest.

@@ -5,3 +5,4 @@ streamlit
 plotly
 statsmodels
 pytest
+openpyxl
