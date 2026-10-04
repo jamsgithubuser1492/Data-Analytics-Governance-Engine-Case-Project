@@ -17,12 +17,12 @@ SELECT
     inflation_ratio,
     CASE
         WHEN total_holdout_conversions IS NULL OR total_holdout_conversions = 0
-            THEN 'NO_HOLDOUT_COVERAGE ⚠️'
+            THEN 'NO_HOLDOUT_COVERAGE'
         WHEN inflation_ratio >= (SELECT inflation_critical FROM POLICY_PARAMS)
-            THEN 'CRITICAL_INFLATION_WARNING 🚨'
+            THEN 'CRITICAL_INFLATION_WARNING'
         WHEN inflation_ratio >= (SELECT inflation_moderate FROM POLICY_PARAMS)
-            THEN 'MODERATE_INFLATION 🟡'
-        ELSE 'PASS ✅'
+            THEN 'MODERATE_INFLATION'
+        ELSE 'PASS'
     END AS governance_status
 FROM ANALYTICS_MEASUREMENT_RECONCILIATION;
 
@@ -58,11 +58,11 @@ SELECT
     ROUND(total_platform_conversions / NULLIF(total_holdout_conversions, 0), 2) AS inflation_ratio,
     CASE
         WHEN total_holdout_revenue IS NULL
-            THEN 'NO_HOLDOUT_COVERAGE ⚠️'
+            THEN 'NO_HOLDOUT_COVERAGE'
         WHEN total_holdout_revenue / NULLIF(holdout_covered_spend, 0) < 1.0
-            THEN 'UNPROFITABLE: Reduce Spend 🔴'
+            THEN 'UNPROFITABLE: Reduce Spend'
         WHEN total_holdout_revenue / NULLIF(holdout_covered_spend, 0) >= 3.0
-            THEN 'HEALTHY: Scale Channel 🟢'
-        ELSE 'MONITOR: Optimize 🟡'
+            THEN 'HEALTHY: Scale Channel'
+        ELSE 'MONITOR: Optimize'
     END AS governance_action
 FROM channel_totals;

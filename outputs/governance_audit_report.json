@@ -12,13 +12,16 @@
     "trust_verified_min": 75.0,
     "trust_directional_min": 50.0,
     "headline_metric": "reported_by_spec",
-    "spec_vs_strict_warning_ratio": 1.5
+    "spec_vs_strict_warning_ratio": 1.5,
+    "gross_margin": null,
+    "margin_industry": "",
+    "seasonality_benchmark": false
   },
-  "settings_fingerprint": "9ce7e0447934",
+  "settings_fingerprint": "825e63e7bf99",
   "headline_metric": "reported_by_spec",
   "headline_label": "Reported-by-spec iROAS",
   "campaigns_audited": 8,
-  "average_trust_score": 87.5,
+  "average_trust_score": 89.3,
   "verdict_counts": {
     "TRUSTED": 6,
     "CAUTION": 2,
@@ -29,11 +32,25 @@
     "DIRECTIONAL": 2,
     "NOT_DECISION_GRADE": 0
   },
+  "economics": {
+    "margin": null,
+    "source": null,
+    "industry": "",
+    "breakeven_iroas": null,
+    "note": "No margin declared: returns are shown as revenue returns only.",
+    "benchmark_set_version": null,
+    "record_id": null
+  },
+  "benchmark_context": {
+    "illustrative_benchmark_table": true,
+    "seasonal_expectation": null,
+    "benchmark_set_version": null
+  },
   "campaigns": [
     {
       "campaign_id": "GOOGLE_ADS_CMP_01",
       "channel": "Google Ads",
-      "trust_score": 93.8,
+      "trust_score": 100.0,
       "verdict": "TRUSTED",
       "recommendation": "SCALE: iROAS 5.67x.",
       "tier": "VERIFIED",
@@ -74,10 +91,10 @@
         {
           "check_id": 4,
           "name": "Business benchmark range adherence",
-          "status": "WARN",
-          "value": 5.67,
-          "threshold": "iROAS in [2.0, 4.5]",
-          "detail": "iROAS 5.67x is above the Google Ads expected ROAS band."
+          "status": "NA",
+          "value": null,
+          "threshold": "verified benchmark required",
+          "detail": "The benchmark ranges in this table are illustrative placeholders from the project spec, not verified sources, so no comparison was made. Upload your own benchmark ranges to enable this check. The Benchmarks page lists what has been verified and why most channel ROAS ranges are excluded."
         },
         {
           "check_id": 5,
@@ -116,7 +133,7 @@
     {
       "campaign_id": "GOOGLE_ADS_CMP_02",
       "channel": "Google Ads",
-      "trust_score": 93.8,
+      "trust_score": 100.0,
       "verdict": "TRUSTED",
       "recommendation": "SCALE: iROAS 5.76x.",
       "tier": "VERIFIED",
@@ -157,10 +174,10 @@
         {
           "check_id": 4,
           "name": "Business benchmark range adherence",
-          "status": "WARN",
-          "value": 5.76,
-          "threshold": "iROAS in [2.0, 4.5]",
-          "detail": "iROAS 5.76x is above the Google Ads expected ROAS band."
+          "status": "NA",
+          "value": null,
+          "threshold": "verified benchmark required",
+          "detail": "The benchmark ranges in this table are illustrative placeholders from the project spec, not verified sources, so no comparison was made. Upload your own benchmark ranges to enable this check. The Benchmarks page lists what has been verified and why most channel ROAS ranges are excluded."
         },
         {
           "check_id": 5,
@@ -240,10 +257,10 @@
         {
           "check_id": 4,
           "name": "Business benchmark range adherence",
-          "status": "PASS",
-          "value": 3.19,
-          "threshold": "iROAS in [1.5, 3.5]",
-          "detail": "iROAS 3.19x is inside the Meta Ads expected ROAS band."
+          "status": "NA",
+          "value": null,
+          "threshold": "verified benchmark required",
+          "detail": "The benchmark ranges in this table are illustrative placeholders from the project spec, not verified sources, so no comparison was made. Upload your own benchmark ranges to enable this check. The Benchmarks page lists what has been verified and why most channel ROAS ranges are excluded."
         },
         {
           "check_id": 5,
@@ -323,10 +340,10 @@
         {
           "check_id": 4,
           "name": "Business benchmark range adherence",
-          "status": "PASS",
-          "value": 3.31,
-          "threshold": "iROAS in [1.5, 3.5]",
-          "detail": "iROAS 3.31x is inside the Meta Ads expected ROAS band."
+          "status": "NA",
+          "value": null,
+          "threshold": "verified benchmark required",
+          "detail": "The benchmark ranges in this table are illustrative placeholders from the project spec, not verified sources, so no comparison was made. Upload your own benchmark ranges to enable this check. The Benchmarks page lists what has been verified and why most channel ROAS ranges are excluded."
         },
         {
           "check_id": 5,
@@ -365,7 +382,7 @@
     {
       "campaign_id": "NETFLIX_ADS_CMP_01",
       "channel": "Netflix Ads",
-      "trust_score": 62.5,
+      "trust_score": 64.3,
       "verdict": "CAUTION",
       "recommendation": "REDUCE: iROAS 0.34x after a confirmation test.",
       "tier": "DIRECTIONAL",
@@ -406,10 +423,10 @@
         {
           "check_id": 4,
           "name": "Business benchmark range adherence",
-          "status": "WARN",
-          "value": 0.34,
-          "threshold": "iROAS in [0.800000011920929, 2.0]",
-          "detail": "iROAS 0.34x is below the Netflix Ads expected ROAS band."
+          "status": "NA",
+          "value": null,
+          "threshold": "verified benchmark required",
+          "detail": "The benchmark ranges in this table are illustrative placeholders from the project spec, not verified sources, so no comparison was made. Upload your own benchmark ranges to enable this check. The Benchmarks page lists what has been verified and why most channel ROAS ranges are excluded."
         },
         {
           "check_id": 5,
@@ -448,7 +465,7 @@
     {
       "campaign_id": "NETFLIX_ADS_CMP_02",
       "channel": "Netflix Ads",
-      "trust_score": 62.5,
+      "trust_score": 64.3,
       "verdict": "CAUTION",
       "recommendation": "REDUCE: iROAS 0.36x after a confirmation test.",
       "tier": "DIRECTIONAL",
@@ -489,10 +506,10 @@
         {
           "check_id": 4,
           "name": "Business benchmark range adherence",
-          "status": "WARN",
-          "value": 0.36,
-          "threshold": "iROAS in [0.800000011920929, 2.0]",
-          "detail": "iROAS 0.36x is below the Netflix Ads expected ROAS band."
+          "status": "NA",
+          "value": null,
+          "threshold": "verified benchmark required",
+          "detail": "The benchmark ranges in this table are illustrative placeholders from the project spec, not verified sources, so no comparison was made. Upload your own benchmark ranges to enable this check. The Benchmarks page lists what has been verified and why most channel ROAS ranges are excluded."
         },
         {
           "check_id": 5,
@@ -531,7 +548,7 @@
     {
       "campaign_id": "TIKTOK_ADS_CMP_01",
       "channel": "TikTok Ads",
-      "trust_score": 93.8,
+      "trust_score": 92.9,
       "verdict": "TRUSTED",
       "recommendation": "MAINTAIN: iROAS 2.08x.",
       "tier": "VERIFIED",
@@ -572,10 +589,10 @@
         {
           "check_id": 4,
           "name": "Business benchmark range adherence",
-          "status": "PASS",
-          "value": 2.08,
-          "threshold": "iROAS in [1.0, 2.5]",
-          "detail": "iROAS 2.08x is inside the TikTok Ads expected ROAS band."
+          "status": "NA",
+          "value": null,
+          "threshold": "verified benchmark required",
+          "detail": "The benchmark ranges in this table are illustrative placeholders from the project spec, not verified sources, so no comparison was made. Upload your own benchmark ranges to enable this check. The Benchmarks page lists what has been verified and why most channel ROAS ranges are excluded."
         },
         {
           "check_id": 5,
@@ -614,7 +631,7 @@
     {
       "campaign_id": "TIKTOK_ADS_CMP_02",
       "channel": "TikTok Ads",
-      "trust_score": 93.8,
+      "trust_score": 92.9,
       "verdict": "TRUSTED",
       "recommendation": "MAINTAIN: iROAS 2.22x.",
       "tier": "VERIFIED",
@@ -655,10 +672,10 @@
         {
           "check_id": 4,
           "name": "Business benchmark range adherence",
-          "status": "PASS",
-          "value": 2.22,
-          "threshold": "iROAS in [1.0, 2.5]",
-          "detail": "iROAS 2.22x is inside the TikTok Ads expected ROAS band."
+          "status": "NA",
+          "value": null,
+          "threshold": "verified benchmark required",
+          "detail": "The benchmark ranges in this table are illustrative placeholders from the project spec, not verified sources, so no comparison was made. Upload your own benchmark ranges to enable this check. The Benchmarks page lists what has been verified and why most channel ROAS ranges are excluded."
         },
         {
           "check_id": 5,

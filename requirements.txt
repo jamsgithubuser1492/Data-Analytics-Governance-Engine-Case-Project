@@ -1,8 +1,8 @@
 pandas
 numpy
 duckdb
-streamlit
-plotly
+streamlit>=1.50
+plotly>=5.20
 statsmodels
 pytest
 openpyxl

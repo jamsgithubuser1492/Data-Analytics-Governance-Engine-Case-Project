@@ -63,7 +63,7 @@ Run `sql/01_raw_schema.sql` in a worksheet. The commented block at its bottom cr
 * `inflation_ratio = total_platform_conversions / total_holdout_conversions`
 * Holdout treatment conversions and revenue are divided by 0.40 to correct for the 40% geo sample.
 
-Governance status: `CRITICAL_INFLATION_WARNING 🚨` at ratio >= 3.0, `MODERATE_INFLATION 🟡` at 1.5 to <3.0, `NO_HOLDOUT_COVERAGE ⚠️` when holdout data is missing, otherwise `PASS ✅`.
+Governance status: `CRITICAL_INFLATION_WARNING` at ratio >= 3.0, `MODERATE_INFLATION` at 1.5 to <3.0, `NO_HOLDOUT_COVERAGE` when holdout data is missing, otherwise `PASS`.
 
 Agents: `CAPITAL_PRESERVATION_AGENT` (reported ROAS >= 1.5 and iROAS < 1.0), `ATTRIBUTION_SHIELD_AGENT` (1.25 < inflation <= 3.0), `SCALE_OPPORTUNITY_AGENT` (iROAS >= 3.0 and inflation <= 1.25). Triggers are independent, so one campaign can fire more than one agent.
 

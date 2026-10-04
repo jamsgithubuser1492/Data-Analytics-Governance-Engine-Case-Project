@@ -1,5 +1,5 @@
 channel,total_spend,holdout_covered_spend,total_platform_conversions,total_mta_conversions,total_holdout_conversions,total_platform_revenue,total_mta_revenue,total_holdout_revenue,platform_roas,mta_roas,incremental_roas,inflation_ratio,governance_action
-Google Ads,264718.21,264718.21,22268.0,18956.0,20165.0,1670100.0,1421700.0,1512375.0,6.31,5.37,5.71,1.1,HEALTHY: Scale Channel 🟢
-Meta Ads,207973.09,207973.09,11157.0,9481.0,9022.5,836775.0,711075.0,676687.5,4.02,3.42,3.25,1.24,HEALTHY: Scale Channel 🟢
-Netflix Ads,161595.51,161595.51,868.0,730.0,752.5,65100.0,54750.0,56437.5,0.4,0.34,0.35,1.15,UNPROFITABLE: Reduce Spend 🔴
-TikTok Ads,113853.61,113853.61,4237.0,3607.0,3267.5,317775.0,270525.0,245062.5,2.79,2.38,2.15,1.3,MONITOR: Optimize 🟡
+Google Ads,264718.21,264718.21,22268.0,18956.0,20165.0,1670100.0,1421700.0,1512375.0,6.31,5.37,5.71,1.1,HEALTHY: Scale Channel
+Meta Ads,207973.09,207973.09,11157.0,9481.0,9022.5,836775.0,711075.0,676687.5,4.02,3.42,3.25,1.24,HEALTHY: Scale Channel
+Netflix Ads,161595.51,161595.51,868.0,730.0,752.5,65100.0,54750.0,56437.5,0.4,0.34,0.35,1.15,UNPROFITABLE: Reduce Spend
+TikTok Ads,113853.61,113853.61,4237.0,3607.0,3267.5,317775.0,270525.0,245062.5,2.79,2.38,2.15,1.3,MONITOR: Optimize
