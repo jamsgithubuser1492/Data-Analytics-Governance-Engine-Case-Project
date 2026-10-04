@@ -114,6 +114,24 @@ st.caption(f"Headline metric: **{label}** · Trust tiers: {tiers['VERIFIED']} ve
 if not is_strict and bool(camp["divergence_warning"].any()):
     st.warning("Reported by spec counts all treatment geo revenue as incremental. The strict causal view is much lower for "
                f"{int(camp['divergence_warning'].sum())} campaign(s). Switch the headline metric in the sidebar to compare.")
+econ = report.get("economics") or {}
+BE = econ.get("breakeven_iroas") or 1.0
+if econ.get("margin"):
+    st.info(f"Breakeven iROAS is **{BE:.2f}x** at a {econ['margin']:.0%} margin ({'declared by you' if econ['source'] == 'user' else 'industry proxy'}). "
+            f"{econ['note']} Campaigns below it lose money after ad spend.")
+    with st.expander("Profit view by campaign"):
+        prof = camp[["campaign_id", "channel", "headline_iroas", "tier"]].copy()
+        prof["breakeven_iroas"] = BE
+        prof["profit_per_ad_dollar"] = prof["headline_iroas"] * econ["margin"] - 1.0
+        st.dataframe(prof.round(3), hide_index=True, width="stretch")
+bctx = report.get("benchmark_context") or {}
+if bctx.get("illustrative_benchmark_table"):
+    st.caption("Benchmark check: this run uses the project's illustrative placeholder ranges, which are not verified, so check 4 makes no comparison. See the Benchmarks page.")
+if bctx.get("benchmark_set_version"):
+    st.caption(f"Benchmark registry version {bctx['benchmark_set_version']} was used in this run.")
+sf = (run["validation"] or {}).get("scale_factor") or {}
+if sf:
+    st.caption(f"Geo scale check: treatment geos hold {sf['census_share']:.1%} of the US population; declared sample fraction {sf['declared_fraction']:.1%}.")
 if run["validation"]["issues"]:
     with st.expander(f"Data checks recorded for this run ({sum(i['severity'] == 'WARNING' for i in run['validation']['issues'])} warnings)"):
         for i in run["validation"]["issues"]:
@@ -176,7 +194,7 @@ fig_roas = go.Figure()
 for src, color in SERIES_COLORS.items():
     d = long[long["source"] == src]
     fig_roas.add_bar(x=d["channel"], y=d["roas"], name=src, marker_color=color, text=d["roas"].map(lambda v: "n/a" if pd.isna(v) else f"{v:.2f}x"), textposition="outside")
-fig_roas.add_hline(y=1.0, line_dash="dot", line_color="#52514e", annotation_text="Breakeven 1.0x")
+fig_roas.add_hline(y=BE, line_dash="dot", line_color="#52514e", annotation_text=f"Breakeven {BE:.2f}x")
 fig_roas.update_layout(barmode="group", yaxis_title="Return on ad spend (x)")
 st.plotly_chart(style(fig_roas, "Channel ROAS Comparison: Platform vs MTA vs Incremental (spec view)"), width="stretch")
 
@@ -198,7 +216,7 @@ for ch, color in CHANNEL_COLORS.items():
     d = ch_roll[ch_roll["channel"] == ch]
     if len(d):
         fig_roll.add_scatter(x=d["date"], y=d["iroas"], name=ch, mode="lines", line=dict(color=color, width=2))
-fig_roll.add_hline(y=1.0, line_dash="dot", line_color="#52514e", annotation_text="Breakeven 1.0x")
+fig_roll.add_hline(y=BE, line_dash="dot", line_color="#52514e", annotation_text=f"Breakeven {BE:.2f}x")
 fig_roll.update_layout(yaxis_title="7 day rolling iROAS, spec view (x)")
 st.plotly_chart(style(fig_roll, "7-Day Rolling iROAS by Channel"), width="stretch")
 

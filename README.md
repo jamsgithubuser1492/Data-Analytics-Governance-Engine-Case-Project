@@ -124,6 +124,23 @@ Run data is stored under `var/` (set `MMGE_DATA_DIR` to change it). `PostgresRun
 
 Not yet exercised: the live Claude call (tests use a fake client with the same interface).
 
+## Benchmark registry (verified, with provenance)
+
+`benchmarks/` holds `values.csv` (234 records), `sources.csv`, `evidence.json`, `excluded_claims.csv` and `snapshots/` of the primary files. Run `python python/benchmark_sync.py sync` to rebuild from the live sources, `python python/benchmark_verify.py` to re-verify offline (23 checks) and `python python/benchmark_verify.py --live` to re-download and compare (52 checks). `MMGE_LIVE=1 pytest` includes the live check.
+
+**How reliability is enforced (not just documented):**
+1. *Official data is parsed from the publisher's file and reconciled.* Damodaran margins (Jan 2026): gross margin equals 1 minus COGS/sales in all 96 industries. Census Vintage 2025: 50 states plus DC equal the US total (341,784,857), and 3,144 county rows equal it again. Census e-commerce share (17.1%, Q2 2026) equals the FRED series. Retail seasonality is the ratio of two Census series (RSXFSN over RSXFS), 12 months by 5 years.
+2. *Study claims are admitted one by one.* Each has a verbatim quote extracted from the fetched primary page, and its numbers must appear in that quote; otherwise it is rejected. Every record carries its definition, attribution window, sample size and a confidence grade.
+3. *Offline verification re-derives every official value from the stored snapshots* and re-checks every study claim against its spec, so hand edited values, tampered snapshots and hand added records fail (tested). Live verification re-fetches sources; changed files are reported as DRIFT (a new vintage), vanished quotes as FAIL.
+4. *Comparability rules decide what a benchmark may be compared with.* For example, Littledata's median conversion rate is a site-wide session rate, so it is offered for order value (as a proxy) but explicitly refused for paid-ad click conversion. Channel ROAS, CPM and absolute incrementality factors have no verified primary source and are answered with "not comparable".
+5. *Refused claims are logged with reasons* (`excluded_claims.csv`), including claims that checking the primary pages showed to be wrong or unsupported.
+
+**Things checking the primary pages corrected:** Littledata's own page covers 421 stores (Sept 2026), not the 2,800 quoted by third-party blogs; the Damodaran file has no Retail (Online) row; a paper's abstract says observational methods "often fail to reproduce" experimental effects, not that they overestimate; Haus's publication date was not on the fetched page, so it is recorded as unknown; the Census population API needs a key, while bulk files do not and already hold Vintage 2025.
+
+**What it feeds:** profit aware breakeven (`1 / margin`) from a declared margin or a labeled industry proxy (an upper bound on contribution margin); the geo sample fraction check (treatment geo FIPS codes against Census population, tolerance 15%); an optional seasonality adjustment of the control drift check; and a registry version stamped on any run that used it. The demo's four row `BUSINESS_BENCHMARKS` ranges are unsourced placeholders from the spec, so audit check 4 now reports "not applicable" for them instead of scoring against them.
+
+**Limits:** vendor figures are marketing content (short attributed quotes only, medium confidence at most); Tier B sample sizes are small in places (33 stores); the margin proxies are public company aggregates, not DTC brands; seasonality is macro retail, not your category; Haus lift is a lift on a KPI, not an iROAS.
+
 ## Caveats
 
 * The synthetic data is deliberately clean: control equals treatment before launch (zero pre-period variance) and the lift is exactly 1.20x. The causal runner applies a Poisson noise floor so intervals stay honest.

@@ -57,6 +57,23 @@ with st.form("settings"):
     i1, i2 = st.columns(2)
     t_ver = i1.number_input("Trust score for Verified (and up)", 1.0, 100.0, float(settings.trust_verified_min))
     t_dir = i2.number_input("Trust score for Directional (and up)", 0.0, 100.0, float(settings.trust_directional_min))
+    st.subheader("Economics and benchmarks")
+    st.caption("A revenue return of 1.0x is only breakeven at a 100% margin. Declare your contribution margin (revenue minus product, shipping, fees and returns) "
+               "to see profit aware returns. Nothing is assumed unless you choose it.")
+    known = st.checkbox("I know my contribution margin", value=settings.gross_margin is not None)
+    margin_pct = st.number_input("Contribution margin (%), used only if the box above is ticked", 1.0, 100.0, float(settings.gross_margin * 100) if settings.gross_margin else 40.0, 1.0)
+    try:
+        from benchmark_registry import Registry
+        _reg = Registry.load()
+        industries = ["(none)"] + _reg.industries()
+    except Exception:
+        _reg, industries = None, ["(none)"]
+    cur_ind = settings.margin_industry if settings.margin_industry in industries else "(none)"
+    industry = st.selectbox("Or use an industry proxy (ignored if you declared a margin above)", industries, index=industries.index(cur_ind),
+                            help="Damodaran aggregate gross margin of US public companies in the industry: an upper bound on your contribution margin, so your true breakeven is higher.")
+    fips_text = st.text_area("Treatment geo codes for the sample fraction check (state 2 digit or county 5 digit FIPS, comma or line separated)",
+                             ", ".join(decl.get("test_geo_fips", [])), placeholder="06, 48, 12", help="Used to compare your geo sample fraction with those geos' share of the US population (Census).")
+    seasonal = st.checkbox("Adjust the control geo drift check for U.S. retail seasonality (Census via FRED)", value=settings.seasonality_benchmark)
     submitted = st.form_submit_button("Save new version", type="primary")
 
 if submitted:
@@ -72,9 +89,25 @@ if submitted:
         new = PolicySettings(geo_sample_fraction=geo, pre_period_days=int(pre), min_pre_period_days=int(min_pre),
                              min_test_days=int(min_test), min_daily_conversions=min_conv, avg_order_value=aov,
                              inflation_moderate=infl_m, inflation_critical=infl_c, trust_verified_min=t_ver,
-                             trust_directional_min=t_dir, headline_metric=headline)
+                             trust_directional_min=t_dir, headline_metric=headline,
+                             gross_margin=(margin_pct / 100.0) if known else None, margin_industry="" if known or industry == "(none)" else industry,
+                             seasonality_benchmark=bool(seasonal))
+        fips = [f.strip() for f in fips_text.replace("\n", ",").split(",") if f.strip()]
+        if fips and _reg is not None:
+            share = _reg.population_share(fips)
+            if share["errors"]:
+                raise SettingsError("Treatment geo codes: " + " ".join(share["errors"]))
         v = store.save_workspace_config(ws, new, {"currency": currency, "timezone": tz.strip() or "UTC", "spend_unit": spend_unit,
-                                                  "decimal_separator": decimal, "date_order": order, "channel_aliases": aliases})
+                                                  "decimal_separator": decimal, "date_order": order, "channel_aliases": aliases,
+                                                  "test_geo_fips": fips})
         st.success(f"Saved as version {v}. New uploads will use it; existing runs keep the policy they ran with.")
+        if new.gross_margin or new.margin_industry:
+            from economics import resolve_economics
+            econ = resolve_economics(new, _reg)
+            st.info(f"Breakeven iROAS is **{econ['breakeven_iroas']:.2f}x** at a {econ['margin']:.0%} margin. {econ['note']}")
+        if fips and _reg is not None:
+            s = _reg.population_share(fips)
+            gap = abs(s["share"] - geo) / geo
+            (st.warning if gap > 0.15 else st.success)(f"Those geos hold {s['share']:.1%} of the US population ({s['vintage']}); your geo sample fraction is {geo:.1%} ({gap:.0%} apart, tolerance 15%).")
     except SettingsError as exc:
         st.error(str(exc))

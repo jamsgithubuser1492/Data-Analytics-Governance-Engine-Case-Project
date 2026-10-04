@@ -305,3 +305,11 @@ def test_expected_tier_a_covers_all_derivable_records(reg) -> None:
     exp = expected_tier_a(BENCH)
     tier_a = set(reg.values[reg.values["tier"] == "A"]["value_id"])
     assert set(exp) | {"CENSUS_ECOM_PCT_LATEST", "CENSUS_ECOM_SALES_LATEST"} >= tier_a - {"CENSUS_ECOM_PCT_LATEST", "CENSUS_ECOM_SALES_LATEST"}
+
+
+# ------------------------------------------------------------------ live (opt in)
+@pytest.mark.skipif(not __import__("os").environ.get("MMGE_LIVE"), reason="set MMGE_LIVE=1 to re-fetch primary sources")
+def test_live_verification_against_primary_sources() -> None:
+    from benchmark_verify import verify_live
+    res = verify_live(BENCH)
+    assert res and not [c for c in res if c.status == "FAIL"], [(c.name, c.detail) for c in res if c.status == "FAIL"]
