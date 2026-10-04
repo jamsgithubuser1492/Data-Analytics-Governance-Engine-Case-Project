@@ -7,7 +7,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from common import get_runner, get_store, identity, page_setup, succeeded_runs, wait_for_run  # noqa: E402
 
-page_setup("Agents", "🤖")
+page_setup("Agents",":material/smart_toy:")
 
 import pandas as pd  # noqa: E402
 import streamlit as st  # noqa: E402
@@ -23,7 +23,7 @@ actor, ws = identity()
 defs = store.get_agent_definitions(ws)
 by_id = {d["id"]: d for d in defs}
 
-st.title("🤖 Agent builder")
+st.title("Decision rules (agent builder)")
 st.caption("Agents are rules, not code. Pick a metric, a condition, who it is for and what action it recommends. "
            "Money actions never fire on results that are not decision grade. Every save is a new version.")
 
@@ -31,7 +31,7 @@ st.dataframe(pd.DataFrame([{"Agent": d["id"], "Name": d["name"], "Version": d.ge
                             "Persona": d["persona"], "Action": d["action"], "Priority": d["priority"]} for d in defs]),
              hide_index=True, width="stretch")
 
-NEW = "➕ New custom agent"
+NEW = "New custom agent"
 sel = st.selectbox("Edit agent", [d["id"] for d in defs] + [NEW])
 base = by_id.get(sel) or {
     "id": "", "name": "", "description": "", "persona": PERSONAS[0], "severity": "INFO", "action": "REVIEW_MEASUREMENT", "enabled": True,
@@ -123,10 +123,10 @@ else:
     st.success("This definition is valid.")
 
 # ------------------------------------------------------------------ preview
-st.subheader("🔍 Preview on a real run")
+st.subheader("Preview on a real run")
 runs = succeeded_runs(ws)
 if not runs:
-    st.info("Create a run first (Dashboard → Try with demo data) to preview what this agent would do.")
+    st.info("Create a run first (on the Dashboard, choose Try with demo data) to preview what this agent would do.")
 elif norm is not None:
     labels = {r["id"]: f"{r['label'] or 'Run'} · {r['created_at'][:16].replace('T', ' ')}" for r in runs}
     run_id = st.selectbox("Run to test against", list(labels), format_func=labels.get, key="preview_run")

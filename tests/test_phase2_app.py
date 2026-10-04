@@ -44,7 +44,7 @@ def test_1_empty_state_then_demo_run_from_dashboard() -> None:
     next(b for b in at.button if b.label == "Try with demo data").click().run(timeout=T)
     clean(at)
     m = {x.label: x.value for x in at.metric}
-    assert m["Total Media Spend"] == "$748,140" and m["Blended iROAS (spec)"] == "3.33x" and m["Open Agent Packets"] == "6"
+    assert m["Total media spend"] == "$748,140" and m["Proven return per $1"] == "3.33x" and m["Recommendations to review"] == "6"
 
 
 def test_2_policy_switch_creates_strict_run() -> None:
@@ -52,7 +52,7 @@ def test_2_policy_switch_creates_strict_run() -> None:
     at.sidebar.radio[0].set_value(at.sidebar.radio[0].options[1]).run(timeout=T)
     clean(at)
     m = {x.label: x.value for x in at.metric}
-    assert m["Blended iROAS (strict)"] == "0.57x"
+    assert m["Proven return per $1"] == "0.57x"
     import common
     assert len(common.get_store().list_runs(common.identity()[1])) >= 2
 

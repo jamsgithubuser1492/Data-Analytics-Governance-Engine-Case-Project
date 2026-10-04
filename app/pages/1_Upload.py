@@ -7,7 +7,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from common import demo_tables, get_runner, get_store, identity, page_setup, safe_page_link, wait_for_run  # noqa: E402
 
-page_setup("Upload", "📤")
+page_setup("Upload",":material/upload:")
 
 import pandas as pd  # noqa: E402
 import streamlit as st  # noqa: E402
@@ -31,21 +31,21 @@ LABELS = {"RAW_PLATFORM_DATA": ("Platform data", "Daily spend, clicks and conver
 demo = demo_tables().as_dict()
 uploads = st.session_state.setdefault("uploads", {})
 
-st.title("📤 Bring your data")
-st.caption("Upload → Map → Check → Run. Nothing runs until every blocker is fixed, and every warning is acknowledged.")
+st.title("Bring your data")
+st.caption("Upload, then Map, then Check, then Run. Nothing runs until every blocker is fixed, and every warning is acknowledged.")
 
 with st.container(border=True):
     st.markdown("**1. Declarations** (how your files are written)")
     st.write(f"Currency **{decl['currency']}** · Timezone **{decl['timezone']}** · Spend in **{decl['spend_unit']}** · "
              f"Decimal **'{decl['decimal_separator']}'** · Dates **{decl['date_order']}** · Settings version {cfg_version or 'defaults'}")
-    safe_page_link("pages/3_Settings.py", "Change declarations or policy", "⚙️")
+    safe_page_link("pages/3_Settings.py", "Change declarations or policy", ":material/tune:")
 
 st.markdown("**2. Upload your four files**")
 if st.button("Use the built in demo data instead"):
     st.session_state["uploads"] = {t: (df.astype(str), {"filename": "demo", "demo": True}) for t, df in demo.items()}
     st.rerun()
 for table, (title, blurb) in LABELS.items():
-    with st.expander(f"{title}" + (" ✅" if table in uploads else ""), expanded=table not in uploads):
+    with st.expander(f"{title}" + (" (uploaded)" if table in uploads else ""), expanded=table not in uploads):
         st.caption(blurb)
         st.download_button("Download template", template_csv(table, demo[table]), f"{table}_template.csv", key=f"tpl_{table}")
         f = st.file_uploader(f"{title} file (CSV or Excel)", type=["csv", "tsv", "txt", "xlsx"], key=f"up_{table}")
@@ -90,7 +90,7 @@ for table, (title, _) in LABELS.items():
                                 key=f"map_{table}_{s.source}", label_visibility="collapsed")
             chosen[s.source] = None if pick == "(ignore)" else pick
             label = f"{s.confidence:.0%} · {s.reason}" if s.target else s.reason
-            c3.caption(("⚠️ " if s.needs_confirmation else "") + label)
+            c3.caption(("Confirm: " if s.needs_confirmation else "") + label)
             if chosen[s.source] and chosen[s.source] != s.target and not use_saved and s.target is None:
                 c3.caption("Chosen by you")
         low = [s.source for s in sugg if s.needs_confirmation and chosen.get(s.source) == s.target]
@@ -126,11 +126,11 @@ report = validate_inputs(tables.platform, tables.mta, tables.holdout, tables.ben
 if report.blockers:
     st.error(f"{len(report.blockers)} blocker(s) must be fixed before a run can start.")
 for i in report.blockers:
-    st.markdown(f"🔴 **{i.rule}** ({i.table}): {i.message}")
+    st.markdown(f"**Blocker.** **{i.rule}** ({i.table}): {i.message}")
     if i.examples:
         st.code(str(i.examples))
 for i in report.warnings:
-    st.markdown(f"🟡 **{i.rule}** ({i.table}): {i.message}")
+    st.markdown(f"**Warning.** **{i.rule}** ({i.table}): {i.message}")
     if i.examples:
         st.caption(f"Examples: {i.examples}")
 if report.ok and not report.warnings:
@@ -160,7 +160,7 @@ if st.button("Run measurement", type="primary", disabled=bool(report.blockers) o
         status = wait_for_run(ws, rid)
         if status == "succeeded":
             st.success("Run complete. Open the Dashboard page to see the results.")
-            safe_page_link("app.py", "Open the dashboard", "🛡️")
+            safe_page_link("app.py", "Open the dashboard", ":material/analytics:")
         else:
             st.error(f"The run failed: {store.get_run(ws, rid)['error']}")
     except ValidationBlocked as exc:

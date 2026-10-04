@@ -7,7 +7,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from common import TIER_BADGE, get_store, identity, page_setup, safe_csv, succeeded_runs  # noqa: E402
 
-page_setup("Runs", "🗂️")
+page_setup("Runs",":material/history:")
 
 import json  # noqa: E402
 
@@ -21,7 +21,7 @@ store = get_store()
 actor, ws = identity()
 runs = store.list_runs(ws)
 
-st.title("🗂️ Runs")
+st.title("Runs")
 if not runs:
     st.info("No runs yet. Upload data or load the demo from the Dashboard page.")
     st.stop()

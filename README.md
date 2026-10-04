@@ -146,3 +146,15 @@ Not yet exercised: the live Claude call (tests use a fake client with the same i
 * The synthetic data is deliberately clean: control equals treatment before launch (zero pre-period variance) and the lift is exactly 1.20x. The causal runner applies a Poisson noise floor so intervals stay honest.
 * Per the project spec, iROAS uses total treatment geo revenue scaled by 1/0.40. A stricter incrementality view would use only the lift over the counterfactual (treatment minus synthetic control), which is far smaller. `causal_impact_runner.py` produces that estimate.
 * The dashboard's "Execute Action" button simulates a Snowflake governance queue write (a JSON line in `outputs/` plus the INSERT it would run).
+
+## Executive dashboard design
+
+The home page (`app/app.py`) is written for a non-technical leadership reader:
+
+* **Answer first.** A plain language bottom line states which channels earn back their spend, which fall short and how much spend sits in them, before any chart.
+* **One message per chart.** Every chart headline is generated from the run (`app/charts.py`), for example "Google Ads just breaks even; Netflix Ads, TikTok Ads and Meta Ads lose money", with a one line guide to reading it.
+* **Plain labels.** "Claimed by the platform", "Attribution model estimate" and "Proven by the holdout test" replace ROAS, MTA and iROAS. A definitions panel explains each term.
+* **Axes sized to the data.** Ranges include the data, the breakeven line and the policy thresholds, with headroom for labels. Bar charts grow with the number of campaigns, outliers are capped and labelled "off scale", and trend charts zoom to the typical range.
+* **Breakeven comes from the economics.** The red line is 1 divided by your margin (or 1.00x revenue breakeven when no margin is set). Results within 5% of breakeven read "just breaks even".
+* **Honest benchmark context.** The dashboard shows the verified context available (test certainty, typical test length) and states plainly that no verified channel return band exists, so none is drawn.
+* **No emojis; modern theme** (`.streamlit/config.toml`, shared CSS in `app/common.py`). Status always uses a text label, never colour alone.

@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 from typing import Any, Dict, Tuple
 
-ICON = {"PASS": "✅", "WARN": "🟡", "FAIL": "🔴", "NA": "➖"}
+ICON = {"PASS": "[PASS]", "WARN": "[WARN]", "FAIL": "[FAIL]", "NA": "[N/A]"}
 
 
 def render_text_summary(report: Dict[str, Any]) -> str:
@@ -37,12 +37,12 @@ def render_markdown(report: Dict[str, Any]) -> str:
     for c in report["campaigns"]:
         strict = "n/a" if c["strict_iroas"] is None else f"{c['strict_iroas']:.2f}x ({c['strict_iroas_lower']:.2f} to {c['strict_iroas_upper']:.2f})"
         spec = "n/a" if c["spec_iroas"] is None else f"{c['spec_iroas']:.2f}x"
-        flag = " ⚠️ spec overstates" if c["divergence_warning"] else ""
+        flag = " (spec overstates)" if c["divergence_warning"] else ""
         out.append(f"| {c['campaign_id']} | {c['channel']} | {c['trust_score']} | {c['tier']} | {spec}{flag} | {strict} | {c['recommendation']} |")
     out.append("")
     for c in report["campaigns"]:
         out += [f"## {c['campaign_id']}", "", "| # | Check | Status | Detail |", "| --- | --- | --- | --- |"]
-        out += [f"| {k['check_id']} | {k['name']} | {ICON[k['status']]} {k['status']} | {k['detail']} |" for k in c["checks"]]
+        out += [f"| {k['check_id']} | {k['name']} | {k['status']} | {k['detail']} |" for k in c["checks"]]
         out.append("")
     return "\n".join(out)
 

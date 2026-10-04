@@ -7,7 +7,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from common import get_store, identity, page_setup  # noqa: E402
 
-page_setup("Settings", "⚙️")
+page_setup("Settings",":material/tune:")
 
 import streamlit as st  # noqa: E402
 
@@ -19,7 +19,7 @@ settings, decl, version = store.latest_workspace_config(ws)
 decl = {"currency": "USD", "timezone": "UTC", "spend_unit": "dollars", "decimal_separator": ".", "date_order": "ymd",
         "channel_aliases": {}, **decl}
 
-st.title("⚙️ Policy and declarations")
+st.title("Policy and declarations")
 st.caption(f"Workspace: **{ws[:6]}…** · Settings version {version or 'defaults (never saved)'}. Every change is saved as a new "
            "version, and each run records the policy it used.")
 

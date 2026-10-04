@@ -7,7 +7,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from common import TIER_BADGE, get_store, identity, page_setup, succeeded_runs  # noqa: E402
 
-page_setup("Memos", "📝")
+page_setup("Memos",":material/description:")
 
 import pandas as pd  # noqa: E402
 import streamlit as st  # noqa: E402
@@ -20,11 +20,11 @@ store = get_store()
 actor, ws = identity()
 runs = succeeded_runs(ws)
 
-st.title("📝 Memos")
+st.title("Memos")
 st.caption("Every number in a memo must come from a fact the code produced. Drafts are verified before you see them, and nothing "
            "can be exported until a person approves it.")
 if not runs:
-    st.info("Create a run first (Dashboard → Try with demo data).")
+    st.info("Create a run first (on the Dashboard, choose Try with demo data).")
     st.stop()
 
 ai = configured_writer()
@@ -52,7 +52,7 @@ st.caption(item["packet"]["strategic_callout"])
 if st.button("Draft memo", type="primary"):
     try:
         memo = draft_memo(store, ws, item, facts_for_item(store, ws, run_id, item), run_id, ai if use_ai else None, actor)
-        st.toast("Memo drafted and verified." + (" The AI draft was replaced by the template." if memo["fallback_reason"] else ""), icon="📝")
+        st.toast("Memo drafted and verified." + (" The AI draft was replaced by the template." if memo["fallback_reason"] else ""))
     except (StoreError, ValueError) as exc:
         st.error(str(exc))
 

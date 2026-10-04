@@ -82,8 +82,8 @@ def test_4_create_custom_agent_and_reevaluate_run() -> None:
     import common
     store, (actor, ws) = common.get_store(), common.identity()
     at = page("pages/4_Agents.py")
-    at.selectbox[0].select("➕ New custom agent").run(timeout=T)
-    n = "➕ New custom agent"
+    at.selectbox[0].select("New custom agent").run(timeout=T)
+    n = "New custom agent"
     w(at, at.text_input, f"{n}_id").set_value("TRUST_WATCH").run(timeout=T)
     w(at, at.text_input, f"{n}_name").set_value("Trust watch").run(timeout=T)
     w(at, at.text_input, f"{n}_all0v").set_value("1.0").run(timeout=T)  # the demo data's inflation ratios are all above 1.0

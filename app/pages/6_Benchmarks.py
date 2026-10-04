@@ -7,7 +7,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from common import page_setup  # noqa: E402
 
-page_setup("Benchmarks", "📚")
+page_setup("Benchmarks",":material/menu_book:")
 
 import pandas as pd  # noqa: E402
 import streamlit as st  # noqa: E402
@@ -15,7 +15,7 @@ import streamlit as st  # noqa: E402
 from benchmark_registry import COMPARABILITY, NOT_COMPARABLE_NOTES, Registry, RegistryError  # noqa: E402
 from benchmark_verify import verify_live, verify_offline  # noqa: E402
 
-st.title("📚 Benchmarks")
+st.title("Benchmarks")
 st.caption("Every number here was checked against its primary source. Context, not a verdict: no agent takes a money action because of a benchmark.")
 try:
     reg = Registry.load()
@@ -96,8 +96,7 @@ with tab_verify:
                 st.error(f"Live verification could not run: {exc}")
     checks = st.session_state.get("verify")
     if checks:
-        icon = {"PASS": "✅", "FAIL": "🔴", "WARN": "🟡", "DRIFT": "🟠"}
-        st.dataframe(pd.DataFrame([{"Status": icon[c.status] + " " + c.status, "Check": c.name, "Detail": c.detail} for c in checks]), hide_index=True, width="stretch")
+        st.dataframe(pd.DataFrame([{"Status": c.status, "Check": c.name, "Detail": c.detail} for c in checks]), hide_index=True, width="stretch")
         st.caption("DRIFT means the publisher changed a file or page since the snapshot: a new vintage to review, not an error.")
 
 with tab_refused:
