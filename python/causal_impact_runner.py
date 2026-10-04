@@ -54,8 +54,12 @@ class CausalResult:
         return asdict(self)
 
 
-def load_holdout(path: Path = HOLDOUT_CSV) -> pd.DataFrame:
-    """Load the raw holdout CSV with parsed dates."""
+def load_holdout(path: "Path | pd.DataFrame" = HOLDOUT_CSV) -> pd.DataFrame:
+    """Load the raw holdout CSV (or accept a DataFrame) with parsed dates."""
+    if isinstance(path, pd.DataFrame):
+        df = path.copy()
+        df["date"] = pd.to_datetime(df["date"])
+        return df
     if not Path(path).exists():
         raise FileNotFoundError(f"Holdout file not found: {path}")
     df = pd.read_csv(path, parse_dates=["date"])
@@ -127,7 +131,7 @@ def estimate_campaign(df: pd.DataFrame, campaign_id: str,
     )
 
 
-def run_all(path: Path = HOLDOUT_CSV, pre_days: int = PRE_PERIOD_DAYS) -> pd.DataFrame:
+def run_all(path: "Path | pd.DataFrame" = HOLDOUT_CSV, pre_days: int = PRE_PERIOD_DAYS) -> pd.DataFrame:
     """Estimate every campaign in the holdout file and return a results table."""
     df = load_holdout(path)
     rows: List[Dict[str, object]] = [estimate_campaign(df, c, pre_days).to_dict()

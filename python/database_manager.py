@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Mapping
 
 import duckdb
 import pandas as pd
@@ -46,8 +46,11 @@ class DatabaseManager:
     """Builds and queries the MMGE warehouse in an in-memory DuckDB session."""
 
     def __init__(self, data_dir: Path = DATA_DIR, sql_dir: Path = SQL_DIR,
-                 output_dir: Path = OUTPUT_DIR, settings: Optional[PolicySettings] = None) -> None:
+                 output_dir: Path = OUTPUT_DIR, settings: Optional[PolicySettings] = None,
+                 frames: Optional[Mapping[str, pd.DataFrame]] = None) -> None:
+        """``frames`` (table name -> DataFrame) loads uploaded data instead of CSV files."""
         self.settings = settings or PolicySettings()
+        self.frames = dict(frames) if frames else None
         self.data_dir = Path(data_dir)
         self.sql_dir = Path(sql_dir)
         self.output_dir = Path(output_dir)
@@ -108,6 +111,19 @@ class DatabaseManager:
                 self.con.execute(stmt)
 
     def _load_raw_tables(self) -> None:
+        if self.frames is not None:
+            for table in RAW_TABLES:
+                if table not in self.frames:
+                    raise ValueError(f"Missing source table: {table}")
+                cols = [r[0] for r in self.con.execute(f"DESCRIBE {table}").fetchall()]
+                df = self.frames[table]
+                absent = [c for c in cols if c not in df.columns]
+                if absent:
+                    raise ValueError(f"{table} is missing columns {absent}")
+                self.con.register("_incoming", df[cols])
+                self.con.execute(f"INSERT INTO {table} ({', '.join(cols)}) SELECT {', '.join(cols)} FROM _incoming")
+                self.con.unregister("_incoming")
+            return
         for table in RAW_TABLES:
             csv_path = self.data_dir / f"{table}.csv"
             if not csv_path.exists():

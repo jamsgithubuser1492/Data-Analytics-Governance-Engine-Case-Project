@@ -189,7 +189,7 @@ def run_audit(mgr: Optional[DatabaseManager] = None, settings: Optional[PolicySe
     mgr = mgr or DatabaseManager(settings=settings).build()
     recon = mgr.view("ANALYTICS_MEASUREMENT_RECONCILIATION")
     bench = mgr.view("BUSINESS_BENCHMARKS").set_index("channel")
-    causal = run_all(mgr.data_dir / "RAW_HOLDOUT_DATA.csv", settings.pre_period_days).set_index("campaign_id")
+    causal = run_all(mgr.view("RAW_HOLDOUT_DATA"), settings.pre_period_days).set_index("campaign_id")
     test_spend = mgr.view_query("""SELECT campaign_id, SUM(platform_spend) AS s FROM STG_UNIFIED_MEASUREMENT
         WHERE date >= (SELECT MIN(date) FROM RAW_HOLDOUT_DATA WHERE treatment_flag = 1)
         GROUP BY campaign_id""").set_index("campaign_id")["s"].to_dict()

@@ -1,0 +1,401 @@
+"""Run store: workspaces, immutable runs, inbox, audit log, settings and mapping profiles.
+
+Metadata lives in a SQL database; run artifacts (Parquet) live in an artifact
+storage. ``LocalRunStore`` (SQLite WAL plus a local folder) is the default.
+``PostgresRunStore`` is the same code against Postgres; it needs a connection
+factory and has not been exercised against a live database yet.
+
+Design rules: every query is scoped by workspace id; runs are written once and
+committed atomically; the idempotent run key makes resubmission a no-op.
+"""
+from __future__ import annotations
+
+import json
+import os
+import shutil
+import sqlite3
+import threading
+import uuid
+from abc import ABC, abstractmethod
+from contextlib import contextmanager
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple
+
+import duckdb
+import pandas as pd
+
+from config import PolicySettings
+from pipeline import RunResult
+
+QUEUED, RUNNING, SUCCEEDED, FAILED = "queued", "running", "succeeded", "failed"
+INBOX_NEW, INBOX_REVIEWED, INBOX_APPROVED = "new", "reviewed", "approved"
+INBOX_EXECUTED, INBOX_DISMISSED, INBOX_SUPERSEDED = "executed", "dismissed", "superseded"
+TRANSITIONS = {
+    INBOX_NEW: {INBOX_REVIEWED, INBOX_APPROVED, INBOX_DISMISSED},
+    INBOX_REVIEWED: {INBOX_APPROVED, INBOX_DISMISSED},
+    INBOX_APPROVED: {INBOX_EXECUTED, INBOX_DISMISSED},
+}  # executed, dismissed and superseded are terminal; execution always requires prior approval
+
+
+class StoreError(RuntimeError):
+    """Raised for invalid store operations (unknown run, bad transition, cross workspace access)."""
+
+
+def _now() -> str:
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+def _uid() -> str:
+    return uuid.uuid4().hex[:16]
+
+
+# ----------------------------------------------------------------- artifact storage
+class ArtifactStorage(ABC):
+    """Where Parquet run artifacts live (local folder now; object storage later)."""
+
+    @abstractmethod
+    def commit_run(self, workspace_id: str, run_id: str, tables: Dict[str, pd.DataFrame],
+                   json_docs: Dict[str, Any]) -> List[str]:
+        """Write all artifacts atomically; return the table names written."""
+
+    @abstractmethod
+    def read_table(self, workspace_id: str, run_id: str, name: str) -> pd.DataFrame: ...
+
+    @abstractmethod
+    def read_json(self, workspace_id: str, run_id: str, name: str) -> Any: ...
+
+
+class LocalArtifactStorage(ArtifactStorage):
+    def __init__(self, root: Path) -> None:
+        self.root = Path(root)
+        self.root.mkdir(parents=True, exist_ok=True)
+
+    def _run_dir(self, workspace_id: str, run_id: str) -> Path:
+        return self.root / "workspaces" / workspace_id / "runs" / run_id
+
+    def commit_run(self, workspace_id, run_id, tables, json_docs):
+        final = self._run_dir(workspace_id, run_id)
+        tmp = final.parent / f".tmp-{run_id}-{_uid()}"
+        tmp.mkdir(parents=True, exist_ok=True)
+        try:
+            con = duckdb.connect(":memory:")
+            for name, df in tables.items():
+                con.register("_t", df)
+                con.execute(f"COPY _t TO '{(tmp / (name + '.parquet')).as_posix()}' (FORMAT PARQUET)")
+                con.unregister("_t")
+            con.close()
+            for name, doc in json_docs.items():
+                (tmp / f"{name}.json").write_text(json.dumps(doc, indent=2, default=str), encoding="utf-8")
+            if final.exists():
+                shutil.rmtree(final)
+            os.replace(tmp, final)  # atomic commit
+        except Exception:
+            shutil.rmtree(tmp, ignore_errors=True)
+            raise
+        return sorted(tables)
+
+    def read_table(self, workspace_id, run_id, name):
+        path = self._run_dir(workspace_id, run_id) / f"{name}.parquet"
+        if not path.exists():
+            raise StoreError(f"No table {name} for run {run_id}")
+        return duckdb.connect(":memory:").execute(f"SELECT * FROM read_parquet('{path.as_posix()}')").fetchdf()
+
+    def read_json(self, workspace_id, run_id, name):
+        path = self._run_dir(workspace_id, run_id) / f"{name}.json"
+        if not path.exists():
+            raise StoreError(f"No document {name} for run {run_id}")
+        return json.loads(path.read_text(encoding="utf-8"))
+
+
+# ----------------------------------------------------------------- SQL run store
+SCHEMA = [
+    "CREATE TABLE IF NOT EXISTS workspaces (id TEXT PRIMARY KEY, name TEXT UNIQUE, created_at TEXT)",
+    """CREATE TABLE IF NOT EXISTS workspace_config (workspace_id TEXT, version INTEGER, settings_json TEXT,
+       declarations_json TEXT, created_at TEXT, PRIMARY KEY (workspace_id, version))""",
+    """CREATE TABLE IF NOT EXISTS mapping_profiles (workspace_id TEXT, name TEXT, version INTEGER,
+       mapping_json TEXT, created_at TEXT, PRIMARY KEY (workspace_id, name, version))""",
+    """CREATE TABLE IF NOT EXISTS runs (id TEXT PRIMARY KEY, workspace_id TEXT, run_key TEXT, label TEXT, status TEXT,
+       error TEXT, settings_fingerprint TEXT, settings_json TEXT, declarations_json TEXT, input_hashes_json TEXT,
+       validation_json TEXT, code_version TEXT, manifest_json TEXT, created_at TEXT, finished_at TEXT,
+       UNIQUE (workspace_id, run_key))""",
+    """CREATE TABLE IF NOT EXISTS inbox (id TEXT PRIMARY KEY, workspace_id TEXT, run_id TEXT, dedupe_key TEXT,
+       agent_id TEXT, campaign_id TEXT, severity TEXT, packet_json TEXT, status TEXT, created_at TEXT,
+       updated_at TEXT, UNIQUE (workspace_id, dedupe_key))""",
+    """CREATE TABLE IF NOT EXISTS audit_events (id TEXT PRIMARY KEY, workspace_id TEXT, run_id TEXT, item_id TEXT,
+       event TEXT, actor TEXT, detail_json TEXT, created_at TEXT)""",
+]
+
+
+class SqlRunStore:
+    """Run store over a DB-API connection factory (SQLite or Postgres)."""
+    placeholder = "?"
+
+    def __init__(self, connect: Callable[[], Any], artifacts: ArtifactStorage) -> None:
+        self._connect = connect
+        self.artifacts = artifacts
+        self._lock = threading.Lock()
+        with self._tx() as cur:
+            for stmt in SCHEMA:
+                cur.execute(stmt)
+
+    # -- plumbing
+    def _sql(self, sql: str) -> str:
+        return sql.replace("?", self.placeholder) if self.placeholder != "?" else sql
+
+    @contextmanager
+    def _tx(self) -> Iterator[Any]:
+        conn = self._connect()
+        try:
+            cur = conn.cursor()
+            yield _Cursor(cur, self)
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
+
+    # -- workspaces and config
+    def get_or_create_workspace(self, name: str) -> str:
+        with self._tx() as c:
+            row = c.one("SELECT id FROM workspaces WHERE name = ?", (name,))
+            if row:
+                return row[0]
+            wid = _uid()
+            try:
+                c.run("INSERT INTO workspaces (id, name, created_at) VALUES (?, ?, ?)", (wid, name, _now()))
+            except Exception:  # lost a creation race
+                row = c.one("SELECT id FROM workspaces WHERE name = ?", (name,))
+                if row:
+                    return row[0]
+                raise
+            return wid
+
+    def save_workspace_config(self, workspace_id: str, settings: PolicySettings,
+                              declarations: Dict[str, Any]) -> int:
+        return _retry_on_conflict(lambda: self._save_workspace_config(workspace_id, settings, declarations))
+
+    def _save_workspace_config(self, workspace_id: str, settings: PolicySettings,
+                               declarations: Dict[str, Any]) -> int:
+        with self._tx() as c:
+            row = c.one("SELECT MAX(version) FROM workspace_config WHERE workspace_id = ?", (workspace_id,))
+            version = (row[0] or 0) + 1
+            c.run("INSERT INTO workspace_config VALUES (?, ?, ?, ?, ?)",
+                  (workspace_id, version, json.dumps(settings.to_dict()), json.dumps(declarations), _now()))
+            c.run("INSERT INTO audit_events VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                  (_uid(), workspace_id, None, None, "config_saved", "system", json.dumps({"version": version}), _now()))
+        return version
+
+    def latest_workspace_config(self, workspace_id: str) -> Tuple[PolicySettings, Dict[str, Any], int]:
+        with self._tx() as c:
+            row = c.one("""SELECT settings_json, declarations_json, version FROM workspace_config
+                           WHERE workspace_id = ? ORDER BY version DESC LIMIT 1""", (workspace_id,))
+        if not row:
+            return PolicySettings(), {}, 0
+        return PolicySettings(**json.loads(row[0])), json.loads(row[1]), int(row[2])
+
+    def save_mapping_profile(self, workspace_id: str, name: str, mapping: Dict[str, Any]) -> int:
+        return _retry_on_conflict(lambda: self._save_mapping_profile(workspace_id, name, mapping))
+
+    def _save_mapping_profile(self, workspace_id: str, name: str, mapping: Dict[str, Any]) -> int:
+        with self._tx() as c:
+            row = c.one("SELECT MAX(version) FROM mapping_profiles WHERE workspace_id = ? AND name = ?", (workspace_id, name))
+            version = (row[0] or 0) + 1
+            c.run("INSERT INTO mapping_profiles VALUES (?, ?, ?, ?, ?)",
+                  (workspace_id, name, version, json.dumps(mapping), _now()))
+        return version
+
+    def get_mapping_profile(self, workspace_id: str, name: str) -> Optional[Dict[str, Any]]:
+        with self._tx() as c:
+            row = c.one("""SELECT mapping_json, version FROM mapping_profiles WHERE workspace_id = ? AND name = ?
+                           ORDER BY version DESC LIMIT 1""", (workspace_id, name))
+        return None if not row else {"mapping": json.loads(row[0]), "version": int(row[1])}
+
+    # -- runs
+    def get_or_create_run(self, workspace_id: str, key: str, settings: PolicySettings, declarations: Dict[str, Any],
+                          input_hashes: Dict[str, str], validation: Dict[str, Any], code_version: str,
+                          label: str = "") -> Tuple[str, bool]:
+        """Return (run_id, created). Identical inputs reuse the existing run; failed runs are retried.
+
+        Safe under concurrent submissions: a lost insert race re-reads the winner's row.
+        """
+        return _retry_on_conflict(lambda: self._get_or_create_run(
+            workspace_id, key, settings, declarations, input_hashes, validation, code_version, label))
+
+    def _get_or_create_run(self, workspace_id, key, settings, declarations, input_hashes, validation,
+                           code_version, label):
+        with self._tx() as c:
+            row = c.one("SELECT id, status FROM runs WHERE workspace_id = ? AND run_key = ?", (workspace_id, key))
+            if row:
+                if row[1] == FAILED:
+                    c.run("UPDATE runs SET status = ?, error = NULL, finished_at = NULL WHERE id = ?", (QUEUED, row[0]))
+                    return row[0], True
+                return row[0], False
+            rid = _uid()
+            c.run("""INSERT INTO runs (id, workspace_id, run_key, label, status, settings_fingerprint, settings_json,
+                     declarations_json, input_hashes_json, validation_json, code_version, created_at)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                  (rid, workspace_id, key, label, QUEUED, settings.fingerprint(), json.dumps(settings.to_dict()),
+                   json.dumps(declarations), json.dumps(input_hashes), json.dumps(validation, default=str),
+                   code_version, _now()))
+            c.run("INSERT INTO audit_events VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                  (_uid(), workspace_id, rid, None, "run_created", "system", "{}", _now()))
+        return rid, True
+
+    def set_status(self, workspace_id: str, run_id: str, status: str, error: Optional[str] = None) -> None:
+        with self._tx() as c:
+            finished = _now() if status in (SUCCEEDED, FAILED) else None
+            n = c.run("UPDATE runs SET status = ?, error = ?, finished_at = ? WHERE id = ? AND workspace_id = ?",
+                      (status, error, finished, run_id, workspace_id))
+            if n == 0:
+                raise StoreError(f"Run {run_id} not found in this workspace")
+
+    def get_run(self, workspace_id: str, run_id: str) -> Dict[str, Any]:
+        with self._tx() as c:
+            rows = c.all("SELECT * FROM runs WHERE id = ? AND workspace_id = ?", (run_id, workspace_id))
+            cols = c.columns
+        if not rows:
+            raise StoreError(f"Run {run_id} not found in this workspace")
+        return self._run_dict(cols, rows[0])
+
+    @staticmethod
+    def _run_dict(cols: List[str], row: Any) -> Dict[str, Any]:
+        d = dict(zip(cols, row))
+        for k in ("settings_json", "declarations_json", "input_hashes_json", "validation_json", "manifest_json"):
+            d[k[:-5]] = json.loads(d[k]) if d.get(k) else None
+            d.pop(k, None)
+        return d
+
+    def list_runs(self, workspace_id: str) -> List[Dict[str, Any]]:
+        with self._tx() as c:
+            rows = c.all("SELECT * FROM runs WHERE workspace_id = ? ORDER BY created_at DESC, id", (workspace_id,))
+            cols = c.columns
+        return [self._run_dict(cols, r) for r in rows]
+
+    def save_result(self, workspace_id: str, run_id: str, result: RunResult) -> None:
+        """Commit artifacts atomically, then record the manifest, inbox items and SUCCEEDED status."""
+        self.get_run(workspace_id, run_id)  # workspace check
+        names = self.artifacts.commit_run(workspace_id, run_id, result.tables,
+                                          {"audit": result.audit, "packets": result.packets})
+        with self._tx() as c:
+            c.run("UPDATE runs SET manifest_json = ? WHERE id = ? AND workspace_id = ?",
+                  (json.dumps(names), run_id, workspace_id))
+            for p in result.packets:
+                dedupe = f"{p['agent_id']}|{p['campaign_id']}|{run_id}"
+                if c.one("SELECT 1 FROM inbox WHERE workspace_id = ? AND dedupe_key = ?", (workspace_id, dedupe)):
+                    continue
+                # a newer run's packet supersedes older open ones for the same agent and campaign
+                c.run("""UPDATE inbox SET status = ?, updated_at = ? WHERE workspace_id = ? AND agent_id = ? AND
+                         campaign_id = ? AND status IN (?, ?) AND run_id <> ?""",
+                      (INBOX_SUPERSEDED, _now(), workspace_id, p["agent_id"], p["campaign_id"], INBOX_NEW, INBOX_REVIEWED, run_id))
+                c.run("INSERT INTO inbox VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                      (_uid(), workspace_id, run_id, dedupe, p["agent_id"], p["campaign_id"], p["severity"],
+                       json.dumps(p, default=str), INBOX_NEW, _now(), _now()))
+        self.set_status(workspace_id, run_id, SUCCEEDED)
+
+    def load_table(self, workspace_id: str, run_id: str, name: str) -> pd.DataFrame:
+        self.get_run(workspace_id, run_id)
+        return self.artifacts.read_table(workspace_id, run_id, name)
+
+    def load_audit(self, workspace_id: str, run_id: str) -> Dict[str, Any]:
+        self.get_run(workspace_id, run_id)
+        return self.artifacts.read_json(workspace_id, run_id, "audit")
+
+    # -- inbox and audit log
+    def list_inbox(self, workspace_id: str, run_id: Optional[str] = None,
+                   status: Optional[str] = None) -> List[Dict[str, Any]]:
+        sql, args = "SELECT * FROM inbox WHERE workspace_id = ?", [workspace_id]
+        if run_id:
+            sql, args = sql + " AND run_id = ?", args + [run_id]
+        if status:
+            sql, args = sql + " AND status = ?", args + [status]
+        with self._tx() as c:
+            rows = c.all(sql + " ORDER BY created_at, id", tuple(args))
+            cols = c.columns
+        out = []
+        for r in rows:
+            d = dict(zip(cols, r))
+            d["packet"] = json.loads(d.pop("packet_json"))
+            out.append(d)
+        return out
+
+    def transition_inbox(self, workspace_id: str, item_id: str, new_status: str, actor: str, note: str = "") -> None:
+        with self._tx() as c:
+            row = c.one("SELECT status, run_id FROM inbox WHERE id = ? AND workspace_id = ?", (item_id, workspace_id))
+            if not row:
+                raise StoreError("Inbox item not found in this workspace")
+            if new_status not in TRANSITIONS.get(row[0], set()):
+                raise StoreError(f"Cannot move inbox item from {row[0]} to {new_status}")
+            c.run("UPDATE inbox SET status = ?, updated_at = ? WHERE id = ?", (new_status, _now(), item_id))
+            c.run("INSERT INTO audit_events VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                  (_uid(), workspace_id, row[1], item_id, f"inbox_{new_status}", actor, json.dumps({"note": note}), _now()))
+
+    def list_audit_events(self, workspace_id: str, run_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        sql, args = "SELECT * FROM audit_events WHERE workspace_id = ?", [workspace_id]
+        if run_id:
+            sql, args = sql + " AND run_id = ?", args + [run_id]
+        with self._tx() as c:
+            rows = c.all(sql + " ORDER BY created_at, id", tuple(args))
+            cols = c.columns
+        return [dict(zip(cols, r)) for r in rows]
+
+
+def _retry_on_conflict(fn: Callable[[], Any], attempts: int = 4) -> Any:
+    """Re-run a read-then-insert transaction when a concurrent writer wins the race."""
+    for i in range(attempts):
+        try:
+            return fn()
+        except Exception as exc:
+            if "IntegrityError" not in type(exc).__name__ and "UniqueViolation" not in type(exc).__name__ or i == attempts - 1:
+                raise
+    raise StoreError("unreachable")  # pragma: no cover
+
+
+class _Cursor:
+    """Tiny helper wrapping a DB-API cursor with placeholder translation."""
+
+    def __init__(self, cur: Any, store: SqlRunStore) -> None:
+        self.cur, self.store, self.columns = cur, store, []
+
+    def run(self, sql: str, args: tuple = ()) -> int:
+        self.cur.execute(self.store._sql(sql), args)
+        return self.cur.rowcount
+
+    def one(self, sql: str, args: tuple = ()) -> Any:
+        self.run(sql, args)
+        return self.cur.fetchone()
+
+    def all(self, sql: str, args: tuple = ()) -> List[Any]:
+        self.run(sql, args)
+        self.columns = [d[0] for d in self.cur.description]
+        return self.cur.fetchall()
+
+    def execute(self, sql: str) -> None:
+        self.cur.execute(sql)
+
+
+class LocalRunStore(SqlRunStore):
+    """SQLite (WAL) metadata plus a local artifact folder."""
+
+    def __init__(self, root: Path) -> None:
+        root = Path(root)
+        root.mkdir(parents=True, exist_ok=True)
+        db_path = root / "mmge_runs.sqlite"
+
+        def connect() -> sqlite3.Connection:
+            conn = sqlite3.connect(db_path, timeout=30)
+            conn.execute("PRAGMA journal_mode=WAL")
+            conn.execute("PRAGMA busy_timeout=30000")
+            return conn
+
+        super().__init__(connect, LocalArtifactStorage(root / "artifacts"))
+
+
+class PostgresRunStore(SqlRunStore):
+    """Same store on Postgres. Needs a connection factory (psycopg) and an ArtifactStorage
+    for object storage. NOT yet exercised against a live database."""
+    placeholder = "%s"
+
+    def __init__(self, connect: Callable[[], Any], artifacts: ArtifactStorage) -> None:
+        super().__init__(connect, artifacts)
