@@ -45,7 +45,7 @@ class StoreError(RuntimeError):
 
 
 def _now() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+    return datetime.now(timezone.utc).isoformat(timespec="microseconds")
 
 
 def _uid() -> str:
@@ -126,6 +126,10 @@ SCHEMA = [
        updated_at TEXT, UNIQUE (workspace_id, dedupe_key))""",
     """CREATE TABLE IF NOT EXISTS agent_definitions (workspace_id TEXT, agent_id TEXT, version INTEGER,
        definition_json TEXT, enabled INTEGER, actor TEXT, created_at TEXT, PRIMARY KEY (workspace_id, agent_id, version))""",
+    """CREATE TABLE IF NOT EXISTS memos (id TEXT PRIMARY KEY, workspace_id TEXT, run_id TEXT, item_id TEXT, writer TEXT,
+       model TEXT, ai_drafted INTEGER, status TEXT, facts_json TEXT, facts_text_json TEXT, text_cited TEXT, text_clean TEXT,
+       verification_json TEXT, attempts_json TEXT, fallback_reason TEXT, prompt_hash TEXT, created_at TEXT, updated_at TEXT,
+       approved_by TEXT, approved_at TEXT)""",
     """CREATE TABLE IF NOT EXISTS audit_events (id TEXT PRIMARY KEY, workspace_id TEXT, run_id TEXT, item_id TEXT,
        event TEXT, actor TEXT, detail_json TEXT, created_at TEXT)""",
 ]
@@ -353,6 +357,88 @@ class SqlRunStore:
                 return None, set()
             rows = c.all("SELECT agent_id, campaign_id FROM inbox WHERE workspace_id = ? AND run_id = ?", (workspace_id, row[0]))
         return row[0], {(r[0], r[1]) for r in rows}
+
+    # -- memos
+    MEMO_TRANSITIONS = {"draft": {"approved"}, "approved": {"exported"}, "exported": {"exported"}}
+
+    def create_memo(self, workspace_id: str, rec: Dict[str, Any], actor: str = "system") -> str:
+        with self._tx() as c:
+            if not c.one("SELECT 1 FROM runs WHERE id = ? AND workspace_id = ?", (rec["run_id"], workspace_id)):
+                raise StoreError("Run not found in this workspace")
+            if not c.one("SELECT 1 FROM inbox WHERE id = ? AND workspace_id = ?", (rec["item_id"], workspace_id)):
+                raise StoreError("Inbox item not found in this workspace")
+            mid, now = _uid(), _now()
+            c.run("""INSERT INTO memos (id, workspace_id, run_id, item_id, writer, model, ai_drafted, status, facts_json, facts_text_json,
+                     text_cited, text_clean, verification_json, attempts_json, fallback_reason, prompt_hash, created_at, updated_at)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                  (mid, workspace_id, rec["run_id"], rec["item_id"], rec["writer"], rec.get("model"), 1 if rec["ai_drafted"] else 0, "draft",
+                   json.dumps(rec["facts"]), json.dumps(rec["facts_text"]), rec["text_cited"], rec["text_clean"],
+                   json.dumps(rec["verification"]), json.dumps(rec.get("attempts", []), default=str), rec.get("fallback_reason"),
+                   rec.get("prompt_hash"), now, now))
+            c.run("INSERT INTO audit_events VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                  (_uid(), workspace_id, rec["run_id"], mid, "memo_drafted", actor,
+                   json.dumps({"writer": rec["writer"], "verified": rec["verification"]["ok"], "fallback": rec.get("fallback_reason")}), now))
+        return mid
+
+    @staticmethod
+    def _memo_dict(cols: List[str], row: Any) -> Dict[str, Any]:
+        d = dict(zip(cols, row))
+        for k, name in (("facts_json", "facts"), ("facts_text_json", "facts_text"), ("verification_json", "verification"), ("attempts_json", "attempts")):
+            d[name] = json.loads(d.pop(k) or "null")
+        d["ai_drafted"] = bool(d["ai_drafted"])
+        return d
+
+    def get_memo(self, workspace_id: str, memo_id: str) -> Dict[str, Any]:
+        with self._tx() as c:
+            rows = c.all("SELECT * FROM memos WHERE id = ? AND workspace_id = ?", (memo_id, workspace_id))
+            cols = c.columns
+        if not rows:
+            raise StoreError("Memo not found in this workspace")
+        return self._memo_dict(cols, rows[0])
+
+    def list_memos(self, workspace_id: str, item_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        sql, args = "SELECT * FROM memos WHERE workspace_id = ?", [workspace_id]
+        if item_id:
+            sql, args = sql + " AND item_id = ?", args + [item_id]
+        with self._tx() as c:
+            rows = c.all(sql + " ORDER BY created_at DESC, id", tuple(args))
+            cols = c.columns
+        return [self._memo_dict(cols, r) for r in rows]
+
+    def update_memo_text(self, workspace_id: str, memo_id: str, cited: str, clean: str, verification: Dict[str, Any], actor: str) -> None:
+        with self._tx() as c:
+            row = c.one("SELECT status, run_id FROM memos WHERE id = ? AND workspace_id = ?", (memo_id, workspace_id))
+            if not row:
+                raise StoreError("Memo not found in this workspace")
+            if row[0] != "draft":
+                raise StoreError("Only draft memos can be edited")
+            c.run("UPDATE memos SET text_cited = ?, text_clean = ?, verification_json = ?, updated_at = ? WHERE id = ?",
+                  (cited, clean, json.dumps(verification), _now(), memo_id))
+            c.run("INSERT INTO audit_events VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                  (_uid(), workspace_id, row[1], memo_id, "memo_edited", actor, "{}", _now()))
+
+    def transition_memo(self, workspace_id: str, memo_id: str, new_status: str, actor: str) -> None:
+        with self._tx() as c:
+            row = c.one("SELECT status, run_id, verification_json FROM memos WHERE id = ? AND workspace_id = ?", (memo_id, workspace_id))
+            if not row:
+                raise StoreError("Memo not found in this workspace")
+            if new_status not in self.MEMO_TRANSITIONS.get(row[0], set()):
+                raise StoreError(f"Cannot move a memo from {row[0]} to {new_status}")
+            if new_status == "approved" and not json.loads(row[2])["ok"]:
+                raise StoreError("A memo that failed verification cannot be approved")
+            now = _now()
+            if new_status == "approved":
+                c.run("UPDATE memos SET status = ?, approved_by = ?, approved_at = ?, updated_at = ? WHERE id = ?", (new_status, actor, now, now, memo_id))
+            else:
+                c.run("UPDATE memos SET status = ?, updated_at = ? WHERE id = ?", (new_status, now, memo_id))
+            c.run("INSERT INTO audit_events VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                  (_uid(), workspace_id, row[1], memo_id, f"memo_{new_status}", actor, "{}", now))
+
+    def count_ai_memos_today(self, workspace_id: str) -> int:
+        today = _now()[:10]
+        with self._tx() as c:
+            row = c.one("SELECT COUNT(*) FROM memos WHERE workspace_id = ? AND ai_drafted = 1 AND created_at LIKE ?", (workspace_id, today + "%"))
+        return int(row[0])
 
     # -- inbox and audit log
     def list_inbox(self, workspace_id: str, run_id: Optional[str] = None,

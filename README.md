@@ -116,6 +116,14 @@ Backend modules: `python/pipeline.py` (`run_pipeline`), `python/run_store.py` (S
 
 Run data is stored under `var/` (set `MMGE_DATA_DIR` to change it). `PostgresRunStore` is the same code on Postgres but has **not** been exercised against a live database; real object storage, a login provider (Streamlit `st.login`) and Slack or email delivery are deployment steps still to do.
 
+## Agent builder and fact checked memos (Phase 4)
+
+**Agents are data, not code** (`app/pages/4_Agents.py`). A definition has a trigger (conditions on whitelisted metrics), persona, severity, an allowed action, a minimum trust tier, a spend floor, an optional deadband, value-add formulas and a message template. Formulas run in `python/safe_expr.py`, an AST allowlist evaluator (numbers, known field names, arithmetic, `min max abs round div`; no attribute access, imports or other calls). The three original agents ship as presets (`python/agent_presets.py`) and are proven identical to the old hardcoded orchestrator at every boundary, in both headline views. Money actions (cut or scale budget) can never fire below the Directional tier. Opposing money actions on the same campaign are resolved by priority. Each save is a new version, stored per workspace and stamped on every packet and run. The builder previews a rule on a real run and shows a plus or minus 10 percent sensitivity table that flags cliff edge campaigns.
+
+**Memos can only contain numbers the code produced** (`app/pages/5_Memos.py`). Every number a memo may use is a numbered fact (`python/memo_facts.py`). The verifier (`python/memo_verify.py`) rejects any number that does not match, within its displayed precision and unit, a fact cited in the same sentence, plus uncited numbers, missing citations, links, code, markup and instruction-like text. Writers: a deterministic template writer, and a Claude writer (`python/memo_writer.py`) that is only enabled when `ANTHROPIC_API_KEY` is set (model from `MMGE_MEMO_MODEL`, default `claude-opus-5-5`; no tools, no sampling parameters). An AI draft gets one retry with the verifier's feedback, then falls back to the template; refusals, API errors and the daily cap (50 per workspace) also fall back. A memo moves draft, approved, exported; export needs a human approval, edits are re-verified, and every step is in the audit log. Set `MMGE_MEMO_WRITER=template` to disable AI drafting.
+
+Not yet exercised: the live Claude call (tests use a fake client with the same interface).
+
 ## Caveats
 
 * The synthetic data is deliberately clean: control equals treatment before launch (zero pre-period variance) and the lift is exactly 1.20x. The causal runner applies a Poisson noise floor so intervals stay honest.

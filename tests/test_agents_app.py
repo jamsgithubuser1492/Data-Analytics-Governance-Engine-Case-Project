@@ -105,3 +105,36 @@ def test_5_dashboard_shows_custom_agent_packets() -> None:
     at = page("app.py")
     clean(at)
     assert any("Review" in m.value for m in at.markdown)
+
+
+# ------------------------------------------------------------------ memos UI
+def test_6_dashboard_draft_memo_and_memos_page_flow() -> None:
+    import common
+    store, (actor, ws) = common.get_store(), common.identity()
+    app = page("app.py")
+    next(b for b in app.button if b.label == "Draft memo").click().run(timeout=T)
+    clean(app)
+    assert store.list_memos(ws)
+    at = page("pages/5_Memos.py")
+    clean(at)
+    assert any("Template drafting only" in i.value for i in at.info)
+    next(b for b in at.button if b.label == "Draft memo").click().run(timeout=T)
+    clean(at)
+    metrics = {m.label: m.value for m in at.metric}
+    assert metrics["Verification"] == "Passed" and metrics["Writer"] == "Template" and metrics["Status"] == "draft"
+    next(b for b in at.button if b.label == "Approve").click().run(timeout=T)
+    clean(at)
+    assert any("Approved by" in s.value for s in at.success)
+    assert any(m["status"] == "approved" for m in store.list_memos(ws))
+    assert {"memo_drafted", "memo_approved"} <= {e["event"] for e in store.list_audit_events(ws)}
+
+
+def test_7_memo_edit_that_adds_a_number_is_rejected() -> None:
+    at = page("pages/5_Memos.py")
+    next(b for b in at.button if b.label == "Draft memo").click().run(timeout=T)
+    clean(at)
+    area = next(a for a in at.text_area if a.key.startswith("edit_"))
+    area.set_value("This will return 10x for sure.").run(timeout=T)
+    next(b for b in at.button if b.label == "Save edit").click().run(timeout=T)
+    clean(at)
+    assert any("no fact citation" in e.value for e in at.error), [e.value for e in at.error]

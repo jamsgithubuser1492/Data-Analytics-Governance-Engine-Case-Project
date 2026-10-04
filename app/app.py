@@ -152,6 +152,11 @@ for item in visible:
             if item["status"] in ("new", "reviewed", "approved") and b2.button("Dismiss", key=f"dm_{item['id']}"):
                 store.transition_inbox(ws, item["id"], "dismissed", actor)
                 st.rerun()
+            if b3.button("Draft memo", key=f"mm_{item['id']}"):
+                from memo_service import draft_memo, facts_for_item
+                from memo_writer import configured_writer
+                memo = draft_memo(store, ws, item, facts_for_item(store, ws, run_id, item), run_id, configured_writer(), actor)
+                st.toast("Memo drafted and verified. Open the Memos page to review and approve it." + (" (AI draft replaced by template)" if memo["fallback_reason"] else ""), icon="📝")
         except StoreError as exc:
             st.error(str(exc))
 st.divider()

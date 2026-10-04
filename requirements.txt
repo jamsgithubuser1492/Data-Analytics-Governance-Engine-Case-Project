@@ -6,3 +6,4 @@ plotly
 statsmodels
 pytest
 openpyxl
+anthropic
