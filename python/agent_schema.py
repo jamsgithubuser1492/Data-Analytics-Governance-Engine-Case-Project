@@ -38,7 +38,7 @@ NUMERIC_BOUNDS: Dict[str, Tuple[float, float]] = {
     "total_platform_conversions": (0, 1e9), "total_mta_conversions": (0, 1e9), "total_holdout_conversions": (0, 1e9),
     "total_platform_revenue": (0, 1e10), "total_mta_revenue": (0, 1e10), "total_holdout_revenue": (-1e10, 1e10),
     "strict_incremental_revenue": (-1e10, 1e10), "has_holdout_coverage": (0, 1), "has_mta_coverage": (0, 1),
-    "divergence_warning": (0, 1),
+    "divergence_warning": (0, 1), "margin": (0, 1), "breakeven_iroas": (0, 1000), "profit_per_dollar": (-1000, 1000),
 }
 NUMERIC_METRICS = sorted(NUMERIC_BOUNDS)
 STRING_METRICS = ["tier", "channel", "campaign_id"]

@@ -85,6 +85,10 @@ def build_factset(packet: Dict[str, Any], row: Dict[str, Any], headline_label: s
     add("iroas", f"Measured incremental return ({headline_label})", row.get("iroas"), "multiple")
     add("inflation_ratio", "Platform claimed conversions divided by holdout conversions", row.get("inflation_ratio"), "multiple")
     add("trust_score", "Trust score out of 100", row.get("trust_score"), "number")
+    if _num(row.get("margin")) is not None:
+        add("margin", "Margin used for breakeven", _num(row["margin"]) * 100, "pct")
+        add("breakeven_iroas", "Breakeven iROAS at that margin", row.get("breakeven_iroas"), "multiple")
+        add("profit_per_dollar", "Profit per ad dollar at that margin", row.get("profit_per_dollar"), "usd")
     for m in packet.get("value_add_metrics", {}):
         raw = packet.get("raw_metrics", {}).get(m)
         kind = _kind_from_display(packet["value_add_metrics"][m])

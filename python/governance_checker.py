@@ -24,8 +24,8 @@ from config import TIER_NOT_DECISION_GRADE, PolicySettings  # noqa: E402
 from database_manager import DatabaseManager, OUTPUT_DIR, ROOT  # noqa: E402
 from strict_lift import divergence_warning, headline_iroas, strict_lift_row  # noqa: E402
 
-PASS, WARN, FAIL = "PASS", "WARN", "FAIL"
-SCORE = {PASS: 1.0, WARN: 0.5, FAIL: 0.0}
+PASS, WARN, FAIL, NA = "PASS", "WARN", "FAIL", "NA"
+SCORE = {PASS: 1.0, WARN: 0.5, FAIL: 0.0}  # NA (not applicable) checks are left out of the trust score
 MIN_WINDOW_DAYS = 28
 
 
@@ -88,7 +88,26 @@ def check_ci_width(c: pd.Series) -> CheckResult:
                        f"95% CI [{c['ci_lower']:.0f}, {c['ci_upper']:.0f}] around {c['point_estimate']:.0f} incremental conversions.")
 
 
-def check_benchmarks(r: pd.Series, b: pd.Series) -> CheckResult:
+def is_illustrative_benchmarks(frame: pd.DataFrame) -> bool:
+    """True when the benchmark table is exactly the placeholder table shipped with the project spec (unsourced)."""
+    import numpy as np
+    demo_path = ROOT / "data" / "BUSINESS_BENCHMARKS.csv"
+    if not demo_path.exists():
+        return False
+    demo = pd.read_csv(demo_path).sort_values("channel").reset_index(drop=True)
+    if not set(demo.columns) <= set(frame.columns):
+        return False
+    cur = frame[list(demo.columns)].sort_values("channel").reset_index(drop=True)
+    if cur.shape != demo.shape or not (cur["channel"].values == demo["channel"].values).all():
+        return False
+    return bool(np.allclose(cur.drop(columns="channel").to_numpy(float), demo.drop(columns="channel").to_numpy(float), atol=1e-6))
+
+
+def check_benchmarks(r: pd.Series, b: pd.Series, illustrative: bool = False) -> CheckResult:
+    if illustrative:
+        return CheckResult(4, "Business benchmark range adherence", NA, None, "verified benchmark required",
+                           "The benchmark ranges in this table are illustrative placeholders from the project spec, not verified sources, so no comparison was made. "
+                           "Upload your own benchmark ranges to enable this check. The Benchmarks page lists what has been verified and why most channel ROAS ranges are excluded.")
     iroas = float(r["incremental_roas"])
     lo, hi = float(b["expected_roas_min"]), float(b["expected_roas_max"])
     inside = lo <= iroas <= hi
@@ -98,12 +117,18 @@ def check_benchmarks(r: pd.Series, b: pd.Series) -> CheckResult:
                        f"iROAS {iroas:.2f}x is {where} the {r['channel']} expected ROAS band.")
 
 
-def check_seasonality(c: pd.Series) -> CheckResult:
-    drift = abs(float(c["control_drift_pct"]))
-    status = PASS if drift <= 10 else (WARN if drift <= 20 else FAIL)
-    return CheckResult(5, "Seasonality contamination check", status, round(float(c["control_drift_pct"]), 1),
-                       "|control drift pre -> post| <= 10%",
-                       f"Unexposed control geo moved {c['control_drift_pct']:+.1f}% between periods.")
+def check_seasonality(c: pd.Series, expected_drift_pct: Optional[float] = None) -> CheckResult:
+    observed = float(c["control_drift_pct"])
+    if expected_drift_pct is None:
+        drift = abs(observed)
+        status = PASS if drift <= 10 else (WARN if drift <= 20 else FAIL)
+        return CheckResult(5, "Seasonality contamination check", status, round(observed, 1), "|control drift pre -> post| <= 10%",
+                           f"Unexposed control geo moved {observed:+.1f}% between periods.")
+    adjusted = observed - expected_drift_pct
+    status = PASS if abs(adjusted) <= 10 else (WARN if abs(adjusted) <= 20 else FAIL)
+    return CheckResult(5, "Seasonality contamination check", status, round(adjusted, 1), "|control drift minus expected U.S. retail seasonal drift| <= 10 points",
+                       f"Unexposed control geo moved {observed:+.1f}%; U.S. retail seasonality alone would move it about {expected_drift_pct:+.1f}% (Census via FRED, 2021 to 2025), "
+                       f"leaving {adjusted:+.1f} points unexplained.")
 
 
 def check_directional_alignment(r: pd.Series) -> CheckResult:
@@ -159,16 +184,18 @@ def _num(v: float) -> Optional[float]:
 # ------------------------------------------------------------------------- orchestration
 def audit_campaign(recon_row: pd.Series, causal_row: pd.Series, bench_row: pd.Series,
                    settings: Optional[PolicySettings] = None,
-                   test_period_spend: Optional[float] = None) -> CampaignAudit:
+                   test_period_spend: Optional[float] = None, illustrative_benchmarks: bool = False,
+                   expected_drift_pct: Optional[float] = None) -> CampaignAudit:
     """Run the 8-point audit for one campaign and attach tier, strict lift and headline."""
     settings = settings or PolicySettings()
     checks = [
         check_parallel_trends(causal_row), check_sample_size(causal_row), check_ci_width(causal_row),
-        check_benchmarks(recon_row, bench_row), check_seasonality(causal_row),
+        check_benchmarks(recon_row, bench_row, illustrative_benchmarks), check_seasonality(causal_row, expected_drift_pct),
         check_directional_alignment(recon_row), check_inflation(recon_row),
     ]
     checks.append(check_decision_usefulness(causal_row, checks))
-    score = round(sum(SCORE[c.status] for c in checks) / len(checks) * 100, 1)
+    scored = [c for c in checks if c.status != NA]
+    score = round(sum(SCORE[c.status] for c in scored) / len(scored) * 100, 1)
     verdict = _verdict(score)
     tier = settings.trust_tier(score, checks[0].status == PASS)
     strict = strict_lift_row(recon_row, causal_row, settings, test_period_spend)
@@ -183,8 +210,13 @@ def audit_campaign(recon_row: pd.Series, causal_row: pd.Series, bench_row: pd.Se
         divergence_warning=divergence_warning(spec, strict["strict_iroas_point"], settings), checks=checks)
 
 
-def run_audit(mgr: Optional[DatabaseManager] = None, settings: Optional[PolicySettings] = None) -> Dict[str, Any]:
-    """Audit every campaign and return the structured report."""
+def run_audit(mgr: Optional[DatabaseManager] = None, settings: Optional[PolicySettings] = None,
+              registry: Any = None, declarations: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """Audit every campaign and return the structured report.
+
+    ``registry`` (a benchmark Registry) enables the margin, the seasonal expectation and the benchmark stamp.
+    """
+    from economics import resolve_economics
     settings = settings or (mgr.settings if mgr else PolicySettings())
     mgr = mgr or DatabaseManager(settings=settings).build()
     recon = mgr.view("ANALYTICS_MEASUREMENT_RECONCILIATION")
@@ -193,6 +225,18 @@ def run_audit(mgr: Optional[DatabaseManager] = None, settings: Optional[PolicySe
     test_spend = mgr.view_query("""SELECT campaign_id, SUM(platform_spend) AS s FROM STG_UNIFIED_MEASUREMENT
         WHERE date >= (SELECT MIN(date) FROM RAW_HOLDOUT_DATA WHERE treatment_flag = 1)
         GROUP BY campaign_id""").set_index("campaign_id")["s"].to_dict()
+    illustrative = is_illustrative_benchmarks(mgr.view("BUSINESS_BENCHMARKS"))
+    expected_drift: Optional[float] = None
+    seasonal_note: Optional[Dict[str, Any]] = None
+    if settings.seasonality_benchmark and registry is not None:
+        hold = mgr.view("RAW_HOLDOUT_DATA")
+        hold["date"] = pd.to_datetime(hold["date"])
+        test = hold[hold["treatment_flag"] == 1]["date"]
+        if len(test):
+            ts, te = test.min().date(), test.max().date()
+            ps, pe = hold["date"].min().date(), (test.min() - pd.Timedelta(days=1)).date()
+            seasonal_note = registry.expected_seasonal_drift(ps, pe, ts, te)
+            expected_drift = seasonal_note["expected_drift_pct"]
     audits: List[CampaignAudit] = []
     for _, row in recon.sort_values("campaign_id").iterrows():
         if row["campaign_id"] not in causal.index or not row["has_holdout_coverage"]:
@@ -200,7 +244,7 @@ def run_audit(mgr: Optional[DatabaseManager] = None, settings: Optional[PolicySe
                                         "HOLD: no holdout coverage, impact is unknown.", headline_metric=settings.headline_metric))
             continue
         audits.append(audit_campaign(row, causal.loc[row["campaign_id"]], bench.loc[row["channel"]], settings,
-                                     test_spend.get(row["campaign_id"])))
+                                     test_spend.get(row["campaign_id"]), illustrative, expected_drift))
     scores = [a.trust_score for a in audits]
     tiers = {t: sum(a.tier == t for a in audits) for t in ("VERIFIED", "DIRECTIONAL", "NOT_DECISION_GRADE")}
     return {
@@ -211,6 +255,9 @@ def run_audit(mgr: Optional[DatabaseManager] = None, settings: Optional[PolicySe
         "average_trust_score": round(sum(scores) / len(scores), 1) if scores else None,
         "verdict_counts": {v: sum(a.verdict == v for a in audits) for v in ("TRUSTED", "CAUTION", "UNTRUSTED")},
         "tier_counts": tiers,
+        "economics": resolve_economics(settings, registry),
+        "benchmark_context": {"illustrative_benchmark_table": illustrative, "seasonal_expectation": seasonal_note,
+                              "benchmark_set_version": registry.version if registry is not None else None},
         "campaigns": [{**{k: v for k, v in a.__dict__.items() if k != "checks"},
                        "checks": [c.__dict__ for c in a.checks]} for a in audits],
     }

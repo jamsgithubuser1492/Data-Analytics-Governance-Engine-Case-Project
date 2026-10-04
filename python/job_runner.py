@@ -12,7 +12,8 @@ from typing import Any, Dict, Optional
 
 from config import PolicySettings
 from agent_engine import fingerprint as agents_fingerprint
-from pipeline import SourceTables, ValidationBlocked, code_fingerprint, run_key, run_pipeline
+from pipeline import (SourceTables, ValidationBlocked, benchmark_version_for, code_fingerprint, get_registry, registry_in_use, run_key,
+                      run_pipeline)
 from run_store import FAILED, QUEUED, RUNNING, SUCCEEDED, SqlRunStore
 from validation import validate_inputs
 
@@ -33,13 +34,14 @@ class JobRunner:
         """
         settings = settings or PolicySettings()
         declarations = declarations or {}
-        report = validate_inputs(inputs.platform, inputs.mta, inputs.holdout, inputs.benchmarks, settings, declarations)
+        registry = get_registry() if registry_in_use(settings, declarations) else None
+        report = validate_inputs(inputs.platform, inputs.mta, inputs.holdout, inputs.benchmarks, settings, declarations, registry)
         if not report.ok:
             raise ValidationBlocked(report)
         definitions = agent_definitions if agent_definitions is not None else self.store.get_agent_definitions(workspace_id)
         uses_deadband = any(d.get("enabled", True) and d.get("deadband_pct", 0) > 0 for d in definitions)
         prev_id, active = self.store.latest_active_set(workspace_id) if uses_deadband else (None, set())
-        key = run_key(inputs, settings, declarations, agents_fingerprint(definitions), prev_id or "")
+        key = run_key(inputs, settings, declarations, agents_fingerprint(definitions), prev_id or "", benchmark_version_for(settings, declarations))
         run_id, created = self.store.get_or_create_run(workspace_id, key, settings, declarations, inputs.hashes(),
                                                        report.to_dict(), code_fingerprint(), label)
         if created:

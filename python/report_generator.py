@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 from typing import Any, Dict, Tuple
 
-ICON = {"PASS": "✅", "WARN": "🟡", "FAIL": "🔴"}
+ICON = {"PASS": "✅", "WARN": "🟡", "FAIL": "🔴", "NA": "➖"}
 
 
 def render_text_summary(report: Dict[str, Any]) -> str:

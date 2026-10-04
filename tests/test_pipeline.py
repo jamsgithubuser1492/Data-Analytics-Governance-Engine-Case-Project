@@ -208,6 +208,7 @@ def test_audit_structure(mgr: DatabaseManager) -> None:
     for c in report["campaigns"]:
         assert [k["check_id"] for k in c["checks"]] == list(range(1, 9))
         assert 0 <= c["trust_score"] <= 100
-        assert all(k["status"] in {"PASS", "WARN", "FAIL"} for k in c["checks"])
+        assert all(k["status"] in {"PASS", "WARN", "FAIL", "NA"} for k in c["checks"])
+        assert c["checks"][3]["status"] == "NA"  # the demo benchmark table is an unsourced placeholder, so check 4 makes no comparison
     netflix = next(c for c in report["campaigns"] if c["campaign_id"] == "NETFLIX_ADS_CMP_01")
     assert netflix["checks"][7]["status"] == "FAIL"  # lift interval includes zero

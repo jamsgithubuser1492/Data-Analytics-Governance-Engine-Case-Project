@@ -1,0 +1,197 @@
+{
+  "generated_at": "2026-10-04T19:53:09+00:00",
+  "sources": {
+    "damodaran": {
+      "url": "https://www.stern.nyu.edu/~adamodar/pc/datasets/margin.xls",
+      "status": 200,
+      "bytes": 78336,
+      "sha256": "25b04fce9740d9a471d50e176bf55aa6b7608cd0621b00072508a20e7c35ed7a",
+      "retrieved_at": "2026-10-04T19:53:10+00:00",
+      "last_modified": "Thu, 08 Jan 2026 19:22:50 GMT",
+      "snapshot": "snapshots/damodaran_margin.xls",
+      "date_updated": "2026-01-05",
+      "industries": 96,
+      "total_firms": 5994
+    },
+    "pep_states": {
+      "url": "https://www2.census.gov/programs-surveys/popest/datasets/2020-2025/state/totals/NST-EST2025-ALLDATA.csv",
+      "status": 200,
+      "bytes": 53555,
+      "sha256": "92188e29cb0a67dcf95afa7d6c47359409782f086478b70ea4128eb70e223ca9",
+      "retrieved_at": "2026-10-04T19:53:10+00:00",
+      "last_modified": "Tue, 27 Jan 2026 13:45:29 GMT",
+      "snapshot": "snapshots/census_pep2025_states.csv"
+    },
+    "pep_counties": {
+      "url": "https://www2.census.gov/programs-surveys/popest/datasets/2020-2025/counties/totals/co-est2025-alldata.csv",
+      "status": 200,
+      "bytes": 2071735,
+      "sha256": "4f5a499d851e2cb48fd7a5405e5a9235453a8a66933657aacd10df0e264f35d5",
+      "retrieved_at": "2026-10-04T19:53:11+00:00",
+      "last_modified": "Thu, 26 Mar 2026 12:15:28 GMT",
+      "snapshot": "snapshots/census_pep2025_counties.csv",
+      "derived_rows": 3144
+    },
+    "fred_RSXFS": {
+      "url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=RSXFS",
+      "status": 200,
+      "bytes": 7511,
+      "sha256": "6f915e4a63b720284285e595bdebe1f3449362929f2765335e80996b390034a0",
+      "retrieved_at": "2026-10-04T19:53:33+00:00",
+      "last_modified": null,
+      "via": "curl",
+      "snapshot": "snapshots/fred_RSXFS.csv",
+      "series_page_title": "Advance Retail Sales: Retail Trade (RSXFS) | FRED | St. Louis Fed"
+    },
+    "fred_RSXFSN": {
+      "url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=RSXFSN",
+      "status": 200,
+      "bytes": 7512,
+      "sha256": "e1021b49fe610cb2cac6ca4c794e18368df9e21b10617301b53031caa2bcfe61",
+      "retrieved_at": "2026-10-04T19:54:18+00:00",
+      "last_modified": null,
+      "via": "curl",
+      "snapshot": "snapshots/fred_RSXFSN.csv",
+      "series_page_title": "Advance Retail Sales: Retail Trade (RSXFSN) | FRED | St. Louis Fed"
+    },
+    "fred_ECOMPCTSA": {
+      "url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=ECOMPCTSA",
+      "status": 200,
+      "bytes": 1662,
+      "sha256": "dfc5d809b83d245e48ee8fb642caf7caeefb2cf7021b210c164d47f75cb6753f",
+      "retrieved_at": "2026-10-04T19:55:03+00:00",
+      "last_modified": null,
+      "via": "curl",
+      "snapshot": "snapshots/fred_ECOMPCTSA.csv",
+      "series_page_title": "E-Commerce Retail Sales as a Percent of Total Sales (ECOMPCTSA) | FRED | St. Louis Fed"
+    },
+    "fred_ECOMSA": {
+      "url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=ECOMSA",
+      "status": 200,
+      "bytes": 1871,
+      "sha256": "1244589c8d22dec220de56b97eeaec850993256173f111619b494c5f200a3344",
+      "retrieved_at": "2026-10-04T19:55:48+00:00",
+      "last_modified": null,
+      "via": "curl",
+      "snapshot": "snapshots/fred_ECOMSA.csv",
+      "series_page_title": "E-Commerce Retail Sales (ECOMSA) | FRED | St. Louis Fed"
+    },
+    "census_ecom": {
+      "url": "https://www.census.gov/retail/ecommerce.html",
+      "status": 200,
+      "bytes": 74211,
+      "sha256": "4d9c84250cd5fdd8b3fd9968c2d299a7ba5974aab47ce66bfd496b761aa6e08a",
+      "retrieved_at": "2026-10-04T19:56:11+00:00",
+      "last_modified": "Mon, 28 Sep 2026 15:55:44 GMT",
+      "text_sha256": "ee0a0af046945f544b2b1c175d934b578e8a98d62ff5db85813e50083de798c1"
+    },
+    "haus": {
+      "url": "https://www.haus.io/blog/the-meta-report-lessons-from-640-haus-incrementality-experiments",
+      "status": 200,
+      "bytes": 381588,
+      "sha256": "71fee9b071d0aea61dd6946ff06268e12fed754830dc0474a0e5d8c28876a2e4",
+      "retrieved_at": "2026-10-04T19:56:11+00:00",
+      "last_modified": "Sun, 04 Oct 2026 07:22:23 GMT",
+      "text_sha256": "1936695346bbe3e67997ae28b8b4098eb156560e9014f9c687c622c9857d8db3",
+      "text_chars": 49076
+    },
+    "gordon": {
+      "url": "https://ideas.repec.org/a/inm/ormksc/v38y2019i2p193-225.html",
+      "status": 200,
+      "bytes": 68886,
+      "sha256": "682a92b6d5aefb27858282428e7ba3f98b70f4940cef6e1298551e30de244c9d",
+      "retrieved_at": "2026-10-04T19:56:12+00:00",
+      "last_modified": null,
+      "text_sha256": "c7e53f9b57cea4f51781045e61d17e6687c4f78140b5cb44a891d38279ef961b",
+      "text_chars": 23901
+    },
+    "lewis": {
+      "url": "https://ideas.repec.org/a/oup/qjecon/v130y2015i4p1941-1973.html",
+      "status": 200,
+      "bytes": 32901,
+      "sha256": "30a1da1430fdc8d5ce3ad8b4b53a1ed7513345df098f78f87a3e7e923acb6d03",
+      "retrieved_at": "2026-10-04T19:56:12+00:00",
+      "last_modified": null,
+      "text_sha256": "68f68c2cc3fbb8a8db4241b3b1e1a9d4d7c26aed929cc61f01030dd59806a75c",
+      "text_chars": 5511
+    },
+    "littledata": {
+      "url": "https://www.littledata.io/benchmarks",
+      "status": 200,
+      "bytes": 127633,
+      "sha256": "990dc9573dff481ced2cc798a95f3fef83806685d97d216e7b3facb03af8eab5",
+      "retrieved_at": "2026-10-04T19:56:13+00:00",
+      "last_modified": null,
+      "text_sha256": "d76396dc92478015e56a3833e12a4faef3ad338178fb9e2d0fb97085b225e942",
+      "text_chars": 9134
+    }
+  },
+  "checks": [
+    {
+      "name": "damodaran_gm_equals_1_minus_cogs",
+      "ok": true,
+      "detail": "gross margin = 1 - COGS/sales for every industry"
+    },
+    {
+      "name": "damodaran_total_market_present",
+      "ok": true,
+      "detail": "Total Market row present"
+    },
+    {
+      "name": "damodaran_ranges",
+      "ok": true,
+      "detail": "margins within plausible ranges"
+    },
+    {
+      "name": "pep_states_sum_to_us",
+      "ok": true,
+      "detail": "50 states + DC sum 341784857 vs US total 341784857 (Puerto Rico is reported separately and excluded from the US total)"
+    },
+    {
+      "name": "pep_counties_sum_to_states",
+      "ok": true,
+      "detail": "counties 341784857 vs states 341784857"
+    },
+    {
+      "name": "pep_county_count",
+      "ok": true,
+      "detail": "3144 county rows"
+    },
+    {
+      "name": "census_text_found",
+      "ok": true,
+      "detail": "Census page contains the quarterly e-commerce sentences"
+    },
+    {
+      "name": "census_vs_fred_pct",
+      "ok": true,
+      "detail": "FRED ECOMPCTSA latest 17.1 appears in Census text"
+    },
+    {
+      "name": "census_vs_fred_level",
+      "ok": true,
+      "detail": "FRED ECOMSA latest 340244 million vs Census text $340.2 billion"
+    },
+    {
+      "name": "fred_dates_agree",
+      "ok": true,
+      "detail": "ECOMPCTSA and ECOMSA end on the same quarter"
+    },
+    {
+      "name": "seasonal_index_complete",
+      "ok": true,
+      "detail": "12 months x 5 years"
+    },
+    {
+      "name": "seasonal_index_mean_near_one",
+      "ok": true,
+      "detail": "mean of monthly ratios 1.0001"
+    },
+    {
+      "name": "seasonal_index_range",
+      "ok": true,
+      "detail": "monthly ratios within 0.8 to 1.25"
+    }
+  ],
+  "rejected": []
+}

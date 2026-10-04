@@ -29,6 +29,7 @@ class Issue:
 class ValidationReport:
     issues: List[Issue] = field(default_factory=list)
     coverage: Dict[str, float] = field(default_factory=dict)
+    scale_factor: Dict[str, Any] = field(default_factory=dict)
 
     def add(self, severity: str, rule: str, table: str, message: str, examples: Optional[list] = None) -> None:
         self.issues.append(Issue(severity, rule, table, message, (examples or [])[:5]))
@@ -50,7 +51,7 @@ class ValidationReport:
         return f"{len(self.blockers)} blocker(s), {len(self.warnings)} warning(s)"
 
     def to_dict(self) -> Dict[str, Any]:
-        return {"ok": self.ok, "coverage": self.coverage,
+        return {"ok": self.ok, "coverage": self.coverage, "scale_factor": self.scale_factor,
                 "issues": [i.__dict__ for i in self.issues]}
 
 
@@ -87,9 +88,36 @@ def _check_schema(table: str, df: pd.DataFrame, rep: ValidationReport) -> bool:
     return True
 
 
+SCALE_FACTOR_TOLERANCE = 0.15
+
+
+def check_scale_factor(rep: "ValidationReport", settings: PolicySettings, declarations: Dict[str, Any], registry: Any) -> None:
+    """Compare the declared geo sample fraction with the treatment geos' share of the US population (Census)."""
+    fips = declarations.get("test_geo_fips")
+    if not fips:
+        return
+    if registry is None:
+        rep.add(WARNING, "scale_factor_unchecked", "DECLARATIONS", "Treatment geos were declared but the benchmark registry is not available, so the scale factor was not checked.")
+        return
+    res = registry.population_share(fips)
+    if res["errors"]:
+        rep.add(BLOCKER, "geo_fips_invalid", "DECLARATIONS", "Treatment geo codes cannot be used: " + " ".join(res["errors"]), list(fips))
+        return
+    share, declared = res["share"], settings.geo_sample_fraction
+    rep.scale_factor = {"census_share": share, "declared_fraction": declared, "population": res["population"], "geos": res["geos"], "vintage": res["vintage"]}
+    gap = abs(share - declared) / declared
+    if gap > SCALE_FACTOR_TOLERANCE:
+        rep.add(WARNING, "scale_factor_mismatch", "DECLARATIONS",
+                f"Your treatment geos hold {share:.1%} of the US population ({res['vintage']}), but the geo sample fraction is {declared:.1%} "
+                f"({gap:.0%} apart, tolerance {SCALE_FACTOR_TOLERANCE:.0%}). Holdout results are divided by this fraction, so every projected dollar is off by the same ratio. "
+                f"Fix the fraction or the geo list. Note this assumes the treatment geos are as representative per person as the rest of the country.")
+    else:
+        rep.add(INFO, "scale_factor_consistent", "DECLARATIONS", f"Treatment geos hold {share:.1%} of the US population ({res['vintage']}); the declared fraction {declared:.1%} agrees within {SCALE_FACTOR_TOLERANCE:.0%}.")
+
+
 def validate_inputs(platform: pd.DataFrame, mta: pd.DataFrame, holdout: pd.DataFrame,
                     benchmarks: pd.DataFrame, settings: Optional[PolicySettings] = None,
-                    declarations: Optional[Dict[str, Any]] = None) -> ValidationReport:
+                    declarations: Optional[Dict[str, Any]] = None, registry: Any = None) -> ValidationReport:
     """Validate the four source tables and return a report of blockers and warnings.
 
     ``declarations`` may carry ``currency`` (single ISO code); any ``currency``
@@ -98,6 +126,7 @@ def validate_inputs(platform: pd.DataFrame, mta: pd.DataFrame, holdout: pd.DataF
     settings = settings or PolicySettings()
     declarations = declarations or {}
     rep = ValidationReport()
+    check_scale_factor(rep, settings, declarations, registry)
     tables = {"RAW_PLATFORM_DATA": platform, "RAW_MTA_OUTPUT": mta,
               "RAW_HOLDOUT_DATA": holdout, "BUSINESS_BENCHMARKS": benchmarks}
     usable = {t: _check_schema(t, df, rep) for t, df in tables.items()}

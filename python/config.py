@@ -9,7 +9,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import asdict, dataclass
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 HEADLINE_STRICT = "strict_lift"
 HEADLINE_SPEC = "reported_by_spec"
@@ -39,10 +39,15 @@ class PolicySettings:
     trust_directional_min: float = 50.0
     headline_metric: str = HEADLINE_SPEC  # user chosen; both views are always computed
     spec_vs_strict_warning_ratio: float = 1.5  # warn if spec iROAS exceeds strict by this multiple
+    gross_margin: Optional[float] = None  # contribution margin the user declares (0 to 1); None means unknown
+    margin_industry: str = ""  # Damodaran industry used as a labeled upper-bound proxy when gross_margin is None
+    seasonality_benchmark: bool = False  # adjust the control geo drift check by U.S. retail seasonality (opt in)
 
     def __post_init__(self) -> None:
         def bound(name: str, lo: float, hi: float) -> None:
             v = getattr(self, name)
+            if v is None and name == "gross_margin":
+                return
             if not isinstance(v, (int, float)) or isinstance(v, bool) or not lo <= v <= hi:
                 raise SettingsError(f"{name} must be between {lo} and {hi}, got {v!r}")
 
@@ -57,6 +62,9 @@ class PolicySettings:
         bound("trust_verified_min", 1, 100)
         bound("trust_directional_min", 0, 100)
         bound("spec_vs_strict_warning_ratio", 1.0, 100.0)
+        bound("gross_margin", 0.01, 1.0)
+        if not isinstance(self.margin_industry, str) or not isinstance(self.seasonality_benchmark, bool):
+            raise SettingsError("margin_industry must be text and seasonality_benchmark true or false")
         if self.inflation_moderate >= self.inflation_critical:
             raise SettingsError("inflation_moderate must be below inflation_critical")
         if self.trust_directional_min >= self.trust_verified_min:

@@ -65,6 +65,11 @@ def build_facts(recon_df: pd.DataFrame, audit_report: Dict[str, Any], use_strict
     df["platform_vs_mta_gap"] = (df["total_platform_conversions"] - df["total_mta_conversions"]) / plat
     for col in ("has_holdout_coverage", "has_mta_coverage"):
         df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0.0)
+    econ = audit_report.get("economics") or {}
+    margin = econ.get("margin")
+    df["margin"] = float(margin) if margin is not None else float("nan")
+    df["breakeven_iroas"] = (1.0 / float(margin)) if margin else float("nan")
+    df["profit_per_dollar"] = df["iroas"] * float(margin) - 1.0 if margin is not None else float("nan")
     return df.reset_index(drop=True)
 
 

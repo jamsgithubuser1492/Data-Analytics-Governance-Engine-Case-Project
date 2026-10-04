@@ -21,6 +21,8 @@ from database_manager import DATA_DIR, DatabaseManager
 from governance_checker import run_audit
 from validation import ValidationReport, validate_inputs
 
+_REGISTRY: Any = None
+
 ROOT = Path(__file__).resolve().parents[1]
 TABLE_NAMES = ("RAW_PLATFORM_DATA", "RAW_MTA_OUTPUT", "RAW_HOLDOUT_DATA", "BUSINESS_BENCHMARKS")
 OUTPUT_VIEWS = ("STG_UNIFIED_MEASUREMENT", "ANALYTICS_MEASUREMENT_RECONCILIATION", "GOVERNANCE_CAMPAIGN_ALERTS",
@@ -33,6 +35,30 @@ class ValidationBlocked(ValueError):
     def __init__(self, report: ValidationReport) -> None:
         super().__init__("Input validation failed: " + report.summary())
         self.report = report
+
+
+def get_registry() -> Any:
+    """The benchmark registry (loaded once), or None if the registry files are missing or invalid."""
+    global _REGISTRY
+    if _REGISTRY is None:
+        try:
+            from benchmark_registry import Registry
+            _REGISTRY = Registry.load()
+        except Exception:
+            return None
+    return _REGISTRY
+
+
+def registry_in_use(settings: PolicySettings, declarations: Optional[Dict[str, Any]]) -> bool:
+    """A run depends on the registry only when it uses an industry margin, seasonality or declared test geos."""
+    return bool((settings.gross_margin is None and settings.margin_industry) or settings.seasonality_benchmark or (declarations or {}).get("test_geo_fips"))
+
+
+def benchmark_version_for(settings: PolicySettings, declarations: Optional[Dict[str, Any]]) -> str:
+    if not registry_in_use(settings, declarations):
+        return ""
+    reg = get_registry()
+    return reg.version if reg is not None else "unavailable"
 
 
 def code_fingerprint() -> str:
@@ -82,27 +108,32 @@ class RunResult:
 
 
 def run_key(inputs: SourceTables, settings: PolicySettings, declarations: Optional[Dict[str, Any]] = None,
-            agents_fingerprint: str = "", previous_run_id: str = "") -> str:
+            agents_fingerprint: str = "", previous_run_id: str = "", benchmark_version: str = "") -> str:
     """Deterministic key: same inputs, settings, declarations, agent definitions and code give the same run.
 
     ``previous_run_id`` is only supplied when an agent uses a deadband (its result then depends on history).
     """
     payload = json.dumps({"inputs": inputs.hashes(), "settings": settings.to_dict(), "declarations": declarations or {},
-                          "code": code_fingerprint(), "agents": agents_fingerprint, "previous": previous_run_id}, sort_keys=True)
+                          "code": code_fingerprint(), "agents": agents_fingerprint, "previous": previous_run_id, "benchmarks": benchmark_version}, sort_keys=True)
     return hashlib.sha256(payload.encode()).hexdigest()[:24]
 
 
 def run_pipeline(inputs: SourceTables, settings: Optional[PolicySettings] = None,
                  declarations: Optional[Dict[str, Any]] = None,
                  agent_definitions: Optional[List[Dict[str, Any]]] = None,
-                 previously_active: Optional[Set[Tuple[str, str]]] = None) -> RunResult:
+                 previously_active: Optional[Set[Tuple[str, str]]] = None,
+                 registry: Any = None) -> RunResult:
     """Validate, build, audit and gate. Raises ValidationBlocked if blockers exist.
 
     ``agent_definitions`` defaults to the built-in presets; ``previously_active`` feeds agent deadbands.
     """
     settings = settings or PolicySettings()
     declarations = declarations or {}
-    report = validate_inputs(inputs.platform, inputs.mta, inputs.holdout, inputs.benchmarks, settings, declarations)
+    if registry is None and registry_in_use(settings, declarations):
+        registry = get_registry()
+        if registry is None and settings.margin_industry and settings.gross_margin is None:
+            raise ValueError("An industry margin was requested but the benchmark registry is not available. Run python python/benchmark_sync.py sync")
+    report = validate_inputs(inputs.platform, inputs.mta, inputs.holdout, inputs.benchmarks, settings, declarations, registry)
     if not report.ok:
         raise ValidationBlocked(report)
     mgr = DatabaseManager(settings=settings, frames=inputs.as_dict()).build()
@@ -110,7 +141,7 @@ def run_pipeline(inputs: SourceTables, settings: Optional[PolicySettings] = None
         tables = {name: mgr.view(name) for name in OUTPUT_VIEWS}
         tables.update({f"INPUT_{k}": v for k, v in inputs.as_dict().items()})  # kept so a run can be re-run under another policy
         tables["CAUSAL_IMPACT"] = run_all(mgr.view("RAW_HOLDOUT_DATA"), settings.pre_period_days)
-        audit = run_audit(mgr, settings)
+        audit = run_audit(mgr, settings, registry, declarations)
         definitions = agent_definitions if agent_definitions is not None else default_definitions()
         facts = build_facts(tables["ANALYTICS_MEASUREMENT_RECONCILIATION"], audit, settings.headline_metric == HEADLINE_STRICT)
         packets = evaluate_agents(definitions, facts, previously_active)
