@@ -10,11 +10,11 @@ import hashlib
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 import pandas as pd
 
-from agent_orchestrator import AgentOrchestrator
+from agent_engine import build_facts, default_definitions, evaluate_agents, fingerprint
 from causal_impact_runner import run_all
 from config import HEADLINE_STRICT, PolicySettings
 from database_manager import DATA_DIR, DatabaseManager
@@ -81,16 +81,25 @@ class RunResult:
     code_version: str = ""
 
 
-def run_key(inputs: SourceTables, settings: PolicySettings, declarations: Optional[Dict[str, Any]] = None) -> str:
-    """Deterministic key: same inputs, settings, declarations and code give the same run."""
-    payload = json.dumps({"inputs": inputs.hashes(), "settings": settings.to_dict(),
-                          "declarations": declarations or {}, "code": code_fingerprint()}, sort_keys=True)
+def run_key(inputs: SourceTables, settings: PolicySettings, declarations: Optional[Dict[str, Any]] = None,
+            agents_fingerprint: str = "", previous_run_id: str = "") -> str:
+    """Deterministic key: same inputs, settings, declarations, agent definitions and code give the same run.
+
+    ``previous_run_id`` is only supplied when an agent uses a deadband (its result then depends on history).
+    """
+    payload = json.dumps({"inputs": inputs.hashes(), "settings": settings.to_dict(), "declarations": declarations or {},
+                          "code": code_fingerprint(), "agents": agents_fingerprint, "previous": previous_run_id}, sort_keys=True)
     return hashlib.sha256(payload.encode()).hexdigest()[:24]
 
 
 def run_pipeline(inputs: SourceTables, settings: Optional[PolicySettings] = None,
-                 declarations: Optional[Dict[str, Any]] = None) -> RunResult:
-    """Validate, build, audit and gate. Raises ValidationBlocked if blockers exist."""
+                 declarations: Optional[Dict[str, Any]] = None,
+                 agent_definitions: Optional[List[Dict[str, Any]]] = None,
+                 previously_active: Optional[Set[Tuple[str, str]]] = None) -> RunResult:
+    """Validate, build, audit and gate. Raises ValidationBlocked if blockers exist.
+
+    ``agent_definitions`` defaults to the built-in presets; ``previously_active`` feeds agent deadbands.
+    """
     settings = settings or PolicySettings()
     declarations = declarations or {}
     report = validate_inputs(inputs.platform, inputs.mta, inputs.holdout, inputs.benchmarks, settings, declarations)
@@ -102,10 +111,14 @@ def run_pipeline(inputs: SourceTables, settings: Optional[PolicySettings] = None
         tables.update({f"INPUT_{k}": v for k, v in inputs.as_dict().items()})  # kept so a run can be re-run under another policy
         tables["CAUSAL_IMPACT"] = run_all(mgr.view("RAW_HOLDOUT_DATA"), settings.pre_period_days)
         audit = run_audit(mgr, settings)
-        packets = AgentOrchestrator.from_audit(tables["ANALYTICS_MEASUREMENT_RECONCILIATION"], audit,
-                                               use_strict=settings.headline_metric == HEADLINE_STRICT).evaluate_triggers()
+        definitions = agent_definitions if agent_definitions is not None else default_definitions()
+        facts = build_facts(tables["ANALYTICS_MEASUREMENT_RECONCILIATION"], audit, settings.headline_metric == HEADLINE_STRICT)
+        packets = evaluate_agents(definitions, facts, previously_active)
     finally:
         mgr.close()
+    audit["agent_context"] = {"fingerprint": fingerprint(definitions),
+                              "definitions": [{"id": d["id"], "version": d.get("version", 1), "enabled": d.get("enabled", True)} for d in definitions],
+                              "previously_active": sorted(f"{a}|{c}" for a, c in (previously_active or set()))}
     audit["declarations"] = declarations
     audit["validation"] = report.to_dict()
     return RunResult(tables, audit, packets, report, settings, declarations, code_fingerprint())

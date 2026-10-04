@@ -25,6 +25,8 @@ from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple
 import duckdb
 import pandas as pd
 
+from agent_engine import default_definitions
+from agent_schema import validate_definition
 from config import PolicySettings
 from pipeline import RunResult
 
@@ -122,6 +124,8 @@ SCHEMA = [
     """CREATE TABLE IF NOT EXISTS inbox (id TEXT PRIMARY KEY, workspace_id TEXT, run_id TEXT, dedupe_key TEXT,
        agent_id TEXT, campaign_id TEXT, severity TEXT, packet_json TEXT, status TEXT, created_at TEXT,
        updated_at TEXT, UNIQUE (workspace_id, dedupe_key))""",
+    """CREATE TABLE IF NOT EXISTS agent_definitions (workspace_id TEXT, agent_id TEXT, version INTEGER,
+       definition_json TEXT, enabled INTEGER, actor TEXT, created_at TEXT, PRIMARY KEY (workspace_id, agent_id, version))""",
     """CREATE TABLE IF NOT EXISTS audit_events (id TEXT PRIMARY KEY, workspace_id TEXT, run_id TEXT, item_id TEXT,
        event TEXT, actor TEXT, detail_json TEXT, created_at TEXT)""",
 ]
@@ -301,6 +305,54 @@ class SqlRunStore:
     def load_audit(self, workspace_id: str, run_id: str) -> Dict[str, Any]:
         self.get_run(workspace_id, run_id)
         return self.artifacts.read_json(workspace_id, run_id, "audit")
+
+    # -- agent definitions
+    def save_agent_definition(self, workspace_id: str, definition: Dict[str, Any], actor: str = "system") -> Tuple[int, List[str]]:
+        """Validate and save a new version. Returns (version, errors); version is 0 when rejected."""
+        norm, errs = validate_definition(definition)
+        if errs:
+            return 0, errs
+        version = _retry_on_conflict(lambda: self._save_agent_definition(workspace_id, norm, actor))
+        return version, []
+
+    def _save_agent_definition(self, workspace_id: str, d: Dict[str, Any], actor: str) -> int:
+        with self._tx() as c:
+            row = c.one("SELECT MAX(version) FROM agent_definitions WHERE workspace_id = ? AND agent_id = ?", (workspace_id, d["id"]))
+            version = (row[0] or 0) + 1
+            if version == 1 and d["id"] in {p["id"] for p in default_definitions()}:
+                version = 2  # presets are version 1; the first saved edit is version 2
+            stored = {**d, "version": version}
+            c.run("INSERT INTO agent_definitions VALUES (?, ?, ?, ?, ?, ?, ?)",
+                  (workspace_id, d["id"], version, json.dumps(stored), 1 if d["enabled"] else 0, actor, _now()))
+            c.run("INSERT INTO audit_events VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                  (_uid(), workspace_id, None, d["id"], "agent_saved", actor, json.dumps({"version": version, "enabled": d["enabled"]}), _now()))
+        return version
+
+    def get_agent_definitions(self, workspace_id: str) -> List[Dict[str, Any]]:
+        """Latest version of every agent: workspace edits override presets; presets fill the rest."""
+        with self._tx() as c:
+            rows = c.all("""SELECT a.definition_json FROM agent_definitions a JOIN (
+                              SELECT agent_id, MAX(version) AS v FROM agent_definitions WHERE workspace_id = ? GROUP BY agent_id) m
+                            ON a.agent_id = m.agent_id AND a.version = m.v WHERE a.workspace_id = ?""", (workspace_id, workspace_id))
+        saved = {json.loads(r[0])["id"]: json.loads(r[0]) for r in rows}
+        merged = [saved.pop(p["id"], p) for p in default_definitions()]
+        return merged + sorted(saved.values(), key=lambda d: (d["priority"], d["id"]))
+
+    def list_agent_versions(self, workspace_id: str, agent_id: str) -> List[Dict[str, Any]]:
+        with self._tx() as c:
+            rows = c.all("SELECT definition_json, actor, created_at FROM agent_definitions WHERE workspace_id = ? AND agent_id = ? ORDER BY version",
+                         (workspace_id, agent_id))
+        return [{**json.loads(r[0]), "saved_by": r[1], "saved_at": r[2]} for r in rows]
+
+    def latest_active_set(self, workspace_id: str) -> Tuple[Optional[str], set]:
+        """(run_id, {(agent_id, campaign_id)}) for the most recent succeeded run; used for agent deadbands."""
+        with self._tx() as c:
+            row = c.one("SELECT id FROM runs WHERE workspace_id = ? AND status = ? ORDER BY created_at DESC, id DESC LIMIT 1",
+                        (workspace_id, SUCCEEDED))
+            if not row:
+                return None, set()
+            rows = c.all("SELECT agent_id, campaign_id FROM inbox WHERE workspace_id = ? AND run_id = ?", (workspace_id, row[0]))
+        return row[0], {(r[0], r[1]) for r in rows}
 
     # -- inbox and audit log
     def list_inbox(self, workspace_id: str, run_id: Optional[str] = None,

@@ -18,7 +18,7 @@ from run_store import SUCCEEDED, LocalRunStore  # noqa: E402
 
 DATA_ROOT = Path(os.environ.get("MMGE_DATA_DIR", ROOT / "var"))
 TIER_BADGE = {"VERIFIED": "🟢 Verified", "DIRECTIONAL": "🟡 Directional", "NOT_DECISION_GRADE": "🔴 Not decision grade"}
-SEVERITY_ICON = {"CRITICAL": "🔴", "WARNING": "🟡", "OPPORTUNITY": "🟢"}
+SEVERITY_ICON = {"CRITICAL": "🔴", "WARNING": "🟡", "OPPORTUNITY": "🟢", "INFO": "ℹ️"}
 
 
 @st.cache_resource

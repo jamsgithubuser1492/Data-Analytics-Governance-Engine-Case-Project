@@ -131,7 +131,7 @@ tier_of = camp.set_index("campaign_id")["tier"].to_dict()
 for item in visible:
     p = item["packet"]
     with st.container(border=True):
-        st.markdown(f"#### {SEVERITY_ICON[p['severity']]} {p['title']}")
+        st.markdown(f"#### {SEVERITY_ICON.get(p['severity'], '•')} {p['title']}")
         st.caption(f"Agent `{p['agent_id']}` · Target role: {p['target_persona']} · Channel: {p['channel']} · "
                    f"{TIER_BADGE.get(tier_of.get(p['campaign_id']), '')} · Status: **{item['status']}**")
         cols = st.columns(len(p["value_add_metrics"]))

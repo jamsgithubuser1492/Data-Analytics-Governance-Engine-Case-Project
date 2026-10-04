@@ -11,6 +11,7 @@ from concurrent.futures import Future, ThreadPoolExecutor
 from typing import Any, Dict, Optional
 
 from config import PolicySettings
+from agent_engine import fingerprint as agents_fingerprint
 from pipeline import SourceTables, ValidationBlocked, code_fingerprint, run_key, run_pipeline
 from run_store import FAILED, QUEUED, RUNNING, SUCCEEDED, SqlRunStore
 from validation import validate_inputs
@@ -24,7 +25,8 @@ class JobRunner:
         self._lock = threading.Lock()
 
     def submit(self, workspace_id: str, inputs: SourceTables, settings: Optional[PolicySettings] = None,
-               declarations: Optional[Dict[str, Any]] = None, label: str = "") -> str:
+               declarations: Optional[Dict[str, Any]] = None, label: str = "",
+               agent_definitions: Optional[list] = None) -> str:
         """Queue a run and return its id. Identical inputs return the existing run.
 
         Raises ValidationBlocked before anything is stored if inputs have blockers.
@@ -34,19 +36,22 @@ class JobRunner:
         report = validate_inputs(inputs.platform, inputs.mta, inputs.holdout, inputs.benchmarks, settings, declarations)
         if not report.ok:
             raise ValidationBlocked(report)
-        key = run_key(inputs, settings, declarations)
+        definitions = agent_definitions if agent_definitions is not None else self.store.get_agent_definitions(workspace_id)
+        uses_deadband = any(d.get("enabled", True) and d.get("deadband_pct", 0) > 0 for d in definitions)
+        prev_id, active = self.store.latest_active_set(workspace_id) if uses_deadband else (None, set())
+        key = run_key(inputs, settings, declarations, agents_fingerprint(definitions), prev_id or "")
         run_id, created = self.store.get_or_create_run(workspace_id, key, settings, declarations, inputs.hashes(),
                                                        report.to_dict(), code_fingerprint(), label)
         if created:
             with self._lock:
-                self._futures[run_id] = self._pool.submit(self._execute, workspace_id, run_id, inputs, settings, declarations)
+                self._futures[run_id] = self._pool.submit(self._execute, workspace_id, run_id, inputs, settings, declarations, definitions, active)
         return run_id
 
     def _execute(self, workspace_id: str, run_id: str, inputs: SourceTables, settings: PolicySettings,
-                 declarations: Dict[str, Any]) -> None:
+                 declarations: Dict[str, Any], definitions: list, active: set) -> None:
         try:
             self.store.set_status(workspace_id, run_id, RUNNING)
-            result = run_pipeline(inputs, settings, declarations)
+            result = run_pipeline(inputs, settings, declarations, definitions, active)
             self.store.save_result(workspace_id, run_id, result)
         except Exception as exc:  # recorded, never raised into the pool
             self.store.set_status(workspace_id, run_id, FAILED, f"{type(exc).__name__}: {exc}")
