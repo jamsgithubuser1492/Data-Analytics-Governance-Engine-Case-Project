@@ -18,6 +18,8 @@ from typing import Any, Dict, List, Optional, Union
 
 import pandas as pd
 
+from config import TIER_NOT_DECISION_GRADE
+
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_RECON = ROOT / "outputs" / "analytics_measurement_reconciliation.csv"
 ACTION_LOG = ROOT / "outputs" / "snowflake_governance_action_log.jsonl"
@@ -47,11 +49,34 @@ def _valid(*values: Any) -> bool:
 class AgentOrchestrator:
     """Evaluates reconciliation rows and dispatches agent packets."""
 
-    def __init__(self, recon_df: pd.DataFrame) -> None:
+    def __init__(self, recon_df: pd.DataFrame, tiers: Optional[Dict[str, str]] = None) -> None:
+        """``tiers`` maps campaign_id to a trust tier; money agents (capital, scale)
+        are suppressed for NOT_DECISION_GRADE campaigns. Governance memos still fire."""
+        self.tiers = tiers or {}
         missing = [c for c in REQUIRED_COLUMNS if c not in recon_df.columns]
         if missing:
             raise ValueError(f"Reconciliation data missing columns: {missing}")
         self.recon_df = recon_df.reset_index(drop=True)
+
+    @classmethod
+    def from_audit(cls, recon_df: pd.DataFrame, audit_report: Dict[str, Any],
+                   use_strict: bool = False) -> "AgentOrchestrator":
+        """Build an orchestrator gated by the trust tiers in a governance audit report.
+
+        With ``use_strict`` the agents evaluate the strict lift view: iROAS, incremental
+        revenue and spend come from the causal estimate over the TEST PERIOD, so dollar
+        amounts in packets cover the test period only. Campaigns without an estimate are skipped.
+        """
+        tiers = {c["campaign_id"]: c["tier"] for c in audit_report["campaigns"]}
+        if not use_strict:
+            return cls(recon_df, tiers)
+        strict = pd.DataFrame(audit_report["campaigns"]).set_index("campaign_id")
+        df = recon_df[recon_df["campaign_id"].isin(strict.index[strict["strict_iroas"].notna()])].copy()
+        idx = df["campaign_id"]
+        df["incremental_roas"] = idx.map(strict["strict_iroas"]).round(2)
+        df["total_holdout_revenue"] = idx.map(strict["strict_incremental_revenue"])
+        df["total_spend"] = idx.map(strict["test_period_spend"])
+        return cls(df, tiers)
 
     @classmethod
     def from_csv(cls, recon_filepath: Union[str, Path] = DEFAULT_RECON) -> "AgentOrchestrator":
@@ -79,11 +104,12 @@ class AgentOrchestrator:
         packets: List[Dict[str, Any]] = []
         for _, row in self.recon_df.iterrows():
             roas, iroas, infl = row["reported_roas"], row["incremental_roas"], row["inflation_ratio"]
-            if self.should_trigger_capital(roas, iroas):
+            money_ok = self.tiers.get(row["campaign_id"]) != TIER_NOT_DECISION_GRADE
+            if money_ok and self.should_trigger_capital(roas, iroas):
                 packets.append(self._capital_preservation_agent(row))
             if self.should_trigger_shield(infl):
                 packets.append(self._attribution_shield_agent(row))
-            if self.should_trigger_scale(iroas, infl):
+            if money_ok and self.should_trigger_scale(iroas, infl):
                 packets.append(self._scale_opportunity_agent(row))
         return packets
 

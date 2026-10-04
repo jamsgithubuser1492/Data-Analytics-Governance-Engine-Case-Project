@@ -1,11 +1,33 @@
 {
   "report": "MMGE Governance Audit",
+  "settings": {
+    "geo_sample_fraction": 0.4,
+    "pre_period_days": 30,
+    "min_pre_period_days": 28,
+    "min_test_days": 28,
+    "min_daily_conversions": 5.0,
+    "avg_order_value": 75.0,
+    "inflation_moderate": 1.5,
+    "inflation_critical": 3.0,
+    "trust_verified_min": 75.0,
+    "trust_directional_min": 50.0,
+    "headline_metric": "reported_by_spec",
+    "spec_vs_strict_warning_ratio": 1.5
+  },
+  "settings_fingerprint": "9ce7e0447934",
+  "headline_metric": "reported_by_spec",
+  "headline_label": "Reported-by-spec iROAS",
   "campaigns_audited": 8,
   "average_trust_score": 87.5,
   "verdict_counts": {
     "TRUSTED": 6,
     "CAUTION": 2,
     "UNTRUSTED": 0
+  },
+  "tier_counts": {
+    "VERIFIED": 6,
+    "DIRECTIONAL": 2,
+    "NOT_DECISION_GRADE": 0
   },
   "campaigns": [
     {
@@ -14,6 +36,16 @@
       "trust_score": 93.8,
       "verdict": "TRUSTED",
       "recommendation": "SCALE: iROAS 5.67x.",
+      "tier": "VERIFIED",
+      "spec_iroas": 5.67,
+      "strict_iroas": 0.9986,
+      "strict_iroas_lower": 0.7843,
+      "strict_iroas_upper": 1.2129,
+      "strict_incremental_revenue": 86625.0,
+      "test_period_spend": 86745.15,
+      "headline_metric": "reported_by_spec",
+      "headline_iroas": 5.67,
+      "divergence_warning": true,
       "checks": [
         {
           "check_id": 1,
@@ -87,6 +119,16 @@
       "trust_score": 93.8,
       "verdict": "TRUSTED",
       "recommendation": "SCALE: iROAS 5.76x.",
+      "tier": "VERIFIED",
+      "spec_iroas": 5.76,
+      "strict_iroas": 0.9974,
+      "strict_iroas_lower": 0.7965,
+      "strict_iroas_upper": 1.1983,
+      "strict_incremental_revenue": 88125.0,
+      "test_period_spend": 88355.3,
+      "headline_metric": "reported_by_spec",
+      "headline_iroas": 5.76,
+      "divergence_warning": true,
       "checks": [
         {
           "check_id": 1,
@@ -160,6 +202,16 @@
       "trust_score": 100.0,
       "verdict": "TRUSTED",
       "recommendation": "SCALE: iROAS 3.19x.",
+      "tier": "VERIFIED",
+      "spec_iroas": 3.19,
+      "strict_iroas": 0.5585,
+      "strict_iroas_lower": 0.3866,
+      "strict_iroas_upper": 0.7303,
+      "strict_incremental_revenue": 38625.0,
+      "test_period_spend": 69159.62,
+      "headline_metric": "reported_by_spec",
+      "headline_iroas": 3.19,
+      "divergence_warning": true,
       "checks": [
         {
           "check_id": 1,
@@ -233,6 +285,16 @@
       "trust_score": 100.0,
       "verdict": "TRUSTED",
       "recommendation": "SCALE: iROAS 3.31x.",
+      "tier": "VERIFIED",
+      "spec_iroas": 3.31,
+      "strict_iroas": 0.5861,
+      "strict_iroas_lower": 0.4081,
+      "strict_iroas_upper": 0.7641,
+      "strict_incremental_revenue": 40312.5,
+      "test_period_spend": 68777.46,
+      "headline_metric": "reported_by_spec",
+      "headline_iroas": 3.31,
+      "divergence_warning": true,
       "checks": [
         {
           "check_id": 1,
@@ -306,6 +368,16 @@
       "trust_score": 62.5,
       "verdict": "CAUTION",
       "recommendation": "REDUCE: iROAS 0.34x after a confirmation test.",
+      "tier": "DIRECTIONAL",
+      "spec_iroas": 0.34,
+      "strict_iroas": 0.0106,
+      "strict_iroas_lower": -0.0571,
+      "strict_iroas_upper": 0.0783,
+      "strict_incremental_revenue": 562.5,
+      "test_period_spend": 53175.83,
+      "headline_metric": "reported_by_spec",
+      "headline_iroas": 0.34,
+      "divergence_warning": true,
       "checks": [
         {
           "check_id": 1,
@@ -379,6 +451,16 @@
       "trust_score": 62.5,
       "verdict": "CAUTION",
       "recommendation": "REDUCE: iROAS 0.36x after a confirmation test.",
+      "tier": "DIRECTIONAL",
+      "spec_iroas": 0.36,
+      "strict_iroas": 0.0244,
+      "strict_iroas_lower": -0.0418,
+      "strict_iroas_upper": 0.0906,
+      "strict_incremental_revenue": 1312.5,
+      "test_period_spend": 53826.52,
+      "headline_metric": "reported_by_spec",
+      "headline_iroas": 0.36,
+      "divergence_warning": true,
       "checks": [
         {
           "check_id": 1,
@@ -452,6 +534,16 @@
       "trust_score": 93.8,
       "verdict": "TRUSTED",
       "recommendation": "MAINTAIN: iROAS 2.08x.",
+      "tier": "VERIFIED",
+      "spec_iroas": 2.08,
+      "strict_iroas": 0.3634,
+      "strict_iroas_lower": 0.1918,
+      "strict_iroas_upper": 0.5349,
+      "strict_incremental_revenue": 14437.5,
+      "test_period_spend": 39731.39,
+      "headline_metric": "reported_by_spec",
+      "headline_iroas": 2.08,
+      "divergence_warning": true,
       "checks": [
         {
           "check_id": 1,
@@ -525,6 +617,16 @@
       "trust_score": 93.8,
       "verdict": "TRUSTED",
       "recommendation": "MAINTAIN: iROAS 2.22x.",
+      "tier": "VERIFIED",
+      "spec_iroas": 2.22,
+      "strict_iroas": 0.393,
+      "strict_iroas_lower": 0.2143,
+      "strict_iroas_upper": 0.5717,
+      "strict_incremental_revenue": 15375.0,
+      "test_period_spend": 39122.17,
+      "headline_metric": "reported_by_spec",
+      "headline_iroas": 2.22,
+      "divergence_warning": true,
       "checks": [
         {
           "check_id": 1,

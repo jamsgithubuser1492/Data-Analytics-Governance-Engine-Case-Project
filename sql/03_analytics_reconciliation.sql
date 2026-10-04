@@ -4,7 +4,8 @@
 --   reported_roas    = total_platform_revenue / total_spend
 --   incremental_roas = total_holdout_revenue  / total_spend   (iROAS)
 --   inflation_ratio  = total_platform_conversions / total_holdout_conversions
--- NULLIF guards every division against zero denominators.
+-- NULLIF guards every division against zero denominators. Campaigns with no
+-- MTA or holdout data return NULL (unknown), not 0.
 -- =============================================================================
 CREATE OR REPLACE VIEW ANALYTICS_MEASUREMENT_RECONCILIATION AS
 WITH aggregated_campaigns AS (
@@ -18,6 +19,7 @@ WITH aggregated_campaigns AS (
         SUM(mta_revenue)          AS total_mta_revenue,
         SUM(holdout_conversions)  AS total_holdout_conversions,
         SUM(holdout_revenue)      AS total_holdout_revenue,
+        MAX(has_mta_coverage)     AS has_mta_coverage,
         MAX(has_holdout_coverage) AS has_holdout_coverage
     FROM STG_UNIFIED_MEASUREMENT
     GROUP BY channel, campaign_id
@@ -33,6 +35,7 @@ SELECT
     total_mta_revenue,
     total_holdout_conversions,
     total_holdout_revenue,
+    has_mta_coverage,
     has_holdout_coverage,
     ROUND(total_platform_revenue / NULLIF(total_spend, 0), 2)          AS reported_roas,
     ROUND(total_mta_revenue / NULLIF(total_spend, 0), 2)               AS mta_roas,

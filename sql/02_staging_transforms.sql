@@ -3,7 +3,9 @@
 -- STG_UNIFIED_MEASUREMENT aligns Platform, MTA and Holdout data at the
 -- (date, channel, campaign_id) grain.
 -- The geo holdout only observes a 40% population sample, so treatment
--- conversions and revenue are scaled by / 0.40 to project to full population.
+-- conversions and revenue are divided by POLICY_PARAMS.geo_sample_fraction
+-- (default 0.40) to project to the full population.
+-- Missing sources stay NULL (unknown), never 0; coverage flags say which sources exist.
 -- =============================================================================
 CREATE OR REPLACE VIEW STG_UNIFIED_MEASUREMENT AS
 WITH stg_platform AS (
@@ -32,8 +34,8 @@ stg_holdout AS (
     SELECT
         date,
         campaign_id,
-        SUM(conversions) / 0.40 AS holdout_conversions,
-        SUM(revenue) / 0.40     AS holdout_revenue
+        SUM(conversions) / (SELECT geo_sample_fraction FROM POLICY_PARAMS) AS holdout_conversions,
+        SUM(revenue) / (SELECT geo_sample_fraction FROM POLICY_PARAMS)     AS holdout_revenue
     FROM RAW_HOLDOUT_DATA
     WHERE group_type = 'treatment'
     GROUP BY date, campaign_id
@@ -46,10 +48,11 @@ SELECT
     p.platform_spend,
     p.platform_conversions,
     p.platform_revenue,
-    COALESCE(m.mta_conversions, 0)     AS mta_conversions,
-    COALESCE(m.mta_revenue, 0)         AS mta_revenue,
-    COALESCE(h.holdout_conversions, 0) AS holdout_conversions,
-    COALESCE(h.holdout_revenue, 0)     AS holdout_revenue,
+    m.mta_conversions,
+    m.mta_revenue,
+    h.holdout_conversions,
+    h.holdout_revenue,
+    CASE WHEN m.mta_conversions IS NOT NULL THEN 1 ELSE 0 END     AS has_mta_coverage,
     CASE WHEN h.holdout_conversions IS NOT NULL THEN 1 ELSE 0 END AS has_holdout_coverage
 FROM stg_platform AS p
 LEFT JOIN stg_mta AS m

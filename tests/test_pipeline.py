@@ -119,7 +119,8 @@ def test_governance_status_thresholds(inflation: float, holdout: int, prefix: st
     db.con.execute(f"""CREATE OR REPLACE VIEW ANALYTICS_MEASUREMENT_RECONCILIATION AS SELECT
         'X' AS channel, 'X1' AS campaign_id, 1.0 AS total_spend, 1 AS total_platform_conversions,
         1 AS total_platform_revenue, 1 AS total_mta_conversions, 1 AS total_mta_revenue,
-        {holdout} AS total_holdout_conversions, 1 AS total_holdout_revenue, 1 AS reported_roas,
+        {holdout} AS total_holdout_conversions, 1 AS total_holdout_revenue, 1 AS has_mta_coverage,
+        1 AS has_holdout_coverage, 1 AS reported_roas,
         1 AS mta_roas, 1 AS incremental_roas, {inflation} AS inflation_ratio""")
     db._run_sql_file("04_governance_queries.sql")
     assert db.con.execute("SELECT governance_status FROM GOVERNANCE_CAMPAIGN_ALERTS").fetchone()[0].startswith(prefix)

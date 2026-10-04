@@ -51,6 +51,17 @@ CREATE OR REPLACE TABLE BUSINESS_BENCHMARKS (
     typical_incrementality_max FLOAT
 );
 
+-- 5. Policy parameters (single row). Editable governance settings used by the
+--    staging and governance layers. The Python runner overwrites this row with
+--    the workspace's settings; defaults below match the original spec.
+CREATE OR REPLACE TABLE POLICY_PARAMS (
+    geo_sample_fraction FLOAT,
+    inflation_moderate  FLOAT,
+    inflation_critical  FLOAT
+);
+
+INSERT INTO POLICY_PARAMS VALUES (0.40, 1.5, 3.0);
+
 -- -----------------------------------------------------------------------------
 -- SNOWFLAKE ONLY (run in a Snowflake worksheet, skipped by the DuckDB runner):
 --   CREATE DATABASE IF NOT EXISTS MMGE_DB;  USE DATABASE MMGE_DB;

@@ -20,7 +20,9 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from causal_impact_runner import run_all  # noqa: E402
+from config import TIER_NOT_DECISION_GRADE, PolicySettings  # noqa: E402
 from database_manager import DatabaseManager, OUTPUT_DIR, ROOT  # noqa: E402
+from strict_lift import divergence_warning, headline_iroas, strict_lift_row  # noqa: E402
 
 PASS, WARN, FAIL = "PASS", "WARN", "FAIL"
 SCORE = {PASS: 1.0, WARN: 0.5, FAIL: 0.0}
@@ -46,6 +48,16 @@ class CampaignAudit:
     trust_score: float
     verdict: str
     recommendation: str
+    tier: str = TIER_NOT_DECISION_GRADE
+    spec_iroas: Optional[float] = None
+    strict_iroas: Optional[float] = None
+    strict_iroas_lower: Optional[float] = None
+    strict_iroas_upper: Optional[float] = None
+    strict_incremental_revenue: Optional[float] = None
+    test_period_spend: Optional[float] = None
+    headline_metric: str = ""
+    headline_iroas: Optional[float] = None
+    divergence_warning: bool = False
     checks: List[CheckResult] = field(default_factory=list)
 
 
@@ -132,17 +144,24 @@ def _verdict(score: float) -> str:
     return "TRUSTED" if score >= 75 else ("CAUTION" if score >= 50 else "UNTRUSTED")
 
 
-def _recommendation(verdict: str, iroas: float) -> str:
-    if verdict == "UNTRUSTED":
-        return "HOLD: do not reallocate budget on this result; rerun or extend the holdout."
+def _recommendation(verdict: str, tier: str, iroas: float) -> str:
+    if tier == TIER_NOT_DECISION_GRADE or verdict == "UNTRUSTED" or pd.isna(iroas):
+        return "HOLD: not decision grade. Do not reallocate budget on this result; rerun or extend the holdout."
     direction = ("SCALE" if iroas >= 3.0 else "REDUCE" if iroas < 1.0 else "MAINTAIN")
-    suffix = " after a confirmation test" if verdict == "CAUTION" else ""
+    suffix = " after a confirmation test" if tier != "VERIFIED" else ""
     return f"{direction}: iROAS {iroas:.2f}x{suffix}."
 
 
+def _num(v: float) -> Optional[float]:
+    return None if pd.isna(v) else round(float(v), 4)
+
+
 # ------------------------------------------------------------------------- orchestration
-def audit_campaign(recon_row: pd.Series, causal_row: pd.Series, bench_row: pd.Series) -> CampaignAudit:
-    """Run the 8-point audit for one campaign."""
+def audit_campaign(recon_row: pd.Series, causal_row: pd.Series, bench_row: pd.Series,
+                   settings: Optional[PolicySettings] = None,
+                   test_period_spend: Optional[float] = None) -> CampaignAudit:
+    """Run the 8-point audit for one campaign and attach tier, strict lift and headline."""
+    settings = settings or PolicySettings()
     checks = [
         check_parallel_trends(causal_row), check_sample_size(causal_row), check_ci_width(causal_row),
         check_benchmarks(recon_row, bench_row), check_seasonality(causal_row),
@@ -151,27 +170,47 @@ def audit_campaign(recon_row: pd.Series, causal_row: pd.Series, bench_row: pd.Se
     checks.append(check_decision_usefulness(causal_row, checks))
     score = round(sum(SCORE[c.status] for c in checks) / len(checks) * 100, 1)
     verdict = _verdict(score)
-    return CampaignAudit(recon_row["campaign_id"], recon_row["channel"], score, verdict,
-                         _recommendation(verdict, float(recon_row["incremental_roas"])), checks)
+    tier = settings.trust_tier(score, checks[0].status == PASS)
+    strict = strict_lift_row(recon_row, causal_row, settings, test_period_spend)
+    spec = float(recon_row["incremental_roas"])
+    head = headline_iroas(spec, strict["strict_iroas_point"], settings)
+    return CampaignAudit(
+        recon_row["campaign_id"], recon_row["channel"], score, verdict, _recommendation(verdict, tier, head),
+        tier=tier, spec_iroas=_num(spec), strict_iroas=_num(strict["strict_iroas_point"]),
+        strict_incremental_revenue=_num(strict["strict_incremental_revenue_point"]), test_period_spend=_num(test_period_spend if test_period_spend is not None else recon_row["total_spend"]),
+        strict_iroas_lower=_num(strict["strict_iroas_lower"]), strict_iroas_upper=_num(strict["strict_iroas_upper"]),
+        headline_metric=settings.headline_metric, headline_iroas=_num(head),
+        divergence_warning=divergence_warning(spec, strict["strict_iroas_point"], settings), checks=checks)
 
 
-def run_audit(mgr: Optional[DatabaseManager] = None) -> Dict[str, Any]:
+def run_audit(mgr: Optional[DatabaseManager] = None, settings: Optional[PolicySettings] = None) -> Dict[str, Any]:
     """Audit every campaign and return the structured report."""
-    mgr = mgr or DatabaseManager().build()
+    settings = settings or (mgr.settings if mgr else PolicySettings())
+    mgr = mgr or DatabaseManager(settings=settings).build()
     recon = mgr.view("ANALYTICS_MEASUREMENT_RECONCILIATION")
     bench = mgr.view("BUSINESS_BENCHMARKS").set_index("channel")
-    causal = run_all().set_index("campaign_id")
+    causal = run_all(mgr.data_dir / "RAW_HOLDOUT_DATA.csv", settings.pre_period_days).set_index("campaign_id")
+    test_spend = mgr.view_query("""SELECT campaign_id, SUM(platform_spend) AS s FROM STG_UNIFIED_MEASUREMENT
+        WHERE date >= (SELECT MIN(date) FROM RAW_HOLDOUT_DATA WHERE treatment_flag = 1)
+        GROUP BY campaign_id""").set_index("campaign_id")["s"].to_dict()
     audits: List[CampaignAudit] = []
     for _, row in recon.sort_values("campaign_id").iterrows():
-        if row["campaign_id"] not in causal.index:
-            raise KeyError(f"No causal estimate for {row['campaign_id']}")
-        audits.append(audit_campaign(row, causal.loc[row["campaign_id"]], bench.loc[row["channel"]]))
+        if row["campaign_id"] not in causal.index or not row["has_holdout_coverage"]:
+            audits.append(CampaignAudit(row["campaign_id"], row["channel"], 0.0, "UNTRUSTED",
+                                        "HOLD: no holdout coverage, impact is unknown.", headline_metric=settings.headline_metric))
+            continue
+        audits.append(audit_campaign(row, causal.loc[row["campaign_id"]], bench.loc[row["channel"]], settings,
+                                     test_spend.get(row["campaign_id"])))
     scores = [a.trust_score for a in audits]
+    tiers = {t: sum(a.tier == t for a in audits) for t in ("VERIFIED", "DIRECTIONAL", "NOT_DECISION_GRADE")}
     return {
         "report": "MMGE Governance Audit",
+        "settings": settings.to_dict(), "settings_fingerprint": settings.fingerprint(),
+        "headline_metric": settings.headline_metric, "headline_label": settings.headline_label,
         "campaigns_audited": len(audits),
         "average_trust_score": round(sum(scores) / len(scores), 1) if scores else None,
         "verdict_counts": {v: sum(a.verdict == v for a in audits) for v in ("TRUSTED", "CAUTION", "UNTRUSTED")},
+        "tier_counts": tiers,
         "campaigns": [{**{k: v for k, v in a.__dict__.items() if k != "checks"},
                        "checks": [c.__dict__ for c in a.checks]} for a in audits],
     }

@@ -127,10 +127,10 @@ def estimate_campaign(df: pd.DataFrame, campaign_id: str,
     )
 
 
-def run_all(path: Path = HOLDOUT_CSV) -> pd.DataFrame:
+def run_all(path: Path = HOLDOUT_CSV, pre_days: int = PRE_PERIOD_DAYS) -> pd.DataFrame:
     """Estimate every campaign in the holdout file and return a results table."""
     df = load_holdout(path)
-    rows: List[Dict[str, object]] = [estimate_campaign(df, c).to_dict()
+    rows: List[Dict[str, object]] = [estimate_campaign(df, c, pre_days).to_dict()
                                      for c in sorted(df["campaign_id"].unique())]
     return pd.DataFrame(rows)
 

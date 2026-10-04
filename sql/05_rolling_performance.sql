@@ -11,7 +11,8 @@ WITH daily AS (
         campaign_id,
         platform_spend,
         platform_revenue,
-        holdout_revenue
+        holdout_revenue,
+        CASE WHEN has_holdout_coverage = 1 THEN platform_spend END AS covered_spend
     FROM STG_UNIFIED_MEASUREMENT
 ),
 
@@ -32,7 +33,11 @@ rolling AS (
         SUM(holdout_revenue) OVER (
             PARTITION BY campaign_id ORDER BY date
             ROWS BETWEEN 6 PRECEDING AND CURRENT ROW
-        ) AS rolling_7d_incremental_revenue
+        ) AS rolling_7d_incremental_revenue,
+        SUM(covered_spend) OVER (
+            PARTITION BY campaign_id ORDER BY date
+            ROWS BETWEEN 6 PRECEDING AND CURRENT ROW
+        ) AS rolling_7d_covered_spend
     FROM daily
 )
 
@@ -44,6 +49,7 @@ SELECT
     ROUND(rolling_7d_spend, 2)            AS rolling_7d_spend,
     ROUND(rolling_7d_reported_revenue, 2) AS rolling_7d_reported_revenue,
     ROUND(rolling_7d_incremental_revenue, 2) AS rolling_7d_incremental_revenue,
+    ROUND(rolling_7d_covered_spend, 2)    AS rolling_7d_covered_spend,
     ROUND(rolling_7d_reported_revenue / NULLIF(rolling_7d_spend, 0), 2)    AS rolling_7d_reported_roas,
-    ROUND(rolling_7d_incremental_revenue / NULLIF(rolling_7d_spend, 0), 2) AS rolling_7d_iroas
+    ROUND(rolling_7d_incremental_revenue / NULLIF(rolling_7d_covered_spend, 0), 2) AS rolling_7d_iroas
 FROM rolling;

@@ -3,17 +3,19 @@
 - Campaigns audited: **8**
 - Average trust score: **87.5**
 - Verdicts: {'TRUSTED': 6, 'CAUTION': 2, 'UNTRUSTED': 0}
+- Trust tiers: {'VERIFIED': 6, 'DIRECTIONAL': 2, 'NOT_DECISION_GRADE': 0}
+- Headline metric: **Reported-by-spec iROAS**
 
-| Campaign | Channel | Trust | Verdict | Recommendation |
-| --- | --- | --- | --- | --- |
-| GOOGLE_ADS_CMP_01 | Google Ads | 93.8 | TRUSTED | SCALE: iROAS 5.67x. |
-| GOOGLE_ADS_CMP_02 | Google Ads | 93.8 | TRUSTED | SCALE: iROAS 5.76x. |
-| META_ADS_CMP_01 | Meta Ads | 100.0 | TRUSTED | SCALE: iROAS 3.19x. |
-| META_ADS_CMP_02 | Meta Ads | 100.0 | TRUSTED | SCALE: iROAS 3.31x. |
-| NETFLIX_ADS_CMP_01 | Netflix Ads | 62.5 | CAUTION | REDUCE: iROAS 0.34x after a confirmation test. |
-| NETFLIX_ADS_CMP_02 | Netflix Ads | 62.5 | CAUTION | REDUCE: iROAS 0.36x after a confirmation test. |
-| TIKTOK_ADS_CMP_01 | TikTok Ads | 93.8 | TRUSTED | MAINTAIN: iROAS 2.08x. |
-| TIKTOK_ADS_CMP_02 | TikTok Ads | 93.8 | TRUSTED | MAINTAIN: iROAS 2.22x. |
+| Campaign | Channel | Trust | Tier | Spec iROAS | Strict iROAS (95% CI) | Recommendation |
+| --- | --- | --- | --- | --- | --- | --- |
+| GOOGLE_ADS_CMP_01 | Google Ads | 93.8 | VERIFIED | 5.67x ⚠️ spec overstates | 1.00x (0.78 to 1.21) | SCALE: iROAS 5.67x. |
+| GOOGLE_ADS_CMP_02 | Google Ads | 93.8 | VERIFIED | 5.76x ⚠️ spec overstates | 1.00x (0.80 to 1.20) | SCALE: iROAS 5.76x. |
+| META_ADS_CMP_01 | Meta Ads | 100.0 | VERIFIED | 3.19x ⚠️ spec overstates | 0.56x (0.39 to 0.73) | SCALE: iROAS 3.19x. |
+| META_ADS_CMP_02 | Meta Ads | 100.0 | VERIFIED | 3.31x ⚠️ spec overstates | 0.59x (0.41 to 0.76) | SCALE: iROAS 3.31x. |
+| NETFLIX_ADS_CMP_01 | Netflix Ads | 62.5 | DIRECTIONAL | 0.34x ⚠️ spec overstates | 0.01x (-0.06 to 0.08) | REDUCE: iROAS 0.34x after a confirmation test. |
+| NETFLIX_ADS_CMP_02 | Netflix Ads | 62.5 | DIRECTIONAL | 0.36x ⚠️ spec overstates | 0.02x (-0.04 to 0.09) | REDUCE: iROAS 0.36x after a confirmation test. |
+| TIKTOK_ADS_CMP_01 | TikTok Ads | 93.8 | VERIFIED | 2.08x ⚠️ spec overstates | 0.36x (0.19 to 0.53) | MAINTAIN: iROAS 2.08x. |
+| TIKTOK_ADS_CMP_02 | TikTok Ads | 93.8 | VERIFIED | 2.22x ⚠️ spec overstates | 0.39x (0.21 to 0.57) | MAINTAIN: iROAS 2.22x. |
 
 ## GOOGLE_ADS_CMP_01
 

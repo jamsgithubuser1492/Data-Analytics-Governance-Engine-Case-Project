@@ -18,9 +18,9 @@ SELECT
     CASE
         WHEN total_holdout_conversions IS NULL OR total_holdout_conversions = 0
             THEN 'NO_HOLDOUT_COVERAGE ⚠️'
-        WHEN inflation_ratio >= 3.0
+        WHEN inflation_ratio >= (SELECT inflation_critical FROM POLICY_PARAMS)
             THEN 'CRITICAL_INFLATION_WARNING 🚨'
-        WHEN inflation_ratio >= 1.5
+        WHEN inflation_ratio >= (SELECT inflation_moderate FROM POLICY_PARAMS)
             THEN 'MODERATE_INFLATION 🟡'
         ELSE 'PASS ✅'
     END AS governance_status
@@ -31,6 +31,7 @@ WITH channel_totals AS (
     SELECT
         channel,
         SUM(total_spend)                AS total_spend,
+        SUM(CASE WHEN has_holdout_coverage = 1 THEN total_spend END) AS holdout_covered_spend,
         SUM(total_platform_conversions) AS total_platform_conversions,
         SUM(total_platform_revenue)     AS total_platform_revenue,
         SUM(total_mta_conversions)      AS total_mta_conversions,
@@ -44,6 +45,7 @@ WITH channel_totals AS (
 SELECT
     channel,
     ROUND(total_spend, 2)               AS total_spend,
+    ROUND(holdout_covered_spend, 2)     AS holdout_covered_spend,
     total_platform_conversions,
     total_mta_conversions,
     total_holdout_conversions,
@@ -52,12 +54,14 @@ SELECT
     total_holdout_revenue,
     ROUND(total_platform_revenue / NULLIF(total_spend, 0), 2) AS platform_roas,
     ROUND(total_mta_revenue / NULLIF(total_spend, 0), 2)      AS mta_roas,
-    ROUND(total_holdout_revenue / NULLIF(total_spend, 0), 2)  AS incremental_roas,
+    ROUND(total_holdout_revenue / NULLIF(holdout_covered_spend, 0), 2)  AS incremental_roas,
     ROUND(total_platform_conversions / NULLIF(total_holdout_conversions, 0), 2) AS inflation_ratio,
     CASE
-        WHEN total_holdout_revenue / NULLIF(total_spend, 0) < 1.0
+        WHEN total_holdout_revenue IS NULL
+            THEN 'NO_HOLDOUT_COVERAGE ⚠️'
+        WHEN total_holdout_revenue / NULLIF(holdout_covered_spend, 0) < 1.0
             THEN 'UNPROFITABLE: Reduce Spend 🔴'
-        WHEN total_holdout_revenue / NULLIF(total_spend, 0) >= 3.0
+        WHEN total_holdout_revenue / NULLIF(holdout_covered_spend, 0) >= 3.0
             THEN 'HEALTHY: Scale Channel 🟢'
         ELSE 'MONITOR: Optimize 🟡'
     END AS governance_action

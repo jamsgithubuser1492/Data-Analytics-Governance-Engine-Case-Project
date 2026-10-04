@@ -14,11 +14,12 @@ def render_text_summary(report: Dict[str, Any]) -> str:
         "=== MMGE GOVERNANCE AUDIT SUMMARY ===",
         f"Campaigns audited: {report['campaigns_audited']}   "
         f"Average trust score: {report['average_trust_score']}",
-        f"Verdicts: {report['verdict_counts']}",
+        f"Verdicts: {report['verdict_counts']}   Tiers: {report['tier_counts']}",
+        f"Headline metric: {report['headline_label']}",
         "",
     ]
     for c in report["campaigns"]:
-        lines.append(f"{c['campaign_id']:<20} trust {c['trust_score']:>5}  {c['verdict']:<9} {c['recommendation']}")
+        lines.append(f"{c['campaign_id']:<20} trust {c['trust_score']:>5}  {c['tier']:<18} {c['recommendation']}")
         for chk in c["checks"]:
             lines.append(f"    {ICON[chk['status']]} {chk['check_id']}. {chk['name']}: {chk['detail']}")
     return "\n".join(lines)
@@ -29,10 +30,15 @@ def render_markdown(report: Dict[str, Any]) -> str:
     out = ["# MMGE Governance Audit Report", "",
            f"- Campaigns audited: **{report['campaigns_audited']}**",
            f"- Average trust score: **{report['average_trust_score']}**",
-           f"- Verdicts: {report['verdict_counts']}", "",
-           "| Campaign | Channel | Trust | Verdict | Recommendation |", "| --- | --- | --- | --- | --- |"]
+           f"- Verdicts: {report['verdict_counts']}", f"- Trust tiers: {report['tier_counts']}",
+           f"- Headline metric: **{report['headline_label']}**", "",
+           "| Campaign | Channel | Trust | Tier | Spec iROAS | Strict iROAS (95% CI) | Recommendation |",
+           "| --- | --- | --- | --- | --- | --- | --- |"]
     for c in report["campaigns"]:
-        out.append(f"| {c['campaign_id']} | {c['channel']} | {c['trust_score']} | {c['verdict']} | {c['recommendation']} |")
+        strict = "n/a" if c["strict_iroas"] is None else f"{c['strict_iroas']:.2f}x ({c['strict_iroas_lower']:.2f} to {c['strict_iroas_upper']:.2f})"
+        spec = "n/a" if c["spec_iroas"] is None else f"{c['spec_iroas']:.2f}x"
+        flag = " ⚠️ spec overstates" if c["divergence_warning"] else ""
+        out.append(f"| {c['campaign_id']} | {c['channel']} | {c['trust_score']} | {c['tier']} | {spec}{flag} | {strict} | {c['recommendation']} |")
     out.append("")
     for c in report["campaigns"]:
         out += [f"## {c['campaign_id']}", "", "| # | Check | Status | Detail |", "| --- | --- | --- | --- |"]
