@@ -49,7 +49,7 @@ python data/generate_synthetic_data.py      # regenerates data/*.csv (determinis
 python python/database_manager.py           # SQL pipeline -> outputs/*.csv
 python python/governance_checker.py         # causal impact + 8-point audit -> outputs/governance_audit_report.{json,md}
 pytest tests/test_pipeline.py
-streamlit run app/app.py                    # opens http://localhost:8501
+python -m streamlit run app/app.py         # opens http://localhost:8501 (use python -m if 'streamlit: command not found')
 ```
 
 ## Snowflake setup
