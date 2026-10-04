@@ -40,19 +40,20 @@ def clean(at: AppTest) -> None:
 def test_1_empty_state_then_demo_run_from_dashboard() -> None:
     at = page("app.py")
     clean(at)
-    assert any("No runs yet" in i.value for i in at.info)
+    assert any("Know which channels truly earn back" in m.value for m in at.markdown)  # empty state is never a dead end
     next(b for b in at.button if b.label == "Try with demo data").click().run(timeout=T)
     clean(at)
-    m = {x.label: x.value for x in at.metric}
-    assert m["Total media spend"] == "$748,140" and m["Proven return per $1"] == "3.33x" and m["Recommendations to review"] == "6"
+    text = " ".join(m.value for m in at.markdown)
+    assert "$748,140" in text and "3.33x" in text and "Decisions to review" in text and "Trust score 89 of 100" in text
+    assert "Scale Google Ads" in text and "+$667,510" in text  # answer first headline
 
 
 def test_2_policy_switch_creates_strict_run() -> None:
     at = page("app.py")
     at.sidebar.radio[0].set_value(at.sidebar.radio[0].options[1]).run(timeout=T)
     clean(at)
-    m = {x.label: x.value for x in at.metric}
-    assert m["Proven return per $1"] == "0.57x"
+    text = " ".join(m.value for m in at.markdown)
+    assert "0.57x" in text and "Strict lift" in text
     import common
     assert len(common.get_store().list_runs(common.identity()[1])) >= 2
 
@@ -85,9 +86,10 @@ def test_4_inbox_approve_then_execute_writes_audit_log() -> None:
 
 def test_5_role_filter_hides_other_personas() -> None:
     at = page("app.py")
-    at.sidebar.selectbox[1].select("Brand CFO").run(timeout=T)
+    next(c for c in at.segmented_control if c.key == "persp").set_value("CFO / Finance").run(timeout=T)
     clean(at)
-    assert any("No threshold triggers" in s.value for s in at.success)  # no capital loss alerts under spec view
+    text = " ".join(m.value for m in at.markdown)
+    assert "No decision rule is triggered" in text and "has not been earned back" in text  # no capital loss packets under spec view
 
 
 def test_6_runs_page_and_compare() -> None:

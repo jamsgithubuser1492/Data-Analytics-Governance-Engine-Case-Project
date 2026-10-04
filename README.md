@@ -149,12 +149,14 @@ Not yet exercised: the live Claude call (tests use a fake client with the same i
 
 ## Executive dashboard design
 
-The home page (`app/app.py`) is written for a non-technical leadership reader:
+The app is written for non-technical leadership. Design system in `app/ui.py`, chart logic in `app/charts.py`, calculations in `app/dashdata.py` (unit tested), sign-off overrides in `python/overrides.py`.
 
-* **Answer first.** A plain language bottom line states which channels earn back their spend, which fall short and how much spend sits in them, before any chart.
-* **One message per chart.** Every chart headline is generated from the run (`app/charts.py`), for example "Google Ads just breaks even; Netflix Ads, TikTok Ads and Meta Ads lose money", with a one line guide to reading it.
-* **Plain labels.** "Claimed by the platform", "Attribution model estimate" and "Proven by the holdout test" replace ROAS, MTA and iROAS. A definitions panel explains each term.
-* **Axes sized to the data.** Ranges include the data, the breakeven line and the policy thresholds, with headroom for labels. Bar charts grow with the number of campaigns, outliers are capped and labelled "off scale", and trend charts zoom to the typical range.
-* **Breakeven comes from the economics.** The red line is 1 divided by your margin (or 1.00x revenue breakeven when no margin is set). Results within 5% of breakeven read "just breaks even".
-* **Honest benchmark context.** The dashboard shows the verified context available (test certainty, typical test length) and states plainly that no verified channel return band exists, so none is drawn.
-* **No emojis; modern theme** (`.streamlit/config.toml`, shared CSS in `app/common.py`). Status always uses a text label, never colour alone.
+* **Answer first.** The home page opens with a plain-language hero (for example "Scale Google Ads; maintain Meta Ads and TikTok Ads; cut Netflix Ads") and a note on what moving Netflix spend is worth, before any chart.
+* **Five perspectives** (CFO / Finance, CMO / Growth, Agency Director, Platform Lead, Everyone) change the landing view: a capital-at-risk waterfall and leaderboard, a trend and portfolio matrix with growth headroom, side by side spec versus strict lift cards with client note export, or an over-claim alert table with data health.
+* **Three lenses.** Capital preservation, attribution shield and scale opportunity each show their rule in words, what they flagged, and the evidence behind each flag (trust score, tier, checks passed, 95% interval, best and worst case).
+* **Uncertainty is shown, not hidden.** Strict lift figures carry a 95% confidence interval; channel intervals add campaign bounds (conservative). The trend envelope is labelled as variation, not a statistical interval.
+* **Trust gating.** Verified: one click execution. Directional: approval only, execution off. Not decision grade: financial actions locked. A divergence alert appears when the spec view exceeds strict lift by more than 15%.
+* **Executive overrides** need a justification of 10 or more characters, an email and a role, and are appended to a hash-chained `run_audit_log.json` that detects any later edit.
+* **Every chart** states its finding, stamps the counting basis, and has a Chart or Table toggle. No dual axes. Axes are sized to the data, breakeven and thresholds.
+* **Plain labels with an always-on glossary** (hover definitions and formulas). No emojis: status uses a distinct shape plus a text label. Light and dark themes follow the system or the Streamlit menu; data colors are Okabe-Ito based.
+* **Honest benchmarks.** No channel return band is drawn because no verified comparable one exists; see the Benchmarks page.

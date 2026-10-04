@@ -21,7 +21,9 @@ store = get_store()
 actor, ws = identity()
 runs = store.list_runs(ws)
 
-st.title("Runs")
+import ui  # noqa: E402
+
+ui.page_head("History and audit", "Runs", "Every analysis is saved with the exact data, policy and code that produced it, so any number can be traced, compared and exported.")
 if not runs:
     st.info("No runs yet. Upload data or load the demo from the Dashboard page.")
     st.stop()
@@ -68,7 +70,7 @@ with tab_inbox:
     for it in items:
         p = it["packet"]
         with st.container(border=True):
-            st.markdown(f"**{p['title']}**  \nStatus **{it['status']}** · run `{it['run_id']}` · {p['agent_id']}")
+            st.markdown(f"**{ui.scrub(p['title'])}**  \nStatus **{it['status']}** · run `{it['run_id']}` · {p['agent_id']}")
             st.caption(p["strategic_callout"])
             c1, c2, c3 = st.columns([1, 1, 4])
             try:

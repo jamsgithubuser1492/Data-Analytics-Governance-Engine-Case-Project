@@ -23,7 +23,9 @@ actor, ws = identity()
 defs = store.get_agent_definitions(ws)
 by_id = {d["id"]: d for d in defs}
 
-st.title("Decision rules (agent builder)")
+import ui  # noqa: E402
+
+ui.page_head("No code rules", "Decision rules", "Three archetypes watch your results: capital preservation, attribution shield and scale opportunity. Edit them, add your own, preview what they would flag, and see how sensitive they are to the thresholds.")
 st.caption("Agents are rules, not code. Pick a metric, a condition, who it is for and what action it recommends. "
            "Money actions never fire on results that are not decision grade. Every save is a new version.")
 

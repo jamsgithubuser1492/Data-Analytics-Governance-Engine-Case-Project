@@ -15,7 +15,9 @@ import streamlit as st  # noqa: E402
 from benchmark_registry import COMPARABILITY, NOT_COMPARABLE_NOTES, Registry, RegistryError  # noqa: E402
 from benchmark_verify import verify_live, verify_offline  # noqa: E402
 
-st.title("Benchmarks")
+import ui  # noqa: E402
+
+ui.page_head("Reference data", "Benchmarks", "Outside context with its sources, confidence and limits. Used as context only: no agent moves money because of a benchmark.")
 st.caption("Every number here was checked against its primary source. Context, not a verdict: no agent takes a money action because of a benchmark.")
 try:
     reg = Registry.load()

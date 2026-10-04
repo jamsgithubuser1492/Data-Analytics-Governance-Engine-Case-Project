@@ -72,7 +72,7 @@ def test_3_settings_margin_and_geos_flow_to_the_dashboard() -> None:
     d = page("app.py")
     next(b for b in d.button if b.label == "Try with demo data").click().run(timeout=T)
     clean(d)
-    assert any("Breakeven is 2.00x" in c.value for c in d.caption)
+    assert any("Breakeven 2.00x at a 50% margin" in m.value for m in d.markdown)
     run = store.list_runs(ws)[0]
     audit = store.load_audit(ws, run["id"])
     assert audit["economics"]["breakeven_iroas"] == 2.0

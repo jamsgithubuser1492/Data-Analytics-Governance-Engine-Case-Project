@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import sqlite3
 import threading
@@ -42,6 +43,9 @@ TRANSITIONS = {
 
 class StoreError(RuntimeError):
     """Raised for invalid store operations (unknown run, bad transition, cross workspace access)."""
+
+
+_EMOJI = re.compile("[\U0001F000-\U0001FFFF\u2600-\u27BF\u2B00-\u2BFF\u2190-\u21FF\u2139\u200d\uFE0F]")
 
 
 def _now() -> str:
@@ -338,7 +342,15 @@ class SqlRunStore:
             rows = c.all("""SELECT a.definition_json FROM agent_definitions a JOIN (
                               SELECT agent_id, MAX(version) AS v FROM agent_definitions WHERE workspace_id = ? GROUP BY agent_id) m
                             ON a.agent_id = m.agent_id AND a.version = m.v WHERE a.workspace_id = ?""", (workspace_id, workspace_id))
-        saved = {json.loads(r[0])["id"]: json.loads(r[0]) for r in rows}
+        saved = {}
+        for r in rows:
+            d = json.loads(r[0])
+            for k in ("name", "description", "title", "callout"):  # definitions saved by older versions may carry emoji; the product is text only
+                if isinstance(d.get(k), str):
+                    d[k] = _EMOJI.sub("", d[k]).strip()
+            for va in d.get("value_add", []):
+                va["label"] = _EMOJI.sub("", str(va.get("label", ""))).strip()
+            saved[d["id"]] = d
         merged = [saved.pop(p["id"], p) for p in default_definitions()]
         return merged + sorted(saved.values(), key=lambda d: (d["priority"], d["id"]))
 

@@ -79,15 +79,15 @@ def export_markdown(memo: Dict[str, Any]) -> str:
     """Markdown export; only approved memos can be exported."""
     if memo["status"] not in ("approved", "exported"):
         raise PermissionError("Only approved memos can be exported.")
-    label = "AI drafted, human approved" if memo["ai_drafted"] else "Template drafted, human approved"
+    label = "AI drafted using verified run facts | Human approved" if memo["ai_drafted"] else "Template drafted from verified run facts | Human approved"
     return (f"# Measurement memo: {memo['facts_text'].get('campaign_id', '')}\n\n{memo['text_clean']}\n\n---\n"
-            f"_{label} by {memo['approved_by']} on {memo['approved_at'][:10]}. Run {memo['run_id']}._\n")
+            f"_Counting basis: {memo['facts_text'].get('headline_label', 'not recorded')}. {label} by {memo['approved_by']} on {memo['approved_at'][:10]}. Run {memo['run_id']}._\n")
 
 
 def export_slack(memo: Dict[str, Any]) -> str:
     if memo["status"] not in ("approved", "exported"):
         raise PermissionError("Only approved memos can be exported.")
-    label = "AI drafted, human approved" if memo["ai_drafted"] else "Template drafted, human approved"
+    label = "AI drafted using verified run facts | Human approved" if memo["ai_drafted"] else "Template drafted from verified run facts | Human approved"
     return f"*Measurement memo: {memo['facts_text'].get('campaign_id', '')}*\n{memo['text_clean']}\n_{label} by {memo['approved_by']}_"
 
 

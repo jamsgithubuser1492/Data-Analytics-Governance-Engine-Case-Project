@@ -19,7 +19,9 @@ settings, decl, version = store.latest_workspace_config(ws)
 decl = {"currency": "USD", "timezone": "UTC", "spend_unit": "dollars", "decimal_separator": ".", "date_order": "ymd",
         "channel_aliases": {}, **decl}
 
-st.title("Policy and declarations")
+import ui  # noqa: E402
+
+ui.page_head("Policy", "Policy and declarations", "These settings decide how results are counted, when evidence is trusted and what a decision rule may do. Every change creates a new version and is stamped on each run.")
 st.caption(f"Workspace: **{ws[:6]}…** · Settings version {version or 'defaults (never saved)'}. Every change is saved as a new "
            "version, and each run records the policy it used.")
 
@@ -104,7 +106,7 @@ if submitted:
         if new.gross_margin or new.margin_industry:
             from economics import resolve_economics
             econ = resolve_economics(new, _reg)
-            st.info(f"Breakeven iROAS is **{econ['breakeven_iroas']:.2f}x** at a {econ['margin']:.0%} margin. {econ['note']}")
+            st.info(f"Breakeven return is **{econ['breakeven_iroas']:.2f}x** at a {econ['margin']:.0%} margin. {econ['note']}")
         if fips and _reg is not None:
             s = _reg.population_share(fips)
             gap = abs(s["share"] - geo) / geo

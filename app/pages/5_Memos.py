@@ -20,7 +20,9 @@ store = get_store()
 actor, ws = identity()
 runs = succeeded_runs(ws)
 
-st.title("Memos")
+import ui  # noqa: E402
+
+ui.page_head("Narratives", "Memos", "Plain-language briefs for executives and clients. Every figure is checked against the run before you see it.")
 st.caption("Every number in a memo must come from a fact the code produced. Drafts are verified before you see them, and nothing "
            "can be exported until a person approves it.")
 if not runs:
@@ -42,12 +44,12 @@ items = store.list_inbox(ws, run_id=run_id)
 if not items:
     st.info("This run has no agent packets, so there is nothing to write a memo about.")
     st.stop()
-item_labels = {i["id"]: f"{i['packet']['title']} · {i['status']}" for i in items}
+item_labels = {i["id"]: f"{ui.scrub(i['packet']['title'])} · {i['status']}" for i in items}
 if st.session_state.get("memo_item") not in item_labels:
     st.session_state["memo_item"] = next(iter(item_labels))
 item_id = st.selectbox("Packet", list(item_labels), format_func=item_labels.get, key="memo_item")
 item = next(i for i in items if i["id"] == item_id)
-st.caption(item["packet"]["strategic_callout"])
+st.caption(ui.scrub(item["packet"]["strategic_callout"]))
 
 if st.button("Draft memo", type="primary"):
     try:

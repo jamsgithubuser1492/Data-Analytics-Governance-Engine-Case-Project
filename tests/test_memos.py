@@ -192,7 +192,7 @@ def test_template_only_memo_and_approval_gate(env) -> None:
         store.transition_memo(ws, m["id"], "exported", "jim")  # cannot skip approval
     store.transition_memo(ws, m["id"], "approved", "jim")
     approved = store.get_memo(ws, m["id"])
-    assert approved["approved_by"] == "jim" and "Template drafted, human approved" in export_markdown(approved)
+    assert approved["approved_by"] == "jim" and "Template drafted from verified run facts | Human approved" in export_markdown(approved)
     assert "[F" not in export_markdown(approved) and "Template drafted" in export_slack(approved)
     store.transition_memo(ws, m["id"], "exported", "jim")
     events = [e["event"] for e in store.list_audit_events(ws)]
@@ -206,7 +206,7 @@ def test_ai_memo_that_verifies_is_used_and_labeled(env) -> None:
     m = draft_memo(store, ws, item, facts, rid, ClaudeMemoWriter(client=FakeClient([ok_text])), "jim")
     assert m["writer"] == "claude" and m["ai_drafted"] and m["verification"]["ok"] and m["attempts"][0]["ok"]
     store.transition_memo(ws, m["id"], "approved", "jim")
-    assert "AI drafted, human approved" in export_markdown(store.get_memo(ws, m["id"]))
+    assert "AI drafted using verified run facts | Human approved" in export_markdown(store.get_memo(ws, m["id"]))
 
 
 def test_hallucinated_number_retries_with_feedback_then_succeeds(env) -> None:

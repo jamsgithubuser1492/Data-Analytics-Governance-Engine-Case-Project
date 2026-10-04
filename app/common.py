@@ -17,49 +17,16 @@ from pipeline import SourceTables  # noqa: E402
 from run_store import SUCCEEDED, LocalRunStore  # noqa: E402
 
 DATA_ROOT = Path(os.environ.get("MMGE_DATA_DIR", ROOT / "var"))
-TIER_BADGE = {"VERIFIED": "Verified", "DIRECTIONAL": "Directional", "NOT_DECISION_GRADE": "Not decision grade"}
-TIER_KIND = {"VERIFIED": "ok", "DIRECTIONAL": "warn", "NOT_DECISION_GRADE": "bad"}
-SEVERITY_LABEL = {"CRITICAL": "Critical", "WARNING": "Warning", "OPPORTUNITY": "Opportunity", "INFO": "Info"}
-SEVERITY_KIND = {"CRITICAL": "bad", "WARNING": "warn", "OPPORTUNITY": "ok", "INFO": "info"}
+import ui  # noqa: E402
 
-CSS = """
-<style>
-[data-testid="stSidebarNav"] {display: none;}
-.block-container {padding-top: 2.2rem; max-width: 1280px;}
-h1 {font-weight: 700; letter-spacing: -0.02em; margin-bottom: 0.1rem;}
-h2, h3 {font-weight: 650; letter-spacing: -0.01em;}
-[data-testid="stMetric"] {background: #f4f6fa; border: 1px solid #e3e8f0; border-radius: 12px; padding: 14px 16px;}
-[data-testid="stMetricLabel"] {color: #4b586b;}
-[data-testid="stMetricValue"] {font-weight: 700;}
-[data-testid="stVerticalBlockBorderWrapper"] {border-radius: 12px;}
-[data-testid="stSidebar"] {border-right: 1px solid #e3e8f0;}
-.pill {display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 0.78rem; font-weight: 600; line-height: 1.5; border: 1px solid transparent;}
-.pill-ok {background: #e6f4ee; color: #146c47; border-color: #bfe3d2;}
-.pill-warn {background: #fdf3df; color: #8a5a00; border-color: #f2dba6;}
-.pill-bad {background: #fbe8e6; color: #a32619; border-color: #f0c3be;}
-.pill-info {background: #e8eefb; color: #1d4ed8; border-color: #c5d3f5;}
-.pill-muted {background: #eef0f4; color: #4b586b; border-color: #dde1e8;}
-.takeaway {border-left: 4px solid #1d4ed8; background: #f4f7ff; padding: 14px 18px; border-radius: 8px; font-size: 1.05rem; line-height: 1.5;}
-.takeaway.bad {border-left-color: #c0392b; background: #fdf4f3;}
-.takeaway.ok {border-left-color: #1a7f5a; background: #f2faf6;}
-.section-note {color: #4b586b; font-size: 0.95rem; margin: -0.3rem 0 0.6rem 0;}
-</style>
-"""
-
+TIER_BADGE = {k: v[0] for k, v in ui.TIER_LABEL.items()}
+TIER_KIND = {k: v[1] for k, v in ui.TIER_LABEL.items()}
+pill, takeaway = ui.pill, ui.callout
 
 NAV = [("app.py", "Dashboard", ":material/analytics:"), ("pages/1_Upload.py", "Upload data", ":material/upload:"),
        ("pages/2_Runs.py", "Runs", ":material/history:"), ("pages/3_Settings.py", "Settings", ":material/tune:"),
        ("pages/4_Agents.py", "Decision rules", ":material/smart_toy:"), ("pages/5_Memos.py", "Memos", ":material/description:"),
        ("pages/6_Benchmarks.py", "Benchmarks", ":material/menu_book:")]
-
-
-def pill(text: str, kind: str = "muted") -> str:
-    """Small colored status label as HTML (always text, never color alone)."""
-    return f'<span class="pill pill-{kind}">{text}</span>'
-
-
-def takeaway(text: str, kind: str = "") -> None:
-    st.markdown(f'<div class="takeaway {kind}">{text}</div>', unsafe_allow_html=True)
 
 
 @st.cache_resource
@@ -109,7 +76,7 @@ def succeeded_runs(workspace_id: str) -> list:
 
 def page_setup(title: str, icon: str = ":material/analytics:") -> None:
     st.set_page_config(page_title=f"MMGE · {title}", page_icon=icon, layout="wide")
-    st.markdown(CSS, unsafe_allow_html=True)
+    ui.apply_theme()
     with st.sidebar:
         st.markdown("**Media Measurement and Governance**")
         for page, name, icon in NAV:

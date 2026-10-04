@@ -1,24 +1,47 @@
 """Executive chart builders: one message per chart, plain language labels, axes sized to the data.
 
-Pure functions (no Streamlit) so they can be unit tested. Every chart carries an action title that
-states the finding, a short subtitle that says how to read it, and reference lines that come from
-the run itself (breakeven from the margin economics, thresholds from the policy).
+Pure functions (no Streamlit rendering) so they can be unit tested. Every figure carries its finding and a reading guide in
+``fig.layout.meta`` (rendered as HTML by the chart card), uses the active theme (light or dark) and never uses a second y axis.
 """
 from __future__ import annotations
 
-from typing import Iterable, Optional, Sequence, Tuple
+from typing import Dict, Iterable, Optional, Sequence, Tuple
 
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 
-INK, MUTED, GRID = "#16202f", "#4b586b", "#e6eaf0"
-BLUE, ORANGE, GREEN = "#1d4ed8", "#d9631e", "#1a7f5a"
-AMBER, RED = "#c98a00", "#c0392b"
-CHANNEL_COLORS = {"Meta Ads": "#2a78d6", "Google Ads": "#eb6834", "TikTok Ads": "#1baf7a", "Netflix Ads": "#c98a00"}
-FALLBACK_COLORS = ["#2a78d6", "#eb6834", "#1baf7a", "#c98a00", "#8a5cc2", "#4b586b"]
-SERIES = {"claimed": ("Claimed by the platform", "#9aa7bd"), "model": ("Attribution model estimate", "#5b7fd6"),
-          "proven": ("Proven by the holdout test", GREEN)}
+from dashdata import AT_BREAKEVEN_BAND, classify  # noqa: F401  (classify re-exported for callers and tests)
+from ui import LIGHT, channel_color
+
+_THEME: Dict[str, str] = dict(LIGHT)
+SERIES_NAMES = {"claimed": "Claimed by the platform", "model": "Attribution model estimate", "proven": "Proven by the holdout test"}
+
+
+def use_theme(tokens: Dict[str, str]) -> None:
+    """Colors for every figure built after this call (light or dark)."""
+    global _THEME
+    _THEME = dict(tokens)
+
+
+def T() -> Dict[str, str]:
+    return _THEME
+
+
+def _dark() -> bool:
+    return _THEME["bg"] != LIGHT["bg"]
+
+
+def good() -> str:
+    return "#5fd1a0" if _dark() else "#15734d"
+
+
+def caution() -> str:
+    return "#f0c25e" if _dark() else "#b87900"
+
+
+def danger() -> str:
+    return "#ff8f84" if _dark() else "#c0392b"
 
 
 def padded_range(values: Iterable[float], include: Sequence[float] = (), floor_zero: bool = True,
@@ -45,39 +68,31 @@ def bar_height(n_items: int, base: int = 300, per_item: int = 36, cap: int = 900
     return int(min(cap, max(base, 110 + per_item * max(n_items, 1))))
 
 
-def _layout(fig: go.Figure, title: str, subtitle: str, height: Optional[int] = None, legend: bool = True, bottom: int = 70) -> go.Figure:
-    """Shared look. The finding and how to read it travel in ``fig.layout.meta`` and are rendered as HTML above the chart
-    (crisp, wrapping text); the figure itself carries no title."""
-    fig.update_layout(
-        meta=dict(headline=title, subtitle=subtitle),
-        template="plotly_white", font=dict(family="Inter, system-ui, sans-serif", size=13, color=INK),
-        margin=dict(t=44, b=bottom, l=8, r=24), height=height, hovermode="closest",
-        showlegend=legend, legend=dict(orientation="h", yref="container", y=0, yanchor="bottom", x=0, title_text=""),
-        paper_bgcolor="white", plot_bgcolor="white")
-    fig.update_xaxes(showgrid=False, linecolor=GRID)
-    fig.update_yaxes(gridcolor=GRID, zeroline=False)
-    return fig
-
-
 def _x(v: float) -> str:
     return "not measured" if pd.isna(v) else f"{v:.2f}x"
 
 
+def _layout(fig: go.Figure, title: str, subtitle: str, height: Optional[int] = None, legend: bool = True, bottom: int = 70,
+            right: int = 24) -> go.Figure:
+    t = _THEME
+    fig.update_layout(
+        meta=dict(headline=title, subtitle=subtitle), template="plotly_dark" if _dark() else "plotly_white",
+        font=dict(family="Inter, system-ui, sans-serif", size=13, color=t["ink"]),
+        margin=dict(t=30, b=bottom, l=8, r=right), height=height, hovermode="closest", showlegend=legend,
+        legend=dict(orientation="h", yref="container", y=0, yanchor="bottom", x=0, title_text=""),
+        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
+    fig.update_xaxes(showgrid=False, linecolor=t["grid"], zeroline=False)
+    fig.update_yaxes(gridcolor=t["grid"], zeroline=False)
+    return fig
+
+
+def _breakeven_line(fig: go.Figure, y: float, label: str) -> None:
+    fig.add_hline(y=y, line_dash="dash", line_color=danger(), line_width=2)
+    fig.add_scatter(x=[None], y=[None], mode="lines", name=label, line=dict(color=danger(), dash="dash", width=2))  # legend entry
+
+
 # ------------------------------------------------------------------ headlines (the message of each chart)
-AT_BREAKEVEN_BAND = 0.05  # within 5% of breakeven counts as "about breakeven", not a loss
-
-
-def classify(proven: float, breakeven: float) -> str:
-    """'above', 'at' (within 5% of breakeven) or 'below'; 'unmeasured' when there is no holdout evidence."""
-    if proven is None or pd.isna(proven):
-        return "unmeasured"
-    if proven >= breakeven * (1 + AT_BREAKEVEN_BAND):
-        return "above"
-    return "at" if proven >= breakeven * (1 - AT_BREAKEVEN_BAND) else "below"
-
-
 def returns_headline(ch: pd.DataFrame, breakeven: float) -> str:
-    """ch has columns channel, claimed, proven. Returns a sentence that states the finding."""
     d = ch.dropna(subset=["proven"]).copy()
     if d.empty:
         return "No channel has holdout evidence yet, so no return can be proven"
@@ -121,76 +136,142 @@ def trend_headline(ch_roll: pd.DataFrame, breakeven: float) -> str:
     return f"Currently below breakeven: {', '.join(under)}"
 
 
-# --------------------------------------------------------------------------------------- charts
+def waterfall_headline(steps: Sequence[Tuple[str, float, str]]) -> str:
+    claimed, delta, proven = steps[0][1], steps[1][1], steps[2][1]
+    share = (-delta / claimed * 100) if claimed else 0.0
+    return f"{share:.0f}% of the revenue platforms claim is not caused by their ads"
+
+
+def portfolio_headline(ch: pd.DataFrame) -> str:
+    n = ch["action"].value_counts().to_dict()
+    bits = [f"{n[k]} to {k.lower()}" for k in ("Scale", "Maintain", "Cut", "Restructure") if n.get(k)]
+    return "Portfolio call: " + ", ".join(bits)
+
+
+# ------------------------------------------------------------------------------------------------ charts
 def returns_chart(ch: pd.DataFrame, breakeven: float, breakeven_label: str, proven_name: str, headline: str) -> go.Figure:
-    """Grouped bars: what platforms claim, what the attribution model says, what the test proves."""
+    """Grouped bars: claimed, attribution model, proven (with its 95% interval when the strict view provides one)."""
+    t = _THEME
     ch = ch.sort_values("proven", ascending=False, na_position="last")
+    colors = {"claimed": t["claimed"], "model": t["model"], "proven": t["proven"]}
     fig = go.Figure()
-    for key, (name, color) in SERIES.items():
-        col = key if key != "proven" else "proven"
-        label = name if key != "proven" else proven_name
-        fig.add_bar(x=ch["channel"], y=ch[col], name=label, marker_color=color,
-                    text=ch[col].map(_x), textposition="outside", cliponaxis=False,
-                    hovertemplate="%{x}<br>" + label + ": %{y:.2f}x<extra></extra>")
-    lo, hi = padded_range(ch[["claimed", "model", "proven"]].to_numpy().ravel(), include=[breakeven], pad=0.2)
+    for key in ("claimed", "model", "proven"):
+        name = proven_name if key == "proven" else SERIES_NAMES[key]
+        kw = {}
+        if key == "proven" and {"lower", "upper"} <= set(ch.columns) and ch["lower"].notna().any():
+            kw["error_y"] = dict(type="data", symmetric=False, array=(ch["upper"] - ch["proven"]).clip(lower=0).fillna(0),
+                                 arrayminus=(ch["proven"] - ch["lower"]).clip(lower=0).fillna(0), color=t["ink"], thickness=1.4, width=5)
+        fig.add_bar(x=ch["channel"], y=ch[key], name=name, marker_color=colors[key], text=ch[key].map(_x), textposition="outside", cliponaxis=False,
+                    hovertemplate="%{x}<br>" + name + ": %{y:.2f}x<extra></extra>", **kw)
+    vals = list(ch[["claimed", "model", "proven"]].to_numpy().ravel())
+    if "upper" in ch.columns:
+        vals += list(ch["upper"].dropna())
+    lo, hi = padded_range(vals, include=[breakeven], pad=0.2)
     fig.update_yaxes(range=[lo, hi], title_text="Revenue per $1 of ad spend", ticksuffix="x")
-    fig.add_hline(y=breakeven, line_dash="dash", line_color=RED, line_width=2)
-    fig.add_scatter(x=[None], y=[None], mode="lines", name=breakeven_label, line=dict(color=RED, dash="dash", width=2))  # legend entry
+    _breakeven_line(fig, breakeven, breakeven_label)
     fig.update_layout(barmode="group", bargap=0.28)
-    return _layout(fig, headline, "Bars above the red line earn back their cost. Compare the grey bar (claimed) with the green bar (proven).", 440)
+    sub = "Bars above the dashed line earn back their cost. Compare the grey bar (claimed) with the blue bar (proven)."
+    if "lower" in ch.columns and ch["lower"].notna().any():
+        sub += " Whiskers show the 95% confidence interval."
+    return _layout(fig, headline, sub, 440)
 
 
 def overclaim_chart(inf: pd.DataFrame, moderate: float, critical: float, headline: str, basis: str = "conversions") -> go.Figure:
-    """Horizontal bars, worst at the top, colored by status. Height grows with the number of campaigns and the axis
-    is capped when one outlier would flatten the rest (the outlier bar is labelled with its true value)."""
+    """Horizontal bars, worst at the top, colored by status. The axis is capped when one outlier would flatten the rest."""
+    t = _THEME
     d = inf.dropna(subset=["inflation_ratio"]).sort_values("inflation_ratio").copy()
     cap = critical * 4
     d["shown"] = d["inflation_ratio"].clip(upper=cap)
     d["label"] = d.apply(lambda r: f"{r['inflation_ratio']:.2f}x" + (" (off scale)" if r["inflation_ratio"] > cap else ""), axis=1)
-    status = np.where(d["inflation_ratio"] > critical, "Critical over-claim",
-                      np.where(d["inflation_ratio"] > moderate, "Over-claim, review", "Within normal range"))
-    colors = {"Critical over-claim": RED, "Over-claim, review": AMBER, "Within normal range": GREEN}
+    status = np.where(d["inflation_ratio"] > critical, "Critical over-claim", np.where(d["inflation_ratio"] > moderate, "Over-claim, review", "Within normal range"))
+    colors = {"Critical over-claim": danger(), "Over-claim, review": caution(), "Within normal range": good()}
     fig = go.Figure()
     for name, color in colors.items():
         m = status == name
         if m.any():
             sub = d[m]
-            fig.add_bar(y=sub["campaign_id"], x=sub["shown"], orientation="h", name=name, marker_color=color,
-                        text=sub["label"], textposition="outside", cliponaxis=False,
-                        customdata=sub["inflation_ratio"], hovertemplate="%{y}<br>Platform claims %{customdata:.2f}x what the test confirms<extra></extra>")
+            fig.add_bar(y=sub["campaign_id"], x=sub["shown"], orientation="h", name=name, marker_color=color, text=sub["label"], textposition="outside",
+                        cliponaxis=False, customdata=sub["inflation_ratio"],
+                        hovertemplate="%{y}<br>Platform claims %{customdata:.2f}x what the test confirms<extra></extra>")
     hi = padded_range(d["shown"], include=[moderate, critical], floor_zero=True, pad=0.3)[1]
-    axis = ("Conversions the platform claims, per conversion the test confirms" if basis == "conversions"
-            else "Return the platform claims, per $1 the test proves")
-    fig.update_xaxes(range=[0, hi], title_text=axis, ticksuffix="x", showgrid=True, gridcolor=GRID)
+    axis = ("Conversions the platform claims, per conversion the test confirms" if basis == "conversions" else "Return the platform claims, per $1 the test proves")
+    fig.update_xaxes(range=[0, hi], title_text=axis, ticksuffix="x", showgrid=True, gridcolor=t["grid"])
     fig.update_yaxes(showgrid=False, autorange=True)
-    for x, label, color, shift in ((moderate, f"Review above {moderate:g}x", AMBER, 0), (critical, f"Critical above {critical:g}x", RED, 16)):
+    for x, label, color, shift in ((moderate, f"Review above {moderate:g}x", caution(), 0), (critical, f"Critical above {critical:g}x", danger(), 16)):
         fig.add_vline(x=x, line_dash="dot", line_color=color, line_width=1.5)
-        fig.add_annotation(x=x, yref="paper", y=1.0, yshift=shift, text=label, showarrow=False, yanchor="bottom", xanchor="left",
-                           font=dict(color=color, size=11))
+        fig.add_annotation(x=x, yref="paper", y=1.0, yshift=shift, text=label, showarrow=False, yanchor="bottom", xanchor="left", font=dict(color=color, size=11))
     fig.update_layout(barmode="overlay")
-    return _layout(fig, headline, "A value of 1.0x means the platform claims exactly what the test confirms. Higher means more over-claiming.",
-                   bar_height(len(d)) + 40, bottom=96)
+    return _layout(fig, headline, "A value of 1.0x means the platform claims exactly what the test confirms. Higher means more over-claiming.", bar_height(len(d)) + 40, bottom=96)
 
 
 def trend_chart(ch_roll: pd.DataFrame, breakeven: float, breakeven_label: str, headline: str) -> go.Figure:
-    """Rolling return by channel with the breakeven line, a shaded loss zone and direct end labels."""
+    """7 day rolling return by channel: breakeven line, shaded loss zone, a shaded envelope of recent variation, direct end labels."""
+    t = _THEME
     fig = go.Figure()
-    channels = [c for c in ch_roll["channel"].unique()]
-    lo, hi = padded_range(ch_roll["iroas"], include=[breakeven], robust=True, pad=0.15)
-    fig.add_hrect(y0=lo, y1=breakeven, fillcolor="rgba(192,57,43,0.06)", line_width=0, layer="below")
-    for i, ch in enumerate(channels):
+    has_band = {"band_low", "band_high"} <= set(ch_roll.columns)
+    vals = list(ch_roll["iroas"].dropna())
+    lo, hi = padded_range(vals, include=[breakeven], robust=True, pad=0.15)
+    fig.add_hrect(y0=lo, y1=breakeven, fillcolor="rgba(192,57,43,0.07)", line_width=0, layer="below")
+    for i, ch in enumerate(ch_roll["channel"].unique()):
         d = ch_roll[ch_roll["channel"] == ch].sort_values("date").dropna(subset=["iroas"])
         if d.empty:
             continue
-        color = CHANNEL_COLORS.get(ch, FALLBACK_COLORS[i % len(FALLBACK_COLORS)])
-        fig.add_scatter(x=d["date"], y=d["iroas"], name=ch, mode="lines", line=dict(color=color, width=2.5),
-                        hovertemplate="%{x}<br>" + ch + ": %{y:.2f}x<extra></extra>")
-        fig.add_scatter(x=d["date"].iloc[-1:], y=d["iroas"].iloc[-1:], mode="markers+text", showlegend=False,
-                        marker=dict(color=color, size=8), text=[f" {ch.replace(' Ads', '')} {d['iroas'].iloc[-1]:.2f}x"],
-                        textposition="middle right", textfont=dict(color=color, size=12), hoverinfo="skip", cliponaxis=False)
-    fig.add_hline(y=breakeven, line_dash="dash", line_color=RED, line_width=2)
-    fig.add_scatter(x=[None], y=[None], mode="lines", name=breakeven_label, line=dict(color=RED, dash="dash", width=2))  # legend entry
+        color = channel_color(ch, i)
+        if has_band:
+            b = d.dropna(subset=["band_low", "band_high"])
+            fig.add_scatter(x=pd.concat([b["date"], b["date"][::-1]]), y=pd.concat([b["band_high"], b["band_low"][::-1]]), fill="toself",
+                            fillcolor=_alpha(color, 0.14), line=dict(width=0), hoverinfo="skip", showlegend=False)
+        fig.add_scatter(x=d["date"], y=d["iroas"], name=ch, mode="lines", showlegend=False, line=dict(color=color, width=2.5), hovertemplate="%{x}<br>" + ch + ": %{y:.2f}x<extra></extra>")
+        fig.add_scatter(x=d["date"].iloc[-1:], y=d["iroas"].iloc[-1:], mode="markers+text", showlegend=False, marker=dict(color=color, size=8),
+                        text=[f" {ch.replace(' Ads', '')} {d['iroas'].iloc[-1]:.2f}x"], textposition="middle right", textfont=dict(color=color, size=12),
+                        hoverinfo="skip", cliponaxis=False)
+    _breakeven_line(fig, breakeven, breakeven_label)
     fig.update_yaxes(range=[lo, hi], title_text="Revenue per $1 (7 day rolling)", ticksuffix="x")
-    fig.update_layout(margin=dict(t=24, b=70, l=8, r=170))
-    fig = _layout(fig, headline, "Shaded area is below breakeven. Each line is a channel's last 7 days of test results; the axis is zoomed to the typical range.", 420)
-    return fig.update_layout(margin=dict(t=44, b=70, l=8, r=170))
+    sub = ("Shaded area under the dashed line is below breakeven. Each line is a channel's last 7 days of test results; the axis is zoomed to the typical range."
+           + (" The soft band around each line shows how far it has typically wandered over recent weeks (variation, not a statistical interval)." if has_band else ""))
+    fig = _layout(fig, headline, sub, 440, right=170)
+    return fig
+
+
+def waterfall_chart(steps: Sequence[Tuple[str, float, str]], headline: str) -> go.Figure:
+    """Claimed revenue, minus the over-claim, equals revenue proven by the test (a single axis, never dual)."""
+    t = _THEME
+    claimed, delta, proven = steps[0][1], steps[1][1], steps[2][1]
+    labels = [s[0] for s in steps]
+    fig = go.Figure()
+    fig.add_bar(x=[labels[0]], y=[claimed], marker_color=t["claimed"], text=[f"${claimed:,.0f}"], textposition="outside", cliponaxis=False, name="Claimed")
+    fig.add_bar(x=[labels[1]], y=[-delta], base=[proven], marker_color=danger(), text=[f"-${-delta:,.0f}"], textposition="outside", cliponaxis=False, name="Over-claim")
+    fig.add_bar(x=[labels[2]], y=[proven], marker_color=t["proven"], text=[f"${proven:,.0f}"], textposition="outside", cliponaxis=False, name="Proven")
+    fig.update_yaxes(range=[0, claimed * 1.18], tickprefix="$", tickformat="~s", title_text="Revenue")
+    fig.update_layout(showlegend=False, bargap=0.35)
+    return _layout(fig, headline, "Platforms claim the first bar. The red step is revenue they take credit for that the test does not support. The last bar is what the test proves.",
+                   360, legend=False, bottom=40)
+
+
+def portfolio_chart(ch: pd.DataFrame, headline: str) -> go.Figure:
+    """Spend share vs proven revenue share. Above the diagonal a channel earns more than its share of spend."""
+    t = _THEME
+    sym = {"Scale": "circle", "Maintain": "square", "Restructure": "diamond", "Cut": "triangle-down"}
+    col = {"Scale": good(), "Maintain": caution(), "Restructure": t["accent"], "Cut": danger()}
+    fig = go.Figure()
+    top = float(np.nanmax([ch["spend_share"].max(), ch["revenue_share"].max(), 0.05]))
+    lim = top * 1.25
+    fig.add_scatter(x=[0, lim], y=[0, lim], mode="lines", line=dict(color=t["muted"], dash="dot", width=1.2), name="Revenue share equals spend share", hoverinfo="skip")
+    for action in ("Scale", "Maintain", "Restructure", "Cut"):
+        d = ch[ch["action"] == action]
+        if d.empty:
+            continue
+        fig.add_scatter(x=d["spend_share"], y=d["revenue_share"], mode="markers+text", name=action, text=[c.replace(" Ads", "") for c in d["channel"]],
+                        textposition="top center", marker=dict(symbol=sym[action], size=np.clip(d["spend"] / ch["spend"].max() * 34, 16, 36), color=col[action],
+                                                               line=dict(color=t["bg"], width=1.5)),
+                        customdata=np.stack([d["channel"], d["proven"].fillna(0)], axis=-1),
+                        hovertemplate="%{customdata[0]}<br>Share of spend %{x:.0%}<br>Share of proven revenue %{y:.0%}<br>Proven return %{customdata[1]:.2f}x<extra></extra>")
+    fig.update_xaxes(range=[0, lim], tickformat=".0%", title_text="Share of ad spend", showgrid=True, gridcolor=t["grid"])
+    fig.update_yaxes(range=[0, lim], tickformat=".0%", title_text="Share of proven revenue")
+    return _layout(fig, headline, "Above the dotted line a channel earns more than its share of the budget; below it, less. Marker shape and the label give the call.", 400, bottom=80)
+
+
+def _alpha(hex_color: str, a: float) -> str:
+    h = hex_color.lstrip("#")
+    r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+    return f"rgba({r},{g},{b},{a})"

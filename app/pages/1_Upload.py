@@ -12,6 +12,8 @@ page_setup("Upload",":material/upload:")
 import pandas as pd  # noqa: E402
 import streamlit as st  # noqa: E402
 
+import ui  # noqa: E402
+
 from mapping import (UploadError, apply_mapping, detect_total_rows, missing_required, read_table_file,  # noqa: E402
                      suggest_mapping, template_csv)
 from pipeline import SourceTables, ValidationBlocked  # noqa: E402
@@ -25,22 +27,31 @@ decl = {"currency": "USD", "timezone": "UTC", "spend_unit": "dollars", "decimal_
         "channel_aliases": {}, **decl}
 
 LABELS = {"RAW_PLATFORM_DATA": ("Platform data", "Daily spend, clicks and conversions as reported by each ad platform."),
-          "RAW_MTA_OUTPUT": ("MTA model output", "Daily conversions your multi touch attribution model credits to each campaign."),
+          "RAW_MTA_OUTPUT": ("Attribution model output", "Daily conversions your multi touch attribution (MTA) model credits to each campaign."),
           "RAW_HOLDOUT_DATA": ("Holdout experiment", "Daily conversions for the control and treatment geos of your holdout test."),
-          "BUSINESS_BENCHMARKS": ("Business benchmarks", "Expected ROAS, conversion rate and incrementality ranges per channel.")}
+          "BUSINESS_BENCHMARKS": ("Business benchmarks", "Expected return, conversion rate and incrementality ranges per channel (optional context, never used to score without a verified source).")}
 demo = demo_tables().as_dict()
 uploads = st.session_state.setdefault("uploads", {})
 
-st.title("Bring your data")
-st.caption("Upload, then Map, then Check, then Run. Nothing runs until every blocker is fixed, and every warning is acknowledged.")
+ui.page_head("Onboarding", "Bring your data", "Five guided steps with plain-language checks and row-level examples. Nothing runs until every blocker is fixed and every warning is acknowledged.")
+STEPS = ["Declare", "Upload", "Map columns", "Validate and preview", "Confirm and run"]
+step_slot = st.empty()
+
+
+def at_step(n: int) -> None:
+    with step_slot.container():
+        ui.stepper(STEPS, n)
+
+
+at_step(2)
 
 with st.container(border=True):
-    st.markdown("**1. Declarations** (how your files are written)")
+    st.markdown("**Step 1. Declare** (how your files are written)")
     st.write(f"Currency **{decl['currency']}** · Timezone **{decl['timezone']}** · Spend in **{decl['spend_unit']}** · "
              f"Decimal **'{decl['decimal_separator']}'** · Dates **{decl['date_order']}** · Settings version {cfg_version or 'defaults'}")
     safe_page_link("pages/3_Settings.py", "Change declarations or policy", ":material/tune:")
 
-st.markdown("**2. Upload your four files**")
+st.markdown("**Step 2. Upload your four files**")
 if st.button("Use the built in demo data instead"):
     st.session_state["uploads"] = {t: (df.astype(str), {"filename": "demo", "demo": True}) for t, df in demo.items()}
     st.rerun()
@@ -67,11 +78,12 @@ for table, (title, blurb) in LABELS.items():
                 st.warning(f"Duplicate column names were renamed: {info['duplicate_headers']}")
 
 if len(uploads) < 4:
-    st.info(f"Upload all four files to continue ({len(uploads)} of 4 ready).")
+    st.info(f"Upload all four files to continue ({len(uploads)} of 4 ready). No files handy? Use the demo data above, or download a template for each file.")
     st.stop()
 
 # ------------------------------------------------------------------------ mapping
-st.markdown("**3. Check the column mapping**")
+at_step(3)
+st.markdown("**Step 3. Check the column mapping**")
 mapped_tables, mapping_ok, all_extras = {}, True, {}
 for table, (title, _) in LABELS.items():
     df, info = uploads[table]
@@ -120,7 +132,8 @@ if not mapping_ok:
     st.stop()
 
 # --------------------------------------------------------------------- validation
-st.markdown("**4. Data checks**")
+at_step(4)
+st.markdown("**Step 4. Validate and preview**")
 tables = SourceTables(*(mapped_tables[t].data for t in LABELS))
 report = validate_inputs(tables.platform, tables.mta, tables.holdout, tables.benchmarks, settings, decl)
 if report.blockers:
@@ -137,19 +150,20 @@ if report.ok and not report.warnings:
     st.success("No issues found.")
 if report.coverage:
     c1, c2 = st.columns(2)
-    c1.metric("MTA coverage of platform campaigns", f"{report.coverage.get('mta', 0):.0%}")
+    c1.metric("Attribution model coverage of platform campaigns", f"{report.coverage.get('mta', 0):.0%}")
     c2.metric("Holdout coverage of platform campaigns", f"{report.coverage.get('holdout', 0):.0%}")
 if any(len(e.columns) for e in all_extras.values()):
     st.caption("Extra columns kept aside, not used in the analysis: " + "; ".join(f"{t}: {list(e.columns)}" for t, e in all_extras.items() if len(e.columns)))
 
 # ------------------------------------------------------------------------ preview
-with st.expander("5. Preview: your row next to what the engine understood"):
+with st.expander("Preview: your row next to what the engine understood"):
     src, std = uploads["RAW_PLATFORM_DATA"][0].head(3), tables.platform.head(3)
     st.write("Your platform file (first rows)"), st.dataframe(src, hide_index=True)
     st.write("Standardized"), st.dataframe(std, hide_index=True)
 
 # --------------------------------------------------------------------------- run
-st.markdown("**6. Run**")
+at_step(5)
+st.markdown("**Step 5. Confirm and run**")
 ack = True
 if report.warnings:
     ack = st.checkbox("I have read the warnings above and want to continue", key="ack")
