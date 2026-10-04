@@ -7,3 +7,4 @@ statsmodels
 pytest
 openpyxl
 anthropic
+xlrd>=2.0
