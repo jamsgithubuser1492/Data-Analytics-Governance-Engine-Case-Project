@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import os
 import sys
+import tempfile
+import uuid
 from pathlib import Path
 from typing import Tuple
 
@@ -16,7 +18,29 @@ from job_runner import JobRunner  # noqa: E402
 from pipeline import SourceTables  # noqa: E402
 from run_store import SUCCEEDED, LocalRunStore  # noqa: E402
 
-DATA_ROOT = Path(os.environ.get("MMGE_DATA_DIR", ROOT / "var"))
+
+
+def demo_mode() -> bool:
+    """True on a public demo host: every visitor gets a private, throwaway workspace on the verified demo data."""
+    flag = os.environ.get("MMGE_DEMO_MODE", "")
+    if not flag:
+        try:
+            flag = str(st.secrets.get("MMGE_DEMO_MODE", ""))
+        except Exception:  # no secrets file
+            flag = ""
+    return flag.strip().lower() in ("1", "true", "yes", "on")
+
+
+def _data_root() -> Path:
+    explicit = os.environ.get("MMGE_DATA_DIR")
+    if explicit:
+        return Path(explicit)
+    return Path(tempfile.gettempdir()) / "mmge_demo" if demo_mode() else ROOT / "var"
+
+
+DATA_ROOT = _data_root()
+DEMO_NOTICE = ("You are viewing a public demo on synthetic data. Platform names are illustrative labels with no affiliation. "
+               "Signing and hand off are simulated, nothing is sent to an ad platform, and nothing you do here is saved or shared.")
 import ui  # noqa: E402
 
 TIER_BADGE = {k: v[0] for k, v in ui.TIER_LABEL.items()}
@@ -57,6 +81,9 @@ def identity() -> Tuple[str, str]:
     except Exception:  # login not configured
         pass
     actor = email or "local-demo-user"
+    if demo_mode() and not email:  # a private workspace per visitor session on a shared host
+        sid = st.session_state.setdefault("demo_session_id", uuid.uuid4().hex[:12])
+        return actor, get_store().get_or_create_workspace(f"public-demo-{sid}")
     return actor, get_store().get_or_create_workspace(email or "local-demo")
 
 
@@ -98,9 +125,22 @@ def app_version() -> str:
         return "unknown"
 
 
+def ensure_demo_run() -> None:
+    """Public demo only: seed the verified demo data once per visitor so no page is ever empty."""
+    if not demo_mode():
+        return
+    _, ws = identity()
+    if not succeeded_runs(ws):
+        store = get_store()
+        cfg = store.latest_workspace_config(ws)
+        rid = get_runner().submit(ws, demo_tables(), cfg[0], cfg[1], "Demo data")
+        wait_for_run(ws, rid, "Loading the verified demo data...")
+
+
 def page_setup(title: str, icon: str = ":material/analytics:") -> None:
     st.set_page_config(page_title=f"MMGE · {title}", page_icon=icon, layout="wide")
     ui.apply_theme()
+    ensure_demo_run()
     with st.sidebar:
         st.markdown("**Media Measurement and Governance**")
         for group, items in NAV_GROUPS:
@@ -108,6 +148,8 @@ def page_setup(title: str, icon: str = ":material/analytics:") -> None:
             for page, name, icon in items:
                 safe_page_link(page, name, icon)
         st.divider()
+        if demo_mode():
+            st.caption("Public demo on synthetic data. Platform names are illustrative, with no affiliation. Signing is simulated.")
         st.caption(f"Version {app_version()}")
 
 

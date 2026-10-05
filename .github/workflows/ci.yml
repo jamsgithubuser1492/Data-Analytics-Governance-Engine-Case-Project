@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+      - run: pip install -r requirements-dev.txt
+      - name: Verify the original data is untouched
+        run: python python/verify_data.py
+      - name: Run the test suite
+        run: python -m pytest -q
+
+  smoke:
+    runs-on: ubuntu-latest
+    needs: tests
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Start the app and check it is healthy
+        env:
+          MMGE_DEMO_MODE: "1"
+        run: |
+          python -m streamlit run app/app.py --server.headless=true --server.port=8501 &
+          for i in $(seq 1 30); do
+            if [ "$(curl -s http://localhost:8501/_stcore/health)" = "ok" ]; then echo "healthy"; exit 0; fi
+            sleep 2
+          done
+          echo "app did not become healthy"; exit 1

@@ -1,0 +1,9 @@
+{
+  "name": "Media Measurement and Governance Engine",
+  "image": "mcr.microsoft.com/devcontainers/python:3.11",
+  "postCreateCommand": "pip install -r requirements-dev.txt",
+  "postAttachCommand": "echo 'Start the app with: python -m streamlit run app/app.py'",
+  "forwardPorts": [8501],
+  "portsAttributes": { "8501": { "label": "Dashboard", "onAutoForward": "openBrowser" } },
+  "customizations": { "vscode": { "extensions": ["ms-python.python"] } }
+}

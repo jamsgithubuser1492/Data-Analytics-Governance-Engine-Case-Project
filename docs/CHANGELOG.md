@@ -1,6 +1,13 @@
 # Changelog
 
-## Plain language pass (latest)
+## Portfolio ready (latest)
+* Public demo mode (`MMGE_DEMO_MODE`): the verified sample data loads by itself, every visitor gets a private throwaway workspace, uploads and settings are read only, and a plain disclaimer is shown.
+* README rebuilt for non technical reviewers: one minute idea, findings table, screenshots and GIF, case study, honest limits box, how it was built.
+* New guides: page by page guide, glossary, role fit, deploy steps, video script.
+* Continuous integration (tests on Python 3.11 and 3.12 plus an app health check), pinned dependencies, Dockerfile, devcontainer, all rights reserved licence.
+* `scripts/make_screenshots.py` rebuilds the images and GIF from the demo.
+
+## Plain language pass
 * Dashboard headline summary rewritten for executives, with the ROAS stated briefly and a plain statement of how many campaigns support a confident recommendation.
 * Trust banner replaced by a confidence strip: confidence level, statistically significant campaigns, campaigns ready for a decision, test coverage.
 * Divergence alert explained in business terms. Counting basis labels renamed.

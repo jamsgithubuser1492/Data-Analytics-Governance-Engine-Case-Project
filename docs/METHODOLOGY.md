@@ -89,7 +89,8 @@ The Automation blueprint describes how AI models could connect to the engine thr
 
 ## 16. Limits and honest caveats
 
-- The demo data is synthetic and built so that the case study is repeatable. Real data will be noisier.
+- The demo data is synthetic and built so that the case study is repeatable. Real data will be noisier. Platform names such as Google, Meta, TikTok and Netflix are illustrative labels with no affiliation to those companies.
+- Signing and hand off are simulated. Nothing is sent to an ad platform and no real money moves. This is a portfolio demonstration, not production software or financial advice.
 - Scaling a test sample to the full market assumes the test markets are representative. The engine checks this against population data when you declare the geos.
 - Average returns do not hold forever. Moving large budgets usually lowers the return, so confirm with a scaled test.
 - Outside benchmarks are context, not truth. No verified channel return range exists in the registry, so none is drawn.

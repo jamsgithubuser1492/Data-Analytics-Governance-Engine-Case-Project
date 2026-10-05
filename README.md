@@ -1,12 +1,124 @@
-# Media Measurement & Governance Engine (MMGE)
+# Media Measurement and Governance Engine
 
-Reconciles three competing views of marketing performance and decides which one to act on:
+**A tool that tells a business leader, in plain language, whether their advertising money is really earning money back, and makes every budget decision signed, explained and reviewable.**
 
-1. **Platform self-reported** conversions (ad network claims, built-in attribution bias)
-2. **Multi-touch attribution (MTA)** output (linear decay deduplication)
-3. **Geo holdout incrementality** (randomized ground truth)
+[![CI](https://github.com/jamsgithubuser1492/Data-Analytics-Governance-Engine-Case-Project/actions/workflows/ci.yml/badge.svg)](https://github.com/jamsgithubuser1492/Data-Analytics-Governance-Engine-Case-Project/actions/workflows/ci.yml)
+![Licence: all rights reserved](https://img.shields.io/badge/licence-all%20rights%20reserved-lightgrey)
+![Python 3.11 and 3.12](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)
 
-Runs locally on **DuckDB**, with SQL written to also run on **Snowflake**. Includes a causal impact runner, an 8-point governance audit, an event-driven agent orchestrator and a Streamlit executive dashboard.
+**[Open the live demo](https://YOUR-APP-URL.streamlit.app)** (no install, about 20 seconds to load) &nbsp;|&nbsp; **[Watch the 90 second walkthrough](docs/VIDEO_SCRIPT.md)** &nbsp;|&nbsp; **[Read the page by page guide](docs/PAGE_GUIDE.md)**
+
+![A short tour of the dashboard, the advisory council, the charts and the sign-off desk](docs/img/walkthrough.gif)
+
+> **Please read first: what this is and is not**
+> * **The data is synthetic.** It was generated so the case study is repeatable. Real company data is messier, and this project does not claim results on real data.
+> * **Platform names are illustrative.** Google, Meta, TikTok and Netflix appear only as labels. There is no affiliation with, or endorsement by, any of those companies, and no real company data is used.
+> * **Nothing here moves real money.** Signing and hand off are simulated. Nothing connects to an ad platform.
+> * **This is a portfolio project,** not production software and not financial advice.
+
+## The idea in one minute
+
+Companies spend a lot on online advertising. The ad platforms (the "channels") report how much sales their own ads created, and those reports tend to be generous. A leader who trusts them may keep paying for ads that are not really working.
+
+This project compares three views of the same spending:
+
+1. **What the platforms say** they delivered.
+2. **What an attribution model says**, which shares out credit for each sale across the ads a customer saw.
+3. **What a controlled test proves.** Some cities keep seeing ads and similar cities do not. The difference shows what the ads actually caused.
+
+It then explains the answer the way a colleague would, shows how sure it is, lets four "advisors" react from different business angles, and routes every decision to a person who signs it, with the signature kept in a record that cannot be quietly edited.
+
+## What it found on the sample data
+
+| | |
+| --- | --- |
+| Total ad spend | **$748,140** |
+| Return per $1 spent, counting all revenue in the test cities (the simpler count) | **3.33x** |
+| Ad spend not earned back (all of it in one channel) | **$105,158** |
+| Revenue platforms claimed that the tests do not support | **$399,188** |
+| Campaigns with strong enough evidence for a confident recommendation | **6 of 8** |
+| The same portfolio counting only the extra revenue the ads caused | about **0.57x**, so spending does not pay back at that stricter count |
+
+The two ways of counting disagree by up to 32 times on some campaigns. The dashboard says so openly and explains which count is safer for budget decisions.
+
+## Try it
+
+| You are | Do this |
+| --- | --- |
+| A reviewer in a hurry | Open the **live demo** above. It loads the sample data by itself. |
+| Comfortable with Docker | `docker build -t mmge . && docker run -p 8501:8501 mmge` then open http://localhost:8501 |
+| Comfortable with Python | `pip install -r requirements.txt` then `python -m streamlit run app/app.py` |
+| Using GitHub Codespaces | Open the repository in a Codespace; it installs everything. Then run `python -m streamlit run app/app.py` |
+
+Having trouble or seeing an old version? See [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md).
+
+## A look inside
+
+| | |
+| --- | --- |
+| ![Dashboard](docs/img/01_dashboard.png) **The answer first.** A plain headline, the gap between claims and proof, and how sure we are. | ![Advisory council](docs/img/02_council.png) **Four advisors** read the same results as a finance chief, a growth lead, an agency head and a measurement specialist. |
+| ![Charts and tables](docs/img/03_chart_table.png) **Every chart has a table view** you can copy into a spreadsheet. | ![Sign-off desk](docs/img/04_signoff.png) **The sign-off desk.** Every decision is signed and recorded. |
+| ![Strategy](docs/img/05_strategy.png) **Strategy.** What a budget move would change, best case and worst case. | ![Dark mode and mobile](docs/img/06_dashboard_dark.png) **Dark mode** and a phone friendly layout. |
+
+Every page is explained in plain words in the [page by page guide](docs/PAGE_GUIDE.md).
+
+## Case study
+
+### The problem
+A marketing leader reports to a finance chief who asks one question: "Did this spend earn its money back?" The ad platforms answer yes. The finance team's own numbers often say otherwise. Nobody in the room can tell which is right, so decisions turn into arguments, and the arguments are hard to explain to a board.
+
+### My approach
+I treated it as a product for busy executives, not a statistics tool.
+1. **Start from the decision.** What would a chief financial officer, a chief marketing officer, an agency director and a media lead each want to know first? Each gets their own view.
+2. **Show proof, not opinion.** Results come from a controlled test, shown with a 95% likely range and quality checks, and every number can be traced to its source.
+3. **Keep people in charge.** The system suggests in cautious language ("Consider...") and never acts alone. Each decision is signed with a note, an email and a role.
+4. **Protect the data and the company.** Personal data is blocked or removed, the AI assistant only ever sees summary totals, and the design for connecting AI tools gives the AI no power to approve or spend.
+5. **Write it so a non specialist understands it.** A written voice guide keeps jargon off the screen, and an automated test fails if building notes or jargon leak into the pages.
+
+### The result
+A working product with 13 pages, a verified sample dataset, and over 450 automated tests. On the sample data it shows that the platforms' claims and the controlled tests differ by hundreds of thousands of dollars, that most of the money not earned back sits in one channel, and which campaigns are strong enough to act on.
+
+### Trade-offs I made, and why
+* **Plain language over precision on screen.** Technical names move to a sources section. The cost is that experts must look one level deeper; the gain is that executives actually read it.
+* **Two ways of counting, both shown.** The simple count looks better and the strict count is safer. I show both and explain the gap, rather than hiding the unflattering one.
+* **Suggestions, not instructions.** The advisors say "Consider...". It is less punchy, but a tool that tells leaders what to do invites blind trust.
+* **Simulated actions.** Nothing connects to a real ad platform. That keeps the demo safe, and the design document describes how a real connection would be made safely.
+* **Synthetic data.** It makes results repeatable and avoids privacy issues, but it is cleaner than real life.
+
+### What I would do differently next
+* Test the engine on messy or public real world data and on simulated data with a known planted result, to show how often it finds the truth and how often it is fooled.
+* Add real sign in and roles, a proper database, and a working (still approval only) AI connection.
+* Run short sessions with real executives and record what confuses them.
+* Build a board ready export (PDF and slides).
+
+### What this project demonstrates
+Turning a messy business question into a product, working with data and statistics responsibly, designing for non technical users, building in privacy, governance and auditability from the start, and directing AI tools to build and test a large system to a professional standard. See [docs/ROLE_FIT.md](docs/ROLE_FIT.md).
+
+## How this was built
+
+I acted as the product owner and orchestrator. I set the goals, made the decisions about what to include and what to leave out, reviewed each result, and insisted on quality rules (plain language, honest uncertainty, human sign off). Claude, an AI model, wrote the code under that direction, and an automated test suite checks the work. [docs/CHANGELOG.md](docs/CHANGELOG.md) shows the steps.
+
+## Where to read more
+
+| If you want | Read |
+| --- | --- |
+| Each page explained in plain words | [docs/PAGE_GUIDE.md](docs/PAGE_GUIDE.md) |
+| Which skills this shows, for which roles | [docs/ROLE_FIT.md](docs/ROLE_FIT.md) |
+| Terms explained simply | [docs/GLOSSARY.md](docs/GLOSSARY.md) |
+| How the numbers are produced | [docs/METHODOLOGY.md](docs/METHODOLOGY.md) |
+| Privacy and governance | [docs/PRIVACY_AND_GOVERNANCE.md](docs/PRIVACY_AND_GOVERNANCE.md) |
+| How AI tools could connect safely (design only) | [docs/ARCHITECTURE_MCP.md](docs/ARCHITECTURE_MCP.md) |
+| How to put it online | [docs/DEPLOY.md](docs/DEPLOY.md) |
+| Writing rules | [docs/VOICE_GUIDE.md](docs/VOICE_GUIDE.md) |
+| What changed and what is next | [docs/CHANGELOG.md](docs/CHANGELOG.md), [docs/NEXT_PHASE.md](docs/NEXT_PHASE.md) |
+
+Licence: all rights reserved, with permission to view and run the project for evaluation. See [LICENSE](LICENSE).
+
+---
+
+# Technical reference
+
+The sections below are for engineers.
 
 ## Architecture
 

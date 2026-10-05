@@ -5,3 +5,7 @@ outputs/snowflake_governance_action_log.jsonl
 var/
 
 data/generated/
+
+var/
+.venv/
+docs/img/tmp/

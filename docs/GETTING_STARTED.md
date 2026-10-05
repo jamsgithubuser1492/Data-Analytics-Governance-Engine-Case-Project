@@ -7,6 +7,12 @@ python -m streamlit run app/app.py     # opens http://localhost:8501
 ```
 If `streamlit: command not found` appears, keep the `python -m` prefix. On the Dashboard choose **Try with demo data**. It uses the verified case study files in `data/`, so the result is identical every time.
 
+## One command with Docker
+```bash
+docker build -t mmge . && docker run -p 8501:8501 mmge     # then open http://localhost:8501
+```
+The Docker image runs in demo mode: sample data loads by itself and uploads are switched off. To use your own data, run with pip as above.
+
 ## Update to the latest version
 `pip install` installs libraries only. It never updates the code, and a running app keeps serving old files.
 ```bash
@@ -37,3 +43,7 @@ pytest                         # full test suite
 | Automation design | `docs/ARCHITECTURE_MCP.md` |
 | Status and roadmap | `docs/NEXT_PHASE.md` |
 | History | `docs/CHANGELOG.md` |
+| Each page explained | `docs/PAGE_GUIDE.md` |
+| Plain word glossary | `docs/GLOSSARY.md` |
+| Skills by role | `docs/ROLE_FIT.md` |
+| Putting it online | `docs/DEPLOY.md` |

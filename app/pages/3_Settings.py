@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from common import get_store, identity, page_setup  # noqa: E402
+from common import DEMO_NOTICE, demo_mode, get_store, identity, page_setup, safe_page_link  # noqa: E402
 
 page_setup("Settings",":material/tune:")
 
@@ -22,6 +22,10 @@ decl = {"currency": "USD", "timezone": "UTC", "spend_unit": "dollars", "decimal_
 import ui  # noqa: E402
 
 ui.page_head("Policy", "Policy and declarations", "These settings decide how results are counted, when evidence is trusted and what a decision rule may do. Every change creates a new version and is stamped on each run.")
+if demo_mode():
+    ui.callout("Settings are read only on the public demo. " + DEMO_NOTICE)
+    safe_page_link("app.py", "Back to the Dashboard", ":material/analytics:")
+    st.stop()
 st.caption(f"Workspace: **{ws[:6]}…** · Settings version {version or 'defaults (never saved)'}. Every change is saved as a new "
            "version, and each run records the policy it used.")
 

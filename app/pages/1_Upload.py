@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from common import demo_tables, get_runner, get_store, identity, page_setup, safe_page_link, wait_for_run  # noqa: E402
+from common import DEMO_NOTICE, demo_mode, demo_tables, get_runner, get_store, identity, page_setup, safe_page_link, wait_for_run  # noqa: E402
 
 page_setup("Upload",":material/upload:")
 
@@ -34,6 +34,10 @@ demo = demo_tables().as_dict()
 uploads = st.session_state.setdefault("uploads", {})
 
 ui.page_head("Onboarding", "Bring your data", "Five guided steps with plain-language checks and row-level examples. Nothing runs until every blocker is fixed and every warning is acknowledged.")
+if demo_mode():
+    ui.callout("Uploading is switched off on the public demo so nobody shares company files on a public server. " + DEMO_NOTICE + " To use your own data, run the app on your own computer (see the README).")
+    safe_page_link("app.py", "Back to the Dashboard", ":material/analytics:")
+    st.stop()
 STEPS = ["Declare", "Upload", "Map columns", "Validate and preview", "Confirm and run"]
 step_slot = st.empty()
 

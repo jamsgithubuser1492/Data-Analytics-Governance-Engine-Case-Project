@@ -13,7 +13,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from common import (DATA_ROOT, demo_tables, get_runner, get_store, identity, page_setup, safe_page_link, succeeded_runs,  # noqa: E402
+from common import (DATA_ROOT, DEMO_NOTICE, demo_mode, demo_tables, get_runner, get_store, identity, page_setup, safe_page_link, succeeded_runs,  # noqa: E402
                     wait_for_run)
 
 page_setup("Dashboard")
@@ -66,6 +66,8 @@ def names(rows) -> str:
 
 
 # ------------------------------------------------------------------------------ empty state (never a dead end)
+if demo_mode():
+    ui.callout(DEMO_NOTICE)
 if not runs:
     ui.hero("Media Measurement and Governance", "Know which channels truly earn back their spend.",
             "Bring your platform, attribution and holdout test data. In minutes you get a plain-language answer, the evidence behind it, "

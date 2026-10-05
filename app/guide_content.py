@@ -86,7 +86,8 @@ SECTIONS: List[Tuple[str, str]] = [
      "- It never tells you what to do. Headlines state findings. The advisors and strategy notes suggest ideas to consider.\n"
      "- It never hides uncertainty. Results carry confidence ranges, confidence levels and the way they were counted."),
     ("Limits and honest caveats",
-     "- The demo data is synthetic and built so that the case study is repeatable. Real data will be noisier.\n"
+     "- The demo data is synthetic and built so that the case study is repeatable. Real data will be noisier. Platform names such as Google, Meta, TikTok and Netflix are illustrative labels with no affiliation to those companies.\n"
+     "- Signing and hand off are simulated. Nothing is sent to an ad platform and no real money moves. This is a portfolio demonstration, not production software or financial advice.\n"
      "- Scaling a test sample to the full market assumes the test markets are representative. The engine checks this against population data when you declare the geos.\n"
      "- Average returns do not hold forever. Moving large budgets usually lowers the return, so confirm with a scaled test.\n"
      "- Outside benchmarks are context, not truth. No verified channel return range exists in the registry, so none is drawn."),
