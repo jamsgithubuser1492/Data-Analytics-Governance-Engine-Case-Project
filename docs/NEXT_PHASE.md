@@ -6,6 +6,10 @@
 * Research engine with a synthetic control matcher and a media mix model prior calculator.
 * Sign-off desk: every decision signed, a hash chained log, a store level rule that refuses unsigned decisions.
 * Automation blueprint (design and documentation only): `docs/ARCHITECTURE_MCP.md`.
+* Plain language pass on the Dashboard, Advisory council and Sign-off desk (see `docs/VOICE_GUIDE.md`).
+
+## In progress
+* Module by module language review of Strategy, AI brief, Research next, Automation, Memos, Benchmarks and Settings.
 
 ## Not built, and why
 * **MCP server.** Specified in the blueprint; building it needs choices about hosting, sign-in and scopes.

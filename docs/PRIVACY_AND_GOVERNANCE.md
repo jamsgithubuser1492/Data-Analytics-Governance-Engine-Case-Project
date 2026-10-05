@@ -38,7 +38,8 @@ The AI brief is designed so that an executive can use their own company approved
 ## 4. Objective recommendations and protecting company resources
 
 * **Facts and interpretation are separate.** Headlines, charts and stats state findings from the data. Interpretation lives in the advisory council and strategy notes, and is worded only as "Consider...", "Given that..., perhaps we should think about..." or "In order to address..., we might want to think about...".
-* **Uncertainty is always shown.** Strict lift results carry a 95% interval. Trust levels limit what can be acted on.
+* **Uncertainty is always shown.** Results that count only revenue the ads caused carry a 95% likely range. Confidence levels (Confident, Leaning, Not yet reliable) limit what can be approved or handed off.
+* **Plain language is a governance control.** Decision text is written for non-technical leaders so that people sign what they understand (`docs/VOICE_GUIDE.md`).
 * **Assumptions are labelled.** Anything the data cannot support (people, hours, contract terms, saturation) is a blank worksheet field or a labelled sensitivity, not a stated fact.
 * **Even handed prompts.** The brief asks the assistant to present both sides, name the strongest case against the leading option and say what would change the conclusion.
 * **Money does not move automatically.** The system never executes spending changes on its own. Every decision (approve, override or reject) is a signed entry with a note, an email, a role and four acknowledgements, written to a hash chained log, and the store refuses to approve, execute or dismiss an item without it. Until single sign-on is configured, the signer's email is typed and recorded as self asserted. See `docs/ARCHITECTURE_MCP.md` for how AI models could connect without any ability to decide.

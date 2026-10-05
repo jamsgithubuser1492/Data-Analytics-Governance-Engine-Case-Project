@@ -172,27 +172,28 @@ Not yet exercised: the live Claude call (tests use a fake client with the same i
 
 * The synthetic data is deliberately clean: control equals treatment before launch (zero pre-period variance) and the lift is exactly 1.20x. The causal runner applies a Poisson noise floor so intervals stay honest.
 * Per the project spec, iROAS uses total treatment geo revenue scaled by 1/0.40. A stricter incrementality view would use only the lift over the counterfactual (treatment minus synthetic control), which is far smaller. `causal_impact_runner.py` produces that estimate.
-* The dashboard's "Execute Action" button simulates a Snowflake governance queue write (a JSON line in `outputs/` plus the INSERT it would run).
+* The Sign-off desk's hand off step simulates a Snowflake governance queue write (it records the approved change plus the INSERT it would run); nothing is sent to an ad platform.
 
 ## Executive dashboard design
 
-The app is written for non-technical leadership. Design system in `app/ui.py`, chart logic in `app/charts.py`, calculations in `app/dashdata.py` (unit tested), sign-off overrides in `python/overrides.py`.
+The app is written for business leaders, not analysts. Design system in `app/ui.py`, chart logic in `app/charts.py`, calculations in `app/dashdata.py` (unit tested), shared wording in `python/voice.py`, the signed decision log in `python/overrides.py` and `python/signoff.py`. The writing rules are in `docs/VOICE_GUIDE.md`.
 
-* **Answer first.** The home page opens with a plain-language hero (for example "Scale Google Ads; maintain Meta Ads and TikTok Ads; cut Netflix Ads") and a note on what moving Netflix spend is worth, before any chart.
-* **Five perspectives** (CFO / Finance, CMO / Growth, Agency Director, Platform Lead, Everyone) change the landing view: a capital-at-risk waterfall and leaderboard, a trend and portfolio matrix with growth headroom, side by side spec versus strict lift cards with client note export, or an over-claim alert table with data health.
-* **Three lenses.** Capital preservation, attribution shield and scale opportunity each show their rule in words, what they flagged, and the evidence behind each flag (trust score, tier, checks passed, 95% interval, best and worst case).
-* **Uncertainty is shown, not hidden.** Strict lift figures carry a 95% confidence interval; channel intervals add campaign bounds (conservative). The trend envelope is labelled as variation, not a statistical interval.
-* **Trust gating.** Verified: one click execution. Directional: approval only, execution off. Not decision grade: financial actions locked. A divergence alert appears when the spec view exceeds strict lift by more than 15%.
-* **Executive overrides** need a justification of 10 or more characters, an email and a role, and are appended to a hash-chained `run_audit_log.json` that detects any later edit.
-* **Every chart** states its finding, stamps the counting basis, and has a Chart or Table toggle. No dual axes. Axes are sized to the data, breakeven and thresholds.
-* **Plain labels with an always-on glossary** (hover definitions and formulas). No emojis: status uses a distinct shape plus a text label. Light and dark themes follow the system or the Streamlit menu; data colors are Okabe-Ito based.
+* **Answer first.** The home page opens with a plain headline of the main finding (for example "$105,158 of ad spend has not been earned back") and a short summary: the gap between what platforms claim and what the tests support, the portfolio return per $1, and how many campaigns have strong enough evidence for a confident recommendation.
+* **A confidence strip** under the headline shows the confidence level (95%), how many campaigns are statistically significant, how many are ready for a confident decision, and test coverage, with a line on what that means for the decision.
+* **Five perspectives** (Everyone, CFO / Finance, CMO / Growth, Agency Director, Platform Lead) change the landing view and wording.
+* **Advisory council.** Four seasoned advisors (the Steward, the Builder, the Translator, the Mechanic) read the same results through their own priorities and speak in budget, growth, client and measurement terms. Stances: Put more behind it, Keep as is, Test again before deciding, Reduce spend, Prove it before deciding. Suggestions are always tentative.
+* **Two ways of counting are explained, not hidden.** When counting all test market revenue and counting only the revenue the ads caused disagree by more than 15%, the dashboard says so in plain words and says which is safer.
+* **Uncertainty is shown.** The caused revenue count carries a 95% likely range; the other does not. Quality checks and sources are in the last section.
+* **Every chart** states its finding and has a Chart or Table toggle. No dual axes. Axes are sized to the data, breakeven and thresholds.
+* **Plain labels with an always-on glossary.** No emojis: status uses a distinct shape plus a text label. Light and dark themes follow the system or the Streamlit menu.
 * **Honest benchmarks.** No channel return band is drawn because no verified comparable one exists; see the Benchmarks page.
+* **Decisions are signed.** Decision cards lead to the Sign-off desk, where every decision is signed and recorded in a tamper evident log.
 
 ## Strategy and AI brief
 
 * **Strategy** (`app/pages/9_Strategy.py`): trade-offs with a best and worst case and a break-even sensitivity, a modeled value of waiting, an implications worksheet for five functions (estimates left blank for you), a fact-triggered change plan, an optional tiered budget lens, and a monitor.
 * **AI brief** (`app/pages/10_AI_Brief.py`): a copy ready prompt of numbered, fact-grounded statements for your company's own AI assistant, with personal data redaction, optional name aliases and an answer checker.
-* Governance and privacy: `docs/PRIVACY_AND_GOVERNANCE.md`. What comes next (research engine, sign-off desk, automation blueprint): `docs/NEXT_PHASE.md`.
+* Governance and privacy: `docs/PRIVACY_AND_GOVERNANCE.md`. Writing rules: `docs/VOICE_GUIDE.md`. Setup help: `docs/GETTING_STARTED.md`. History: `docs/CHANGELOG.md`. What comes next (research engine, sign-off desk, automation blueprint): `docs/NEXT_PHASE.md`.
 
 ## Research, sign-off and automation
 
