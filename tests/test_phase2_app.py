@@ -45,7 +45,8 @@ def test_1_empty_state_then_demo_run_from_dashboard() -> None:
     clean(at)
     text = " ".join(m.value for m in at.markdown)
     assert "$748,140" in text and "3.33x" in text and "Decisions to review" in text and "Trust score 89 of 100" in text
-    assert "Scale Google Ads" in text and "+$667,510" in text  # answer first headline
+    assert "$105,158 of ad spend has not been earned back" in text  # objective, answer first headline
+    assert "Scale Google" not in text and "cut Netflix" not in text.lower()  # the system states facts, it does not instruct
 
 
 def test_2_policy_switch_creates_strict_run() -> None:

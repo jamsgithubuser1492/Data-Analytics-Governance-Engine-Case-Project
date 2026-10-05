@@ -1,0 +1,5 @@
+# SHA-256 of the verified case study data (original uploaded files). Regenerate with: python python/verify_data.py --write
+16caa9b38e69b8ee2eb378641b2627c19bf9504525c73b8c4c5e36b268c9ba80  RAW_PLATFORM_DATA.csv
+5c8351972a059765fce9545ea180db393ebdadb24c7a21d6df9cbce73bd1472a  RAW_MTA_OUTPUT.csv
+3bd3559225266e70ff72d84b643ee0aa74ee814543127c3fe27b49a6aa962694  RAW_HOLDOUT_DATA.csv
+bf59bfa9c4d0a56641ab7268e486f3caee82b059badc49fd2b3eb1b7affad73d  BUSINESS_BENCHMARKS.csv

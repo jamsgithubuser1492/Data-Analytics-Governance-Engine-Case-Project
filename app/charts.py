@@ -12,6 +12,7 @@ import pandas as pd
 import plotly.graph_objects as go
 
 from dashdata import AT_BREAKEVEN_BAND, classify  # noqa: F401  (classify re-exported for callers and tests)
+import ui
 from ui import LIGHT, channel_color
 
 _THEME: Dict[str, str] = dict(LIGHT)
@@ -144,8 +145,9 @@ def waterfall_headline(steps: Sequence[Tuple[str, float, str]]) -> str:
 
 def portfolio_headline(ch: pd.DataFrame) -> str:
     n = ch["action"].value_counts().to_dict()
-    bits = [f"{n[k]} to {k.lower()}" for k in ("Scale", "Maintain", "Cut", "Restructure") if n.get(k)]
-    return "Portfolio call: " + ", ".join(bits)
+    words = {"Scale": "with a strong return", "Maintain": "at or above breakeven", "Cut": "below breakeven", "Restructure": "needing stronger evidence"}
+    bits = [f"{n[k]} {words[k]}" for k in ("Scale", "Maintain", "Cut", "Restructure") if n.get(k)]
+    return "Where returns stand: " + ", ".join(bits)
 
 
 # ------------------------------------------------------------------------------------------------ charts
@@ -261,14 +263,14 @@ def portfolio_chart(ch: pd.DataFrame, headline: str) -> go.Figure:
         d = ch[ch["action"] == action]
         if d.empty:
             continue
-        fig.add_scatter(x=d["spend_share"], y=d["revenue_share"], mode="markers+text", name=action, text=[c.replace(" Ads", "") for c in d["channel"]],
+        fig.add_scatter(x=d["spend_share"], y=d["revenue_share"], mode="markers+text", name=ui.ACTION_LABEL[action], text=[c.replace(" Ads", "") for c in d["channel"]],
                         textposition="top center", marker=dict(symbol=sym[action], size=np.clip(d["spend"] / ch["spend"].max() * 34, 16, 36), color=col[action],
                                                                line=dict(color=t["bg"], width=1.5)),
                         customdata=np.stack([d["channel"], d["proven"].fillna(0)], axis=-1),
                         hovertemplate="%{customdata[0]}<br>Share of spend %{x:.0%}<br>Share of proven revenue %{y:.0%}<br>Proven return %{customdata[1]:.2f}x<extra></extra>")
     fig.update_xaxes(range=[0, lim], tickformat=".0%", title_text="Share of ad spend", showgrid=True, gridcolor=t["grid"])
     fig.update_yaxes(range=[0, lim], tickformat=".0%", title_text="Share of proven revenue")
-    return _layout(fig, headline, "Above the dotted line a channel earns more than its share of the budget; below it, less. Marker shape and the label give the call.", 400, bottom=80)
+    return _layout(fig, headline, "Above the dotted line a channel earns more than its share of the budget; below it, less. Marker shape and the label show where each channel's return stands.", 400, bottom=80)
 
 
 def _alpha(hex_color: str, a: float) -> str:

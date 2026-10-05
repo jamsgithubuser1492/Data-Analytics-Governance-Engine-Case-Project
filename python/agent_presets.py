@@ -18,9 +18,9 @@ PRESETS: List[Dict[str, Any]] = [
             {"label": "Spend Not Earned Back", "format": "usd", "expression": "max(0, total_spend - total_holdout_revenue)"},
             {"label": "Gap: Claimed vs Proven Return", "format": "x2", "expression": "reported_roas - iroas"},
         ],
-        "title": "Capital Loss Detected: {campaign_id}",
+        "title": "Spend not earned back: {campaign_id}",
         "callout": ("{channel} claims {reported_roas}x ROAS but randomized holdouts show only {iroas}x. "
-                    "Reduce budget by 50% and reallocate {m2} of unrecouped spend to proven channels."),
+                    "Given that {m2} of spend has not been earned back, perhaps we should think about reducing budget by 50% until a confirmation test says otherwise."),
     },
     {
         "id": "ATTRIBUTION_SHIELD_AGENT", "name": "Attribution shield", "persona": PERSONA_AGENCY, "severity": "WARNING",
@@ -32,10 +32,10 @@ PRESETS: List[Dict[str, Any]] = [
             {"label": "Platform Claim Above Proven Return", "format": "pct1", "expression": "(reported_roas / iroas - 1) * 100"},
             {"label": "Proven Return", "format": "x2", "expression": "iroas"},
         ],
-        "title": "Attribution Inflation Warning: {campaign_id}",
+        "title": "Platform over-claim: {campaign_id}",
         "callout": ("Client governance note: {channel} reports {reported_roas}x ROAS versus {iroas}x holdout iROAS "
                     "(platform claims {inflation_ratio:.2f}x the verified conversions). "
-                    "Explain MTA deduplication and anchor reporting on holdout results."),
+                    "In order to address the gap, we might want to think about explaining MTA deduplication and anchoring reporting on holdout results."),
     },
     {
         "id": "SCALE_OPPORTUNITY_AGENT", "name": "Scale opportunity", "persona": PERSONA_PLATFORM, "severity": "OPPORTUNITY",
@@ -47,9 +47,9 @@ PRESETS: List[Dict[str, Any]] = [
             {"label": "Platform Reporting Accuracy", "format": "text", "expression": "'High (small over-claim)'"},
             {"label": "Est. Revenue Gain (+25% Spend)", "format": "usd", "expression": "total_spend * 0.25 * iroas"},
         ],
-        "title": "High-Incrementality Scale Target: {campaign_id}",
-        "callout": ("{channel} shows strong incrementality with minimal over-attribution. A 25% budget increase "
-                    "projects {m3} of incremental revenue (assumes constant marginal iROAS)."),
+        "title": "Strong proven return: {campaign_id}",
+        "callout": ("{channel} shows strong incrementality with minimal over-attribution. Given that, perhaps we should think about a 25% budget increase, "
+                    "which would project {m3} of incremental revenue (assumes constant marginal iROAS)."),
     },
 ]
 

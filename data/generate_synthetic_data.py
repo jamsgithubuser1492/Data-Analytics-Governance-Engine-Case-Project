@@ -7,7 +7,11 @@ Produces four raw source tables over a 90-day window starting 2026-01-01:
 * RAW_HOLDOUT_DATA    geo holdout experiment (days 0-29 pre-period, 30-89 treatment)
 * BUSINESS_BENCHMARKS governance reference ranges per channel
 
-Run:  python data/generate_synthetic_data.py [--out-dir data] [--seed 42]
+The repository ships VERIFIED case study files in data/ (see data/VERIFIED_DATA.sha256). This generator reproduces
+them with seed 42, but by default it writes to data/generated/ so the verified files are never overwritten.
+
+Run:  python data/generate_synthetic_data.py [--out-dir data/generated] [--seed 42]
+      (writing into data/ itself needs --overwrite-verified)
 """
 from __future__ import annotations
 
@@ -105,11 +109,15 @@ def generate_all_data(seed: int = 42) -> Tuple[pd.DataFrame, pd.DataFrame, pd.Da
 def main() -> None:
     """CLI entry point: write the four CSVs."""
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--out-dir", default=str(Path(__file__).resolve().parent))
+    here = Path(__file__).resolve().parent
+    parser.add_argument("--out-dir", default=str(here / "generated"))
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--overwrite-verified", action="store_true", help="allow writing into data/, replacing the verified case study files")
     args = parser.parse_args()
 
-    out = Path(args.out_dir)
+    out = Path(args.out_dir).resolve()
+    if out == here and not args.overwrite_verified:
+        raise SystemExit("Refusing to overwrite the verified case study files in data/. Use the default data/generated/ or pass --overwrite-verified.")
     out.mkdir(parents=True, exist_ok=True)
     names = ["RAW_PLATFORM_DATA", "RAW_MTA_OUTPUT", "RAW_HOLDOUT_DATA", "BUSINESS_BENCHMARKS"]
     for name, df in zip(names, generate_all_data(args.seed)):

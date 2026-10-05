@@ -25,8 +25,8 @@ pill, takeaway = ui.pill, ui.callout
 
 NAV = [("app.py", "Dashboard", ":material/analytics:"), ("pages/1_Upload.py", "Upload data", ":material/upload:"),
        ("pages/2_Runs.py", "Runs", ":material/history:"), ("pages/3_Settings.py", "Settings", ":material/tune:"),
-       ("pages/4_Agents.py", "Decision rules", ":material/smart_toy:"), ("pages/5_Memos.py", "Memos", ":material/description:"),
-       ("pages/6_Benchmarks.py", "Benchmarks", ":material/menu_book:")]
+       ("pages/4_Agents.py", "Advisory council", ":material/groups:"), ("pages/5_Memos.py", "Memos", ":material/description:"),
+       ("pages/6_Benchmarks.py", "Benchmarks", ":material/menu_book:"), ("pages/7_Guide.py", "How it works", ":material/help:")]
 
 
 @st.cache_resource

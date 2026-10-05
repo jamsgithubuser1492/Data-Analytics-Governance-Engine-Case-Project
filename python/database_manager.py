@@ -128,7 +128,7 @@ class DatabaseManager:
             csv_path = self.data_dir / f"{table}.csv"
             if not csv_path.exists():
                 raise FileNotFoundError(
-                    f"Raw file missing: {csv_path}. Run python data/generate_synthetic_data.py")
+                    f"Raw file missing: {csv_path}. Restore the verified case study files with: git checkout -- data/")
             self.con.execute(
                 f"INSERT INTO {table} SELECT * FROM read_csv('{csv_path.as_posix()}', header=true)")
 

@@ -41,7 +41,7 @@ def w(at: AppTest, widgets, key: str):
 
 
 def test_1_builder_without_runs_shows_hint_and_validates() -> None:
-    at = page("pages/4_Agents.py")
+    at = page("pages/8_Advanced_rules.py")
     clean(at)
     assert any("Create a run first" in i.value for i in at.info) and any("valid" in s.value for s in at.success)
 
@@ -52,7 +52,7 @@ def test_2_edit_preset_preview_and_save_new_version() -> None:
     app = page("app.py")
     next(b for b in app.button if b.label == "Try with demo data").click().run(timeout=T)
     clean(app)
-    at = page("pages/4_Agents.py")
+    at = page("pages/8_Advanced_rules.py")
     at.selectbox[0].select("ATTRIBUTION_SHIELD_AGENT").run(timeout=T)
     clean(at)
     sid = "ATTRIBUTION_SHIELD_AGENT"
@@ -68,7 +68,7 @@ def test_2_edit_preset_preview_and_save_new_version() -> None:
 
 
 def test_3_invalid_edit_blocks_save() -> None:
-    at = page("pages/4_Agents.py")
+    at = page("pages/8_Advanced_rules.py")
     at.selectbox[0].select("SCALE_OPPORTUNITY_AGENT").run(timeout=T)
     w(at, at.text_input, "SCALE_OPPORTUNITY_AGENT_va0e").set_value("__import__('os').system('x')").run(timeout=T)
     clean(at)
@@ -81,7 +81,7 @@ def test_3_invalid_edit_blocks_save() -> None:
 def test_4_create_custom_agent_and_reevaluate_run() -> None:
     import common
     store, (actor, ws) = common.get_store(), common.identity()
-    at = page("pages/4_Agents.py")
+    at = page("pages/8_Advanced_rules.py")
     at.selectbox[0].select("New custom agent").run(timeout=T)
     n = "New custom agent"
     w(at, at.text_input, f"{n}_id").set_value("TRUST_WATCH").run(timeout=T)
@@ -93,7 +93,7 @@ def test_4_create_custom_agent_and_reevaluate_run() -> None:
     clean(at)
     assert "TRUST_WATCH" in {d["id"] for d in store.get_agent_definitions(ws)}
     before = len(store.list_runs(ws))
-    at2 = page("pages/4_Agents.py")
+    at2 = page("pages/8_Advanced_rules.py")
     next(b for b in at2.button if b.label.startswith("Re-evaluate")).click().run(timeout=T)
     clean(at2)
     assert len(store.list_runs(ws)) == before + 1

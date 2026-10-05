@@ -52,9 +52,23 @@ with st.container(border=True):
     safe_page_link("pages/3_Settings.py", "Change declarations or policy", ":material/tune:")
 
 st.markdown("**Step 2. Upload your four files**")
-if st.button("Use the built in demo data instead"):
-    st.session_state["uploads"] = {t: (df.astype(str), {"filename": "demo", "demo": True}) for t, df in demo.items()}
-    st.rerun()
+from verify_data import all_verified  # noqa: E402
+
+c_demo, c_gen = st.columns(2)
+with c_demo:
+    if st.button("Use the verified demo data (the original case study files)", width="stretch"):
+        st.session_state["uploads"] = {t: (df.astype(str), {"filename": "demo", "demo": True}) for t, df in demo.items()}
+        st.rerun()
+    st.caption("Verified: the files match the recorded checksums." if all_verified() else "Notice: the case study files in data/ differ from the verified originals. Restore them with git checkout -- data/ for a repeatable result.")
+with c_gen, st.popover("Generate new synthetic data", width="stretch"):
+    st.caption("Optional. Creates a fresh synthetic dataset in memory for experiments. It never replaces the verified case study files, and the same seed always gives the same data.")
+    seed = st.number_input("Random seed", 0, 1_000_000, 7, 1, key="gen_seed")
+    if st.button("Generate and load", key="gen_go"):
+        sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "data"))
+        from generate_synthetic_data import generate_all_data
+        names_ = ["RAW_PLATFORM_DATA", "RAW_MTA_OUTPUT", "RAW_HOLDOUT_DATA", "BUSINESS_BENCHMARKS"]
+        st.session_state["uploads"] = {n: (df.astype(str), {"filename": f"synthetic data, seed {int(seed)}", "demo": True}) for n, df in zip(names_, generate_all_data(int(seed)))}
+        st.rerun()
 for table, (title, blurb) in LABELS.items():
     with st.expander(f"{title}" + (" (uploaded)" if table in uploads else ""), expanded=table not in uploads):
         st.caption(blurb)

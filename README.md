@@ -43,14 +43,26 @@ Runs locally on **DuckDB**, with SQL written to also run on **Snowflake**. Inclu
 
 ## Run it
 
+The repository ships the **verified case study data** (the original files, checksummed in `data/VERIFIED_DATA.sha256`). You do not need to generate anything to use the app.
+
 ```bash
 pip install -r requirements.txt
-python data/generate_synthetic_data.py      # regenerates data/*.csv (deterministic)
-python python/database_manager.py           # SQL pipeline -> outputs/*.csv
-python python/governance_checker.py         # causal impact + 8-point audit -> outputs/governance_audit_report.{json,md}
-pytest tests/test_pipeline.py
 python -m streamlit run app/app.py         # opens http://localhost:8501 (use python -m if 'streamlit: command not found')
 ```
+
+On the Dashboard choose **Try with demo data**. It runs on the verified files and the result is identical every time.
+
+Optional checks and tools:
+
+```bash
+python python/verify_data.py               # confirms data/*.csv still match the verified originals
+pytest                                     # the full test suite
+python python/database_manager.py          # standalone SQL pipeline -> outputs/*.csv (reference outputs)
+python python/governance_checker.py        # standalone causal impact + 8 point audit -> outputs/governance_audit_report.{json,md}
+python data/generate_synthetic_data.py     # OPTIONAL: new synthetic data in data/generated/ (never overwrites the verified files)
+```
+
+Synthetic data generation is also available inside the app (Upload data, then Generate new synthetic data). It loads the data in memory for experiments and never replaces the verified files. If a verified file is ever changed by accident, restore it with `git checkout -- data/`.
 
 ## Snowflake setup
 

@@ -34,6 +34,16 @@ def scrub(text: object) -> str:
     return EMOJI.sub("", str(text)).replace("  ", " ").strip() if text is not None else ""
 
 
+def esc(text: object) -> str:
+    """Escape dollar signs so Streamlit markdown never reads two of them as a LaTeX formula."""
+    return str(text).replace("$", "\\$")
+
+
+def safe(text: object) -> str:
+    """scrub() plus dollar escaping, for text shown through st.markdown or st.caption."""
+    return esc(scrub(text))
+
+
 def mode() -> str:
     """'light' or 'dark' following the viewer's Streamlit theme (system setting by default)."""
     try:
@@ -63,7 +73,8 @@ h1, h2, h3, h4, h5 {{letter-spacing: -0.015em;}}
 h5 {{font-weight: 650; font-size: 1.12rem; margin-bottom: .1rem;}}
 [data-testid="stSidebar"] {{border-right: 1px solid {t['border']};}}
 [data-testid="stMetric"] {{background: {t['surface']}; border: 1px solid {t['border']}; border-radius: 14px; padding: 14px 16px;}}
-[data-testid="stMetricValue"] {{font-weight: 700; font-variant-numeric: tabular-nums;}}
+[data-testid="stMetricValue"] {{font-weight: 700; font-variant-numeric: tabular-nums; font-size: 1.7rem;}}
+[data-testid="stMetricValue"] *, [data-testid="stMetricLabel"] * {{white-space: normal !important; overflow: visible !important; text-overflow: clip !important; overflow-wrap: anywhere;}}
 [data-testid="stVerticalBlockBorderWrapper"] {{border-radius: 16px; border-color: {t['border']};}}
 [data-testid="stExpander"] {{border-radius: 12px; border-color: {t['border']};}}
 .stButton > button {{border-radius: 10px; font-weight: 600;}}
@@ -92,10 +103,15 @@ h5 {{font-weight: 650; font-size: 1.12rem; margin-bottom: .1rem;}}
 .stat .l {{font-size: .82rem; color: {t['muted']}; font-weight: 600;}}
 .stat .v {{font-size: 2rem; font-weight: 740; letter-spacing: -.02em; color: {t['ink']}; font-variant-numeric: tabular-nums; line-height: 1.15; margin-top: 4px;}}
 .stat .s {{font-size: .82rem; color: {t['muted']}; margin-top: 4px; line-height: 1.4;}}
+.stats.compact {{grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin: 12px 0;}}
+.stats.compact .stat {{padding: 12px 14px; border-radius: 12px;}}
+.stats.compact .stat .v {{font-size: 1.35rem;}}
 .stat.ok .v {{color: {t['ok']};}} .stat.bad .v {{color: {t['bad']};}} .stat.warn .v {{color: {t['warn']};}}
 .callout {{border: 1px solid {t['border']}; border-left: 4px solid {t['accent']}; background: {t['surface']}; padding: 16px 20px; border-radius: 12px; line-height: 1.55;}}
 .callout.bad {{border-left-color: {t['bad']}; background: {t['bad_bg']};}} .callout.ok {{border-left-color: {t['ok']}; background: {t['ok_bg']};}}
 .callout.warn {{border-left-color: {t['warn']}; background: {t['warn_bg']};}}
+.tblwrap {{overflow-x: auto; max-width: 100%;}}
+.stat .v, .stat .l, .lens, .callout, .hero h1, .sec h2 {{overflow-wrap: anywhere;}}
 .note {{color: {t['muted']}; font-size: .86rem; line-height: 1.5;}}
 .src {{color: {t['muted']}; font-size: .78rem; border-top: 1px dashed {t['border']}; padding-top: 8px; margin-top: 6px; line-height: 1.5;}}
 .tip {{border-bottom: 1px dotted {t['muted']}; cursor: help; position: relative;}}
@@ -172,8 +188,18 @@ def tier_pill(tier: Optional[str]) -> str:
     return pill(label, kind)
 
 
+ACTION_LABEL = {"Scale": "Strong return", "Maintain": "At or above breakeven", "Restructure": "Needs stronger evidence", "Cut": "Below breakeven"}
+STANCE_KIND = {"Lean in": "ok", "Hold": "info", "Re-test": "warn", "Pull back": "bad", "Get more evidence": "muted"}
+LEAN_WORDS = {"conservative": "Leans conservative", "moderate": "Moderate", "aggressive": "Leans aggressive"}
+
+
 def action_pill(action: str) -> str:
-    return pill(action, ACTION_KIND.get(action, "muted"))
+    """Neutral description of where a channel's return stands (a position, never an instruction)."""
+    return pill(ACTION_LABEL.get(action, action), ACTION_KIND.get(action, "muted"))
+
+
+def lean_pill(lean: str) -> str:
+    return pill(LEAN_WORDS[lean], {"conservative": "info", "moderate": "muted", "aggressive": "warn"}[lean])
 
 
 # ------------------------------------------------------------------------------------------- layout components
@@ -193,14 +219,14 @@ def section(num: str, title: str, lede: str = "", anchor: str = "") -> None:
                 unsafe_allow_html=True)
 
 
-def stat_row(stats: Iterable[Dict[str, str]]) -> None:
+def stat_row(stats: Iterable[Dict[str, str]], compact: bool = False) -> None:
     """Cards: dict(label, value, sub, kind, term). Values are display strings; label may carry a glossary term."""
     cards = []
     for s in stats:
         label = term(s["term"], s["label"]) if s.get("term") else html.escape(s["label"])
         cards.append(f'<div class="stat {s.get("kind", "")}"><div class="l">{label}</div><div class="v">{html.escape(s["value"])}</div>'
                      f'<div class="s">{s.get("sub", "")}</div></div>')
-    st.markdown(f'<div class="stats">{"".join(cards)}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="stats{" compact" if compact else ""}">{"".join(cards)}</div>', unsafe_allow_html=True)
 
 
 def callout(text: str, kind: str = "") -> None:

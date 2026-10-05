@@ -1,175 +1,240 @@
-"""No-code agent builder: edit, preview, test sensitivity and save agent versions."""
+"""Advisory council and guardrails: personas interpret the facts, and rules are set in plain business language."""
 from __future__ import annotations
 
+import html
+import re
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from common import get_runner, get_store, identity, page_setup, succeeded_runs, wait_for_run  # noqa: E402
+from common import get_store, identity, page_setup, safe_page_link, succeeded_runs  # noqa: E402
 
-page_setup("Agents",":material/smart_toy:")
+page_setup("Advisory council", ":material/groups:")
 
 import pandas as pd  # noqa: E402
 import streamlit as st  # noqa: E402
 
-from agent_engine import build_facts, evaluate_agents, sensitivity  # noqa: E402
-from agent_schema import (ACTIONS, CONDITION_METRICS, FORMATS, MEASURE_SLOTS, NUMERIC_OPS, PERSONAS, SEVERITIES,  # noqa: E402
-                          TIER_OPS, TIERS, validate_definition)
-from config import HEADLINE_STRICT, PolicySettings  # noqa: E402
-from pipeline import SourceTables  # noqa: E402
-
-store, runner = get_store(), get_runner()
-actor, ws = identity()
-defs = store.get_agent_definitions(ws)
-by_id = {d["id"]: d for d in defs}
-
+import council as cn  # noqa: E402
+import guide_content  # noqa: E402
+import stances as sx  # noqa: E402
 import ui  # noqa: E402
+from agent_engine import build_facts, default_definitions, evaluate_agents  # noqa: E402
+from agent_schema import ACTIONS, PERSONAS as RULE_PERSONAS  # noqa: E402
+from runview import load_view  # noqa: E402
 
-ui.page_head("No code rules", "Decision rules", "Three archetypes watch your results: capital preservation, attribution shield and scale opportunity. Edit them, add your own, preview what they would flag, and see how sensitive they are to the thresholds.")
-st.caption("Agents are rules, not code. Pick a metric, a condition, who it is for and what action it recommends. "
-           "Money actions never fire on results that are not decision grade. Every save is a new version.")
-
-st.dataframe(pd.DataFrame([{"Agent": d["id"], "Name": d["name"], "Version": d.get("version", 1), "Enabled": d.get("enabled", True),
-                            "Persona": d["persona"], "Action": d["action"], "Priority": d["priority"]} for d in defs]),
-             hide_index=True, width="stretch")
-
-NEW = "New custom agent"
-sel = st.selectbox("Edit agent", [d["id"] for d in defs] + [NEW])
-base = by_id.get(sel) or {
-    "id": "", "name": "", "description": "", "persona": PERSONAS[0], "severity": "INFO", "action": "REVIEW_MEASUREMENT", "enabled": True,
-    "priority": 50, "requires_min_tier": "NOT_DECISION_GRADE", "min_spend": 0.0, "deadband_pct": 0.0,
-    "trigger": {"all": [{"metric": "inflation_ratio", "op": ">", "value": 1.5}], "any": []},
-    "value_add": [{"label": "Platform Over-Claim Multiplier", "expression": "inflation_ratio", "format": "x2"}],
-    "title": "Review {campaign_id}", "callout": "{channel} needs review: platform claims {m1} of the verified conversions."}
-k = lambda name: f"{sel}_{name}"  # noqa: E731  widget keys per selected agent so switching resets the form
-
-
-def fmt_value(c: dict) -> str:
-    v = c["value"]
-    return ", ".join(str(x) for x in v) if isinstance(v, list) else str(v)
-
-
-def parse_value(metric: str, op: str, text: str):
-    parts = [p.strip() for p in text.split(",") if p.strip()]
-    if metric == "tier":
-        return parts if op == "in" else (parts[0] if parts else "")
-    if op == "between":
-        return [float(p) for p in parts]
-    return float(parts[0])
-
-
-c1, c2 = st.columns(2)
-agent_id = c1.text_input("Agent id (capitals, digits, underscores)", base["id"], key=k("id"), disabled=bool(base["id"]))
-name = c2.text_input("Name", base["name"], key=k("name"))
-desc = st.text_input("What it is for", base.get("description", ""), key=k("desc"))
-d1, d2, d3 = st.columns(3)
-persona = d1.selectbox("Who it is for", PERSONAS, index=PERSONAS.index(base["persona"]), key=k("persona"))
-severity = d2.selectbox("Severity", SEVERITIES, index=SEVERITIES.index(base["severity"]), key=k("sev"))
-actions = list(ACTIONS)
-action = d3.selectbox("Recommended action", actions, index=actions.index(base["action"]), key=k("action"),
-                      format_func=lambda a: f"{ACTIONS[a][0]}{' (money action)' if ACTIONS[a][1] else ''}")
-e1, e2, e3, e4, e5 = st.columns(5)
-enabled = e1.checkbox("Enabled", base.get("enabled", True), key=k("en"))
-priority = e2.number_input("Priority (1 first)", 1, 100, int(base["priority"]), key=k("pri"))
-min_tier = e3.selectbox("Minimum trust tier", TIERS, index=TIERS.index(base["requires_min_tier"]), key=k("tier"),
-                        help="Money actions are always at least Directional.")
-min_spend = e4.number_input("Minimum spend ($)", 0.0, 1e9, float(base["min_spend"]), key=k("ms"))
-deadband = e5.number_input("Deadband (%)", 0.0, 50.0, float(base["deadband_pct"]), key=k("db"),
-                           help="An alert that was active last run stays active until the metric is this far past the threshold.")
-
-st.markdown("**When it fires**")
-raw_trigger = {"all": [], "any": []}
-parse_errors = []
-for group, label in (("all", "ALL of these must be true"), ("any", "ANY of these may be true")):
-    existing = base["trigger"].get(group, [])
-    n = st.number_input(f"{label}: number of conditions", 0, 6, len(existing), key=k(f"n_{group}"))
-    for i in range(int(n)):
-        cur = existing[i] if i < len(existing) else {"metric": "iroas", "op": ">", "value": 1.0}
-        a, b, c = st.columns([3, 2, 3])
-        metric = a.selectbox("Metric", CONDITION_METRICS, index=CONDITION_METRICS.index(cur["metric"]) if cur["metric"] in CONDITION_METRICS else 0, key=k(f"{group}{i}m"))
-        ops = TIER_OPS if metric == "tier" else NUMERIC_OPS
-        op = b.selectbox("Condition", ops, index=ops.index(cur["op"]) if cur["op"] in ops else 0, key=k(f"{group}{i}o"))
-        text = c.text_input("Value (use a comma for between or in)", fmt_value(cur), key=k(f"{group}{i}v"))
-        try:
-            raw_trigger[group].append({"metric": metric, "op": op, "value": parse_value(metric, op, text)})
-        except (ValueError, IndexError):
-            parse_errors.append(f"{group.upper()} condition {i + 1}: '{text}' is not a valid value for {metric} {op}.")
-
-st.markdown("**Numbers the agent shows (value-add metrics)**")
-st.caption("Formulas can use any metric name, + - * / ** and min, max, abs, round, div(a, b, default). Nothing else is allowed.")
-existing_va = base.get("value_add", [])
-nva = st.number_input("Number of value-add metrics", 0, len(MEASURE_SLOTS), len(existing_va), key=k("nva"))
-value_add = []
-for i in range(int(nva)):
-    cur = existing_va[i] if i < len(existing_va) else {"label": "", "expression": "iroas", "format": "x2"}
-    a, b, c = st.columns([3, 5, 2])
-    lab = a.text_input(f"Label {i + 1} (use {{m{i + 1}}} in the callout)", cur["label"], key=k(f"va{i}l"))
-    expr = b.text_input("Formula", cur["expression"], key=k(f"va{i}e"))
-    fmts = list(FORMATS)
-    f = c.selectbox("Format", fmts, index=fmts.index(cur["format"]) if cur["format"] in fmts else 0, key=k(f"va{i}f"))
-    value_add.append({"label": lab, "expression": expr, "format": f})
-
-title = st.text_input("Card title", base["title"], key=k("title"), help="Placeholders: {campaign_id} {channel} {tier} and any metric name")
-callout = st.text_area("Callout message", base["callout"], key=k("callout"), height=90,
-                       help="Placeholders: any metric name, {m1} to {m5} for value-add results, {iroas:.2f} style formats.")
-
-draft = {"id": agent_id.strip() or base["id"], "name": name, "description": desc, "persona": persona, "severity": severity, "action": action,
-         "enabled": enabled, "priority": priority, "requires_min_tier": min_tier, "min_spend": min_spend, "deadband_pct": deadband,
-         "trigger": raw_trigger, "value_add": value_add, "title": title, "callout": callout}
-norm, errors = validate_definition(draft)
-errors = parse_errors + errors
-if errors:
-    for e in errors:
-        st.error(e)
-else:
-    st.success("This definition is valid.")
-
-# ------------------------------------------------------------------ preview
-st.subheader("Preview on a real run")
+store = get_store()
+actor, ws = identity()
 runs = succeeded_runs(ws)
-if not runs:
-    st.info("Create a run first (on the Dashboard, choose Try with demo data) to preview what this agent would do.")
-elif norm is not None:
-    labels = {r["id"]: f"{r['label'] or 'Run'} · {r['created_at'][:16].replace('T', ' ')}" for r in runs}
-    run_id = st.selectbox("Run to test against", list(labels), format_func=labels.get, key="preview_run")
-    run = store.get_run(ws, run_id)
-    settings = PolicySettings(**run["settings"])
-    facts = build_facts(store.load_table(ws, run_id, "ANALYTICS_MEASUREMENT_RECONCILIATION"), store.load_audit(ws, run_id),
-                        settings.headline_metric == HEADLINE_STRICT)
-    test_def = {**norm, "version": base.get("version", 0) + 1, "enabled": True}
-    _, prev_active = store.latest_active_set(ws)
-    prev = prev_active if norm["deadband_pct"] > 0 else set()
-    fired = evaluate_agents([test_def], facts, prev)
-    st.markdown(f"**Would fire on {len(fired)} of {len(facts)} campaigns** ({'strict lift' if settings.headline_metric == HEADLINE_STRICT else 'reported by spec'} view)")
-    if fired:
-        st.dataframe(pd.DataFrame([{"Campaign": p["campaign_id"], "Channel": p["channel"], "Tier": p["tier"], **p["value_add_metrics"]} for p in fired]),
-                     hide_index=True, width="stretch")
-        st.caption("Example message: " + fired[0]["strategic_callout"])
-    sens = sensitivity(test_def, facts, prev)
-    cliff = sens[sens["cliff_edge"]]
-    st.markdown("**Sensitivity (thresholds moved 10% down and up)**")
-    st.dataframe(sens, hide_index=True, width="stretch")
-    if len(cliff):
-        st.warning(f"{len(cliff)} campaign(s) sit on a cliff edge: {', '.join(cliff['campaign_id'])}. A small data change flips this alert. "
-                   "Consider a deadband.")
 
-# --------------------------------------------------------------------- save
-s1, s2 = st.columns([1, 2])
-if s1.button("Save as new version", type="primary", disabled=bool(errors)):
-    version, errs = store.save_agent_definition(ws, draft, actor)
-    if errs:
-        st.error("; ".join(errs))
+ui.page_head("Interpretation", "Advisory council",
+             "Four advisors read the same verified facts through different motivations and risk appetites. They offer ideas to consider, never instructions. "
+             "Set your own guardrails in plain business terms, and see how each choice changes what gets flagged.")
+
+if not runs:
+    ui.callout("There is nothing to interpret yet. Load the case study data from the Dashboard (choose Try with demo data) or upload your own files, then return here.")
+    safe_page_link("app.py", "Go to the Dashboard", ":material/analytics:")
+    st.stop()
+
+labels = {r["id"]: f"{r['label'] or 'Run'} · {r['created_at'][:16].replace('T', ' ')}" for r in runs}
+run_id = st.selectbox("Run to interpret", list(labels), format_func=labels.get, key="council_run")
+v = load_view(store, ws, run_id)
+facts = build_facts(v.recon, v.report, v.is_strict)
+defs = {d["id"]: d for d in (store.get_agent_definitions(ws) or default_definitions())}
+council = cn.convene(v.ch, v.cd, v.tot, v.breakeven, v.is_strict, v.holdout_coverage)
+
+STANCE_KIND = ui.STANCE_KIND
+
+
+def lean_pill(p: cn.Persona) -> str:
+    return ui.lean_pill(p.lean)
+
+
+def bar_text(p: cn.Persona) -> str:
+    return (f"Wants {cn.TIER_WORDS[p.evidence_floor]} evidence before backing a money move, "
+            f"{'judges a channel by the cautious end of its interval' if p.uses_lower_bound else 'judges a channel by its central estimate'}, "
+            f"treats {p.clearance:g}x breakeven as clearly profitable, and tolerates platforms claiming up to {p.overclaim_tolerance:g}x what the test confirms.")
+
+
+tab_council, tab_rules, tab_how = st.tabs(["The council", "Your guardrails", "How it works"])
+
+# ============================================================================================== the council
+with tab_council:
+    st.markdown(f'<div class="note">Counting basis {ui.pill(v.basis, "info")} Breakeven {v.breakeven:.2f}x. Every number below is computed from this run; the advisors add interpretation only.</div>', unsafe_allow_html=True)
+    who = st.segmented_control("Show", ["Whole council"] + [p.name for p in cn.PERSONAS], default="Whole council", key="council_who", label_visibility="collapsed") or "Whole council"
+    st.write("")
+
+    if who == "Whole council":
+        a, s = st.columns(2)
+        with a, st.container(border=True):
+            st.markdown("##### Where the council agrees")
+            for line in council.agree or ["No channel has full agreement. See the split on the right."]:
+                st.markdown(f"- {line}")
+        with s, st.container(border=True):
+            st.markdown("##### Where the council splits")
+            st.caption("A split shows where judgement and risk appetite, not the data, decide.")
+            for line in council.split or ["The advisors read every channel the same way."]:
+                st.markdown(f"- {line}")
+        st.write("")
+        cols = st.columns(2)
+        for i, rd in enumerate(council.readings):
+            p = rd.persona
+            with cols[i % 2], st.container(border=True):
+                st.markdown(f"{lean_pill(p)}", unsafe_allow_html=True)
+                st.markdown(f"#### {p.name}")
+                st.caption(p.role)
+                st.markdown(ui.esc(rd.headline))
+                ui.stat_row(rd.kpis, compact=True)
+                rows = "".join(f"<tr><td>{html.escape(c.channel)}</td><td>{ui.pill(c.stance, STANCE_KIND[c.stance])}</td></tr>" for c in rd.channels)
+                st.markdown(f'<div class="tblwrap"><table class="mm"><thead><tr><th>Channel</th><th>Where {html.escape(p.name)} stands</th></tr></thead><tbody>{rows}</tbody></table></div>', unsafe_allow_html=True)
+                st.caption(f"First question: {p.first_question}")
+        st.caption("Choose an advisor above for their full reading, the facts behind each view and what would change their mind.")
     else:
-        st.success(f"Saved {draft['id']} as version {version}. New runs use it.")
-        st.session_state["agent_saved"] = True
-if runs and s2.button("Re-evaluate the selected run's data with the saved agents (creates a new run)"):
-    rid = st.session_state.get("preview_run") or runs[0]["id"]
-    run = store.get_run(ws, rid)
-    inputs = SourceTables(*(store.load_table(ws, rid, f"INPUT_{n}") for n in ("RAW_PLATFORM_DATA", "RAW_MTA_OUTPUT", "RAW_HOLDOUT_DATA", "BUSINESS_BENCHMARKS")))
-    new_id = runner.submit(ws, inputs, PolicySettings(**run["settings"]), run["declarations"], (run["label"] or "Run") + " (agents updated)")
-    status = wait_for_run(ws, new_id, "Re-evaluating agents...")
-    st.success(f"Run {status}. Open the Dashboard to see the packets.") if status == "succeeded" else st.error(store.get_run(ws, new_id)["error"])
-if base.get("version"):
-    with st.expander("Version history"):
-        st.dataframe(pd.DataFrame([{"Version": v.get("version"), "Saved by": v.get("saved_by"), "Saved at": v.get("saved_at"), "Enabled": v.get("enabled")}
-                                   for v in store.list_agent_versions(ws, sel)]), hide_index=True)
+        rd = next(r for r in council.readings if r.persona.name == who)
+        p = rd.persona
+        with st.container(border=True):
+            st.markdown(f"{lean_pill(p)}", unsafe_allow_html=True)
+            st.markdown(f"### {p.name}, {p.role}")
+            c1, c2 = st.columns(2)
+            c1.markdown(f"**Background.** {p.background}")
+            c1.markdown(f"**Personality.** {p.personality}")
+            c2.markdown("**Motivations**\n" + "\n".join(f"- {m}" for m in p.motivations))
+            c2.markdown(f"**First question.** {p.first_question}")
+            st.caption(bar_text(p))
+        st.markdown("##### What the facts say, in their terms")
+        st.markdown(ui.esc(rd.headline))
+        ui.stat_row(rd.kpis, compact=True)
+        st.markdown("##### Their view, channel by channel")
+        for c in rd.channels:
+            with st.container(border=True):
+                st.markdown(f"{ui.pill(c.stance, STANCE_KIND[c.stance])} &nbsp; **{html.escape(c.channel)}**", unsafe_allow_html=True)
+                st.markdown(ui.esc(c.text))
+                with st.expander("The facts behind this and what would change their mind"):
+                    st.markdown(ui.esc(f"**Facts.** {c.facts}."))
+                    st.markdown(ui.esc(f"**What would change my mind.** {c.change_my_mind}."))
+        if rd.portfolio:
+            st.markdown("##### Across the portfolio")
+            for t in rd.portfolio:
+                st.markdown(f"- {ui.esc(t)}")
+        related = defs.get(p.related_rule)
+        if related:
+            fired = evaluate_agents([{**related, "enabled": True}], facts)
+            with st.expander(f"Evidence from the '{related['name']}' guardrail ({len(fired)} of {len(facts)} campaigns flagged)"):
+                st.caption(ui.esc(sx.describe(related)) if related["id"] in sx.RULE_IDS else "")
+                if not fired:
+                    st.caption("Nothing flagged under the current guardrail settings.")
+                camp = v.camp.set_index("campaign_id")
+                for pk in fired:
+                    r = camp.loc[pk["campaign_id"]]
+                    st.markdown(ui.esc(f"**{pk['campaign_id']}**: trust score {r['trust_score']:.0f} ({cn.TIER_WORDS[r['tier']]}), "
+                                + ", ".join(f"{ui.scrub(a)} {b}" for a, b in pk["value_add_metrics"].items())))
+        st.caption("Sources: this run's platform, attribution and holdout data. Intervals are 95%.")
+
+# ================================================================================================ guardrails
+with tab_rules:
+    st.markdown("#### Choose how cautious the whole system should be")
+    st.caption("A risk appetite sets all three guardrails at once. Balanced is the standard case study setting. Your choice is saved as a new version and can be changed back at any time.")
+    current = sx.detect_appetite(defs)
+    names = list(sx.APPETITES)
+    choice = st.radio("Risk appetite", names, index=names.index(current) if current in names else 1, horizontal=True, key="appetite")
+    st.caption(sx.APPETITES[choice]["blurb"] + (f" Your guardrails currently match: {current}." if current != "Custom" else " Your guardrails are currently tuned individually (Custom)."))
+
+    # what each appetite would flag on THIS run
+    rows = []
+    for rid, title in (("CAPITAL_PRESERVATION_AGENT", "Money not earned back"), ("ATTRIBUTION_SHIELD_AGENT", "Platforms claiming more than proven"), ("SCALE_OPPORTUNITY_AGENT", "Room to grow")):
+        cells = []
+        for ap in names:
+            d, _ = sx.apply_settings(defs[rid], sx.APPETITES[ap][rid])
+            n = len(evaluate_agents([{**d, "enabled": True}], facts)) if d else 0
+            cells.append(f"<b>{n}</b> of {len(facts)}" if ap == choice else f"{n} of {len(facts)}")
+        rows.append(f"<tr><td>{title}</td>" + "".join(f"<td>{c}</td>" for c in cells) + "</tr>")
+    st.markdown("**What each appetite would flag on this run**")
+    st.markdown('<div class="tblwrap"><table class="mm"><thead><tr><th>Guardrail</th>' + "".join(f"<th>{n}</th>" for n in names) + f'</tr></thead><tbody>{"".join(rows)}</tbody></table></div>', unsafe_allow_html=True)
+    if st.button(f"Apply {choice} to all three guardrails", type="primary", disabled=choice == current):
+        try:
+            for rid, d in sx.apply_appetite(defs, choice).items():
+                store.save_agent_definition(ws, {**defs[rid], **d}, actor)
+            st.toast(f"{choice} saved as a new version of each guardrail.")
+            st.rerun()
+        except ValueError as exc:
+            st.error(str(exc))
+
+    st.divider()
+    st.markdown("#### Fine tune each guardrail")
+    st.caption("Each guardrail is a plain question. Change an answer and the preview shows what it would flag on this run before you save.")
+    GUARDS = [
+        ("CAPITAL_PRESERVATION_AGENT", "Money not earned back", "For the CFO. Catches campaigns that look profitable in the platform's own numbers but lose money once the test is applied.",
+         [("claimed_at_least", "Alert when a platform claims a return of at least", 1.0, 10.0, 0.05, "x"), ("proven_below", "but the test proves less than", 0.0, 5.0, 0.05, "x")]),
+        ("ATTRIBUTION_SHIELD_AGENT", "Platforms claiming more than proven", "For agencies and platform leads. Catches platforms taking more credit than the evidence supports.",
+         [("overclaim_above", "Alert when a platform claims more than this many times what the test confirms", 1.0, 5.0, 0.05, "x")]),
+        ("SCALE_OPPORTUNITY_AGENT", "Room to grow", "For the CMO. Catches strong, well measured campaigns that could take more budget.",
+         [("proven_at_least", "Alert when the proven return is at least", 0.5, 20.0, 0.1, "x"), ("overclaim_at_most", "and platforms claim no more than this many times what the test confirms", 1.0, 5.0, 0.05, "x")]),
+    ]
+    for rid, title, blurb, fields in GUARDS:
+        base = defs[rid]
+        cur = sx.read_settings(base)
+        with st.container(border=True):
+            top_l, top_r = st.columns([4, 1])
+            top_l.markdown(f"##### {title}")
+            top_l.caption(blurb)
+            enabled = top_r.toggle("Watching", value=bool(base.get("enabled", True)), key=f"en_{rid}")
+            st.markdown(f"**Right now:** {ui.esc(sx.describe(base))}")
+            vals = {}
+            cols = st.columns(len(fields))
+            for col, (key, label, lo, hi, step, unit) in zip(cols, fields):
+                vals[key] = col.number_input(f"{label} ({unit})", lo, hi, float(min(max(cur[key], lo), hi)), step, key=f"{rid}_{key}")
+            c1, c2 = st.columns(2)
+            vals["min_spend"] = c1.number_input("Only when at least this much is being spent ($)", 0.0, 10_000_000.0, float(cur["min_spend"]), 1000.0, key=f"{rid}_spend",
+                                                help="Small campaigns create noisy alerts. A floor keeps the guardrail focused on money that matters.")
+            tier_label = c2.selectbox("Evidence level needed", list(sx.TIER_CHOICES), index=list(sx.TIER_CHOICES.values()).index(cur["min_tier"]), key=f"{rid}_tier",
+                                      help="Verified results passed every quality check. Directional results are informative but weaker.")
+            vals["min_tier"] = sx.TIER_CHOICES[tier_label]
+            cand, errs = sx.apply_settings(base, vals)
+            if errs:
+                st.error(" ".join(errs))
+            else:
+                fired = evaluate_agents([{**cand, "enabled": True}], facts)
+                st.markdown(f'{ui.pill("Preview", "info")} Would flag <b>{len(fired)} of {len(facts)}</b> campaigns on this run'
+                            + (": " + ", ".join(p["campaign_id"] for p in fired) if fired else "."), unsafe_allow_html=True)
+                changed = any(abs(float(cur.get(k, 0)) - float(vals[k])) > 1e-9 for k in vals if k != "min_tier") or cur["min_tier"] != vals["min_tier"] or enabled != bool(base.get("enabled", True))
+                if st.button("Save this guardrail", key=f"save_{rid}", disabled=not changed):
+                    _, e2 = store.save_agent_definition(ws, {**cand, "enabled": enabled}, actor)
+                    st.toast("Saved as a new version." if not e2 else " ".join(e2))
+                    st.rerun()
+
+    st.divider()
+    with st.expander("Add a watch of your own"):
+        st.caption("Say it as a sentence: tell me when a measure goes above or below a level. The same safety rules apply, and every save is a new version.")
+        MEASURES = {"Proven return per $1": ("iroas", "x2", 0.0, 20.0), "Claimed return per $1": ("reported_roas", "x2", 0.0, 50.0), "Over-claim multiple": ("inflation_ratio", "x2", 0.0, 20.0),
+                    "Trust score (0 to 100)": ("trust_score", "number", 0.0, 100.0), "Spend ($)": ("total_spend", "usd", 0.0, 5_000_000.0)}
+        n1, n2 = st.columns(2)
+        wname = n1.text_input("Name this watch", placeholder="Example: Low proven return")
+        who_sees = n2.selectbox("Who should see it", RULE_PERSONAS)
+        m1, m2, m3 = st.columns([3, 1.4, 1.6])
+        measure = m1.selectbox("Tell me when", list(MEASURES))
+        mkey, mfmt, mlo, mhi = MEASURES[measure]
+        op = m2.selectbox("is", ["above", "below"])
+        level = m3.number_input("this level", mlo, mhi, min(max(1.0, mlo), mhi), 0.05 if mhi <= 50 else 1000.0)
+        action_labels = {"Just flag it for review": "REVIEW_MEASUREMENT", **{lbl: code for code, (lbl, _) in ACTIONS.items() if code != "REVIEW_MEASUREMENT"}}
+        action = st.selectbox("and suggest", list(action_labels))
+        wid = re.sub(r"[^A-Z0-9]+", "_", ("WATCH_" + wname.upper()).strip("_"))[:40].strip("_")
+        if st.button("Save watch", disabled=len(wname.strip()) < 3):
+            new = {"id": wid, "name": wname.strip(), "description": f"{measure} {op} {level:g}", "persona": who_sees, "severity": "WARNING", "action": action_labels[action], "enabled": True,
+                   "priority": 50, "requires_min_tier": "NOT_DECISION_GRADE", "min_spend": 0.0, "deadband_pct": 0.0,
+                   "trigger": {"all": [{"metric": mkey, "op": ">" if op == "above" else "<", "value": float(level)}], "any": []},
+                   "value_add": [{"label": measure, "expression": mkey, "format": mfmt}], "title": f"{wname.strip()}: " + "{campaign_id}",
+                   "callout": "Consider reviewing {channel}: " + f"{measure.lower()} is " + "{m1}, which is " + f"{op} the level you set ({level:g})."}
+            ver, errs = store.save_agent_definition(ws, new, actor)
+            st.success(f"Saved as version {ver}.") if not errs else st.error(" ".join(errs))
+    safe_page_link("pages/8_Advanced_rules.py", "Open the advanced rule editor (for analysts)", ":material/code:")
+
+# ================================================================================================ how it works
+with tab_how:
+    st.markdown("#### The short version")
+    st.markdown("Three guardrails watch every result. A risk appetite sets how sensitive they are. Four advisors then interpret what was flagged, each from their own motivations, "
+                "and offer ideas to consider. The facts never change with the advisor; only the interpretation does.")
+    wanted = {"The trust score and the three trust levels", "Guardrails: the rules that watch your results", "Risk appetite: Conservative, Balanced or Aggressive", "The advisory council"}
+    for title, body in guide_content.SECTIONS:
+        if title in wanted:
+            with st.expander(title):
+                st.markdown(body)
+    safe_page_link("pages/7_Guide.py", "Read the full methodology guide", ":material/help:")

@@ -124,7 +124,7 @@ class AgentOrchestrator:
             "packet_id": f"CAPITAL_PRESERVATION_AGENT:{row['campaign_id']}",
             "agent_id": "CAPITAL_PRESERVATION_AGENT", "target_persona": PERSONA_CFO,
             "campaign_id": row["campaign_id"], "channel": row["channel"], "severity": "CRITICAL",
-            "title": f"Capital Loss Detected: {row['campaign_id']}",
+            "title": f"Spend not earned back: {row['campaign_id']}",
             "value_add_metrics": {
                 "Sales Claimed but Not Caused by Ads": f"{cannibalization:.1f}%",
                 "Spend Not Earned Back": f"${net_unrecouped:,.2f}",
@@ -133,8 +133,8 @@ class AgentOrchestrator:
             "raw_metrics": {"cannibalization_pct": cannibalization, "net_unrecouped_spend": net_unrecouped},
             "strategic_callout": (
                 f"{row['channel']} claims {row['reported_roas']}x ROAS but randomized holdouts show only "
-                f"{row['incremental_roas']}x. Reduce budget by 50% and reallocate ${net_unrecouped:,.2f} "
-                "of unrecouped spend to proven channels."),
+                f"{row['incremental_roas']}x. Given that ${net_unrecouped:,.2f} of spend has not been earned back, perhaps we should think about "
+                "reducing budget by 50% until a confirmation test says otherwise."),
             "recommended_action": "REDUCE_BUDGET_50%",
         }
 
@@ -147,7 +147,7 @@ class AgentOrchestrator:
             "packet_id": f"ATTRIBUTION_SHIELD_AGENT:{row['campaign_id']}",
             "agent_id": "ATTRIBUTION_SHIELD_AGENT", "target_persona": PERSONA_AGENCY,
             "campaign_id": row["campaign_id"], "channel": row["channel"], "severity": "WARNING",
-            "title": f"Attribution Inflation Warning: {row['campaign_id']}",
+            "title": f"Platform over-claim: {row['campaign_id']}",
             "value_add_metrics": {
                 "Platform Over-Claim Multiplier": f"{float(row['inflation_ratio']):.2f}x",
                 "Platform Claim Above Proven Return": margin_txt,
@@ -157,7 +157,7 @@ class AgentOrchestrator:
             "strategic_callout": (
                 f"Client governance note: {row['channel']} reports {roas}x ROAS versus {iroas}x holdout "
                 f"iROAS (platform claims {float(row['inflation_ratio']):.2f}x the verified conversions). "
-                "Explain MTA deduplication and anchor reporting on holdout results."),
+                "In order to address the gap, we might want to think about explaining MTA deduplication and anchoring reporting on holdout results."),
             "recommended_action": "CLIENT_GOVERNANCE_AUDIT",
         }
 
@@ -169,7 +169,7 @@ class AgentOrchestrator:
             "packet_id": f"SCALE_OPPORTUNITY_AGENT:{row['campaign_id']}",
             "agent_id": "SCALE_OPPORTUNITY_AGENT", "target_persona": PERSONA_PLATFORM,
             "campaign_id": row["campaign_id"], "channel": row["channel"], "severity": "OPPORTUNITY",
-            "title": f"High-Incrementality Scale Target: {row['campaign_id']}",
+            "title": f"Strong proven return: {row['campaign_id']}",
             "value_add_metrics": {
                 "Proven Return": f"{iroas:.2f}x",
                 "Platform Reporting Accuracy": "High (small over-claim)",
@@ -177,8 +177,8 @@ class AgentOrchestrator:
             },
             "raw_metrics": {"projected_gain": gain, "added_spend": spend * SCALE_SPEND_INCREASE},
             "strategic_callout": (
-                f"{row['channel']} shows strong incrementality with minimal over-attribution. A 25% budget "
-                f"increase projects ${gain:,.2f} of incremental revenue (assumes constant marginal iROAS)."),
+                f"{row['channel']} shows strong incrementality with minimal over-attribution. Given that, perhaps we should think about a 25% budget "
+                f"increase, which would project ${gain:,.2f} of incremental revenue (assumes constant marginal iROAS)."),
             "recommended_action": "SCALE_BUDGET_25%",
         }
 
