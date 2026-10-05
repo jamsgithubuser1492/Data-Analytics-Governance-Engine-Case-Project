@@ -1,9 +1,8 @@
-"""Executive overrides with a tamper evident audit log (FR-AG01).
+"""Tamper evident audit log shared by every signed decision (FR-AG01).
 
-Overriding a recommendation needs a written business justification (at least 10 characters), the authorizing
-person's email and executive role. Each override is appended to ``run_audit_log.json`` (JSON Lines) with a hash
-that chains to the previous entry, so any later edit or deletion is detectable by ``verify_log``. The same event is
-also written to the run store's audit trail.
+Entries are appended to ``run_audit_log.json`` (JSON Lines). Each carries a hash that chains to the previous entry, so any later
+edit or deletion is detectable by ``verify_log``. Decisions themselves are made through ``signoff.sign``; this module holds the
+log mechanics, the role list and the input validators.
 """
 from __future__ import annotations
 
@@ -66,18 +65,3 @@ def verify_log(path: Path) -> Tuple[bool, str]:
             return False, f"Entry {i} was altered after it was written."
         prev = e["hash"]
     return True, "ok"
-
-
-def record_override(store: Any, workspace_id: str, item: Dict[str, Any], reason: str, email: str, role: str,
-                    trust_score: float, tier: str, log_path: Path) -> Dict[str, Any]:
-    problems = validate_override(reason, email, role)
-    if problems:
-        raise OverrideError(" ".join(problems))
-    p = item["packet"]
-    entry = append_entry(log_path, {
-        "timestamp": datetime.now(timezone.utc).isoformat(timespec="microseconds"), "event": "override_default_recommendation",
-        "run_id": item["run_id"], "inbox_item": item["id"], "campaign_id": p["campaign_id"], "agent_id": p["agent_id"],
-        "recommended_action": p["recommended_action"], "authorized_by": email.strip(), "role": role,
-        "rationale": reason.strip(), "trust_score": trust_score, "trust_tier": tier})
-    store.transition_inbox(workspace_id, item["id"], "dismissed", email.strip(), f"OVERRIDE ({role}): {reason.strip()}")
-    return entry

@@ -11,6 +11,8 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "python"))
 
+sys.path.insert(0, str(ROOT / "tests"))
+from helpers import sign_for_test  # noqa: E402
 from config import HEADLINE_STRICT, PolicySettings  # noqa: E402
 from job_runner import JobRunner  # noqa: E402
 from pipeline import SourceTables, ValidationBlocked, run_key, run_pipeline  # noqa: E402
@@ -146,7 +148,10 @@ def test_inbox_lifecycle_and_audit_log(store, tables) -> None:
     with pytest.raises(StoreError):
         store.transition_inbox(ws, it, "executed", "jim")  # cannot execute without approval
     store.transition_inbox(ws, it, "reviewed", "jim")
-    store.transition_inbox(ws, it, "approved", "jim", "ok")
+    with pytest.raises(StoreError):
+        store.transition_inbox(ws, it, "approved", "jim", "ok")  # an unsigned approval is refused
+    sign_for_test(store, ws, it)
+    assert store.get_inbox_item(ws, it)["status"] == "approved"
     store.transition_inbox(ws, it, "executed", "jim")
     with pytest.raises(StoreError):
         store.transition_inbox(ws, it, "dismissed", "jim")  # terminal
@@ -160,7 +165,7 @@ def test_newer_run_supersedes_open_items(store, tables) -> None:
     r1 = j.submit(ws, tables)
     j.wait(ws, r1)
     first = store.list_inbox(ws, r1)
-    store.transition_inbox(ws, first[0]["id"], "approved", "jim")
+    sign_for_test(store, ws, first[0]["id"])
     r2 = j.submit(ws, tables, PolicySettings(headline_metric=HEADLINE_STRICT))
     assert j.wait(ws, r2) == SUCCEEDED and r2 != r1
     after = {i["id"]: i["status"] for i in store.list_inbox(ws, r1)}

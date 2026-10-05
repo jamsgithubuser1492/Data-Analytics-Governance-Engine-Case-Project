@@ -25,11 +25,10 @@ import charts  # noqa: E402
 import council as cn  # noqa: E402
 import dashdata as dd  # noqa: E402
 import ui  # noqa: E402
-from agent_schema import ACTIONS  # noqa: E402
 from agent_engine import build_facts, default_definitions, evaluate_agents  # noqa: E402
 from agent_orchestrator import PERSONA_AGENCY, PERSONA_CFO, PERSONA_PLATFORM  # noqa: E402
 from config import HEADLINE_SPEC, HEADLINE_STRICT, PolicySettings  # noqa: E402
-from overrides import EXEC_ROLES, OverrideError, read_log, record_override, verify_log  # noqa: E402
+from overrides import read_log, verify_log  # noqa: E402
 from pipeline import SourceTables  # noqa: E402
 from run_store import StoreError  # noqa: E402
 
@@ -432,7 +431,7 @@ with st.expander("Benchmark context for these charts"):
         st.caption("Benchmark registry unavailable for this view.")
 
 # ------------------------------------------------------------------------------------------ 04 decisions
-ui.section("04", "Decisions for your sign-off", "The rules flag and suggest; people decide. Buttons follow the trust level of each campaign, and every override is written to a tamper evident log.", "decisions")
+ui.section("04", "Decisions for your sign-off", "The rules flag and suggest; people decide. Every decision, whether to approve, override or reject, is signed on the Sign-off desk and written to a tamper evident log.", "decisions")
 visible = [i for i in inbox if not personas or i["packet"]["target_persona"] in personas]
 if is_strict:
     st.caption("Strict lift view: dollar amounts cover the test period only.")
@@ -441,56 +440,37 @@ if not visible:
 log_path = Path(DATA_ROOT) / "workspaces" / ws / "run_audit_log.json"
 for item in visible:
     p = item["packet"]
-    t = tier_of.get(p["campaign_id"])
+    t = tier_of.get(p["campaign_id"]) or p.get("tier")
     g = dd.gate(t)
     sev, sev_kind = ui.SEVERITY_LABEL.get(p["severity"], (p["severity"], "muted"))
+    sig = store.get_signoff(ws, item["id"])
     with st.container(border=True):
         st.markdown(f"{ui.pill(sev, sev_kind)} {ui.tier_pill(t)} {ui.pill(item['status'].capitalize(), 'muted')}", unsafe_allow_html=True)
         st.markdown(f"#### {ui.scrub(p['title'])}")
-        st.caption(f"For {p['target_persona']} · {p['channel']} · rule {p['agent_id']} v{p.get('agent_version', 1)} · trust score {score_of.get(p['campaign_id'], 0):.0f}")
+        st.caption(f"For {p['target_persona']} · {p['channel']} · rule {p['agent_id']} v{p.get('agent_version', 1)} · trust score {score_of.get(p['campaign_id'], p.get('trust_score', 0)):.0f}")
         ui.stat_row([dict(label=ui.scrub(name), value=str(val)) for name, val in p["value_add_metrics"].items()], compact=True)
         st.markdown(f"**Suggested by the rule:** {ui.safe(p['strategic_callout'])}")
         row = cd[cd["campaign_id"] == p["campaign_id"]]
         bw = dd.best_worst_case(row.iloc[0], margin, BE) if len(row) else None
         if bw:
             st.caption(ui.esc(bw))
-        if not g["can_execute"]:
+        if sig:
+            st.markdown(f"{ui.pill('Signed', 'ok')} {ui.esc(sig['outcome'].capitalize())} by {html.escape(sig['email'])} ({html.escape(sig['role'])}) on {sig['created_at'][:10]}.", unsafe_allow_html=True)
+        elif not g["can_approve"]:
             st.caption(g["message"])
-        b1, b2, b3 = st.columns([2.4, 1, 1.4])
+        b1, b2 = st.columns([2, 1.4])
         try:
-            if item["status"] in ("new", "reviewed"):
-                if b1.button(f"Approve: {ACTIONS.get(p['recommended_action'], (p['recommended_action'],))[0]}", key=f"ap_{item['id']}", disabled=not g["can_approve"]):
-                    store.transition_inbox(ws, item["id"], "approved", actor, "approved from dashboard")
-                    st.rerun()
-            elif item["status"] == "approved":
-                if b1.button(f"Execute: {ACTIONS.get(p['recommended_action'], (p['recommended_action'],))[0]}", key=f"ex_{item['id']}", type="primary", disabled=not g["can_execute"]):
-                    store.transition_inbox(ws, item["id"], "executed", actor, "dry run: logged to simulated Snowflake queue")
-                    st.toast("Action logged to the governance audit trail (simulated Snowflake queue).")
-                    st.rerun()
-            if item["status"] in ("new", "reviewed", "approved") and b2.button("Dismiss", key=f"dm_{item['id']}"):
-                store.transition_inbox(ws, item["id"], "dismissed", actor)
-                st.rerun()
-            if b3.button("Draft memo", key=f"mm_{item['id']}"):
+            if item["status"] in ("new", "reviewed", "approved"):
+                if b1.button("Review and sign" if item["status"] != "approved" else "Open in the sign-off desk", key=f"rs_{item['id']}", type="primary" if item["status"] != "approved" else "secondary"):
+                    st.session_state["signoff_item"] = item["id"]
+                    st.switch_page("pages/12_Signoff.py")
+            if b2.button("Draft memo", key=f"mm_{item['id']}"):
                 from memo_service import draft_memo, facts_for_item
                 from memo_writer import configured_writer
                 memo = draft_memo(store, ws, item, facts_for_item(store, ws, run_id, item), run_id, configured_writer(), actor)
                 st.toast("Memo drafted and verified. Open the Memos page to review and approve it." + (" (AI draft replaced by template)" if memo["fallback_reason"] else ""))
         except StoreError as exc:
             st.error(str(exc))
-        if item["status"] in ("new", "reviewed", "approved"):
-            with st.expander("Override this recommendation"):
-                st.caption("Requires a written business reason (10 or more characters), your email and role. The override is permanent in the audit log.")
-                reason = st.text_area("Business justification", key=f"or_{item['id']}")
-                e1, e2 = st.columns(2)
-                email = e1.text_input("Authorizing email", key=f"oe_{item['id']}")
-                role_ = e2.selectbox("Executive role", EXEC_ROLES, key=f"orl_{item['id']}")
-                if st.button("Record override", key=f"ob_{item['id']}"):
-                    try:
-                        record_override(store, ws, item, reason, email, role_, float(score_of.get(p["campaign_id"], 0)), t or "", log_path)
-                        st.toast("Override recorded in the audit log.")
-                        st.rerun()
-                    except (OverrideError, StoreError) as exc:
-                        st.error(str(exc))
 
 # ------------------------------------------------------------------------------------------- 05 what if
 ui.section("05", "Scenario: moving the Netflix budget", "An illustration at proven returns. It is a scenario, not a forecast and not a recommendation.", "whatif")
@@ -551,11 +531,13 @@ if issues:
         for i in issues:
             st.markdown(f"{ui.pill('Warning' if i['severity'] == 'WARNING' else 'Note', 'warn' if i['severity'] == 'WARNING' else 'info')} **{i['rule']}**: {i['message']}", unsafe_allow_html=True)
 entries = read_log(log_path)
-with st.expander(f"Override audit log ({len(entries)} entries)"):
+with st.expander(f"Signed decisions log ({len(entries)} entries)"):
     ok, why = verify_log(log_path)
     st.markdown(ui.pill("Log intact" if ok else "Log altered", "ok" if ok else "bad") + f" {html.escape(why if not ok else 'Every entry chains to the one before it.')}", unsafe_allow_html=True)
     if entries:
-        st.dataframe(pd.DataFrame(entries)[["timestamp", "campaign_id", "recommended_action", "authorized_by", "role", "rationale", "trust_score", "trust_tier"]], hide_index=True, width="stretch")
+        view_ = pd.DataFrame([{"When": e.get("timestamp_utc", "")[:19], "Decision": e.get("decision_outcome", ""), "Rule": e.get("agent_rule_triggered", ""), "Signed by": (e.get("authorizing_user") or {}).get("email", ""),
+                               "Role": (e.get("authorizing_user") or {}).get("role", ""), "Note": e.get("justification", ""), "Trust score": e.get("trust_score_at_signing", "")} for e in entries])
+        st.dataframe(view_, hide_index=True, width="stretch")
 with st.expander("Glossary: every term and formula"):
     for key, (label_, plain, formula) in ui.GLOSSARY.items():
         st.markdown(f"**{label_}.** {plain}" + (f" *Formula: {formula}.*" if formula else ""))

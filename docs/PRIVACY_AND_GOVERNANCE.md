@@ -41,7 +41,7 @@ The AI brief is designed so that an executive can use their own company approved
 * **Uncertainty is always shown.** Strict lift results carry a 95% interval. Trust levels limit what can be acted on.
 * **Assumptions are labelled.** Anything the data cannot support (people, hours, contract terms, saturation) is a blank worksheet field or a labelled sensitivity, not a stated fact.
 * **Even handed prompts.** The brief asks the assistant to present both sides, name the strongest case against the leading option and say what would change the conclusion.
-* **Money does not move automatically.** The system never executes spending changes on its own. Today, decisions are approved by a person inside the app, and overrides need a written reason, an email and a role. The next phase makes every decision a signed entry (see `docs/NEXT_PHASE.md`).
+* **Money does not move automatically.** The system never executes spending changes on its own. Every decision (approve, override or reject) is a signed entry with a note, an email, a role and four acknowledgements, written to a hash chained log, and the store refuses to approve, execute or dismiss an item without it. Until single sign-on is configured, the signer's email is typed and recorded as self asserted. See `docs/ARCHITECTURE_MCP.md` for how AI models could connect without any ability to decide.
 * **Resources.** Aggregate processing is light. Calls to an AI service are optional, capped and verified before display.
 
 ## 5. Open items for your organization

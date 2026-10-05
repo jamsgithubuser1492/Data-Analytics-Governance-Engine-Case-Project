@@ -114,5 +114,5 @@ def test_answer_checker_flags_invented_numbers() -> None:
 def test_navigation_is_grouped_and_lists_the_new_pages() -> None:
     import common
     groups = dict(common.NAV_GROUPS)
-    assert [n for _, n, _ in groups["Strategize"]] == ["Strategy", "AI brief"]
-    assert set(groups) == {"Understand", "Interpret", "Strategize", "Reference"}
+    assert [n for _, n, _ in groups["Strategize"]] == ["Strategy", "AI brief", "Research next"]
+    assert set(groups) == {"Understand", "Interpret", "Strategize", "Decide", "Automate", "Reference"} and [n for _, n, _ in groups["Decide"]] == ["Sign-off desk"]

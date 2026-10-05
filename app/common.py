@@ -27,7 +27,10 @@ NAV_GROUPS = [
     ("Understand", [("app.py", "Dashboard", ":material/analytics:"), ("pages/1_Upload.py", "Upload data", ":material/upload:"),
                     ("pages/2_Runs.py", "Runs", ":material/history:"), ("pages/3_Settings.py", "Settings", ":material/tune:")]),
     ("Interpret", [("pages/4_Agents.py", "Advisory council", ":material/groups:")]),
-    ("Strategize", [("pages/9_Strategy.py", "Strategy", ":material/account_tree:"), ("pages/10_AI_Brief.py", "AI brief", ":material/auto_awesome:")]),
+    ("Strategize", [("pages/9_Strategy.py", "Strategy", ":material/account_tree:"), ("pages/10_AI_Brief.py", "AI brief", ":material/auto_awesome:"),
+                    ("pages/11_Research.py", "Research next", ":material/science:")]),
+    ("Decide", [("pages/12_Signoff.py", "Sign-off desk", ":material/draw:")]),
+    ("Automate", [("pages/13_Automation.py", "Automation blueprint", ":material/hub:")]),
     ("Reference", [("pages/5_Memos.py", "Memos", ":material/description:"), ("pages/6_Benchmarks.py", "Benchmarks", ":material/menu_book:"),
                    ("pages/7_Guide.py", "How it works", ":material/help:")]),
 ]
@@ -55,6 +58,11 @@ def identity() -> Tuple[str, str]:
         pass
     actor = email or "local-demo-user"
     return actor, get_store().get_or_create_workspace(email or "local-demo")
+
+
+def auth_mode(actor: str) -> str:
+    """'sso_verified' when a real login is active, otherwise 'self_asserted' (a typed email is not proof of identity)."""
+    return "self_asserted" if actor == "local-demo-user" else "sso_verified"
 
 
 def safe_csv(df: pd.DataFrame) -> bytes:

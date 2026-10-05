@@ -72,16 +72,13 @@ with tab_inbox:
         with st.container(border=True):
             st.markdown(f"**{ui.scrub(p['title'])}**  \nStatus **{it['status']}** · run `{it['run_id']}` · {p['agent_id']}")
             st.caption(p["strategic_callout"])
-            c1, c2, c3 = st.columns([1, 1, 4])
-            try:
-                if it["status"] in ("new", "reviewed") and c1.button("Approve", key=f"a{it['id']}"):
-                    store.transition_inbox(ws, it["id"], "approved", actor); st.rerun()  # noqa: E702
-                if it["status"] == "approved" and c1.button("Execute (dry run)", key=f"e{it['id']}"):
-                    store.transition_inbox(ws, it["id"], "executed", actor, "dry run"); st.rerun()  # noqa: E702
-                if it["status"] in ("new", "reviewed", "approved") and c2.button("Dismiss", key=f"d{it['id']}"):
-                    store.transition_inbox(ws, it["id"], "dismissed", actor); st.rerun()  # noqa: E702
-            except StoreError as exc:
-                st.error(str(exc))
+            sig = store.get_signoff(ws, it["id"])
+            if sig:
+                st.caption(f"Signed: {sig['outcome'].capitalize()} by {sig['email']} ({sig['role']}) on {sig['created_at'][:10]}.")
+            elif it["status"] in ("new", "reviewed"):
+                if st.button("Review and sign", key=f"rs{it['id']}"):
+                    st.session_state["signoff_item"] = it["id"]
+                    st.switch_page("pages/12_Signoff.py")
 
 with tab_audit:
     ev = store.list_audit_events(ws)

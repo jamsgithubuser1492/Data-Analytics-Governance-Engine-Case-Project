@@ -33,28 +33,6 @@ def test_override_validation_rules() -> None:
     assert ov.validate_override("Legal hold on this budget line", "a@b.co", "CFO / VP Finance") == []
 
 
-def test_override_writes_chained_log_and_dismisses(result) -> None:
-    tmp = Path(tempfile.mkdtemp())
-    store = LocalRunStore(tmp)
-    ws = store.get_or_create_workspace("t")
-    from job_runner import JobRunner
-    runner = JobRunner(store, max_workers=1)
-    rid = runner.submit(ws, SourceTables.from_directory(), *store.latest_workspace_config(ws)[:2], "t")
-    runner.wait(ws, rid, timeout=300)
-    item = store.list_inbox(ws, rid)[0]
-    log = tmp / "run_audit_log.json"
-    with pytest.raises(ov.OverrideError):
-        ov.record_override(store, ws, item, "short", "a@b.co", "CFO / VP Finance", 90, "VERIFIED", log)
-    assert not log.exists() and store.list_inbox(ws, rid)[0]["status"] == "new"  # nothing written on invalid input
-    e1 = ov.record_override(store, ws, item, "Contract commitment until Q3 renewal", "cfo@x.com", "CFO / VP Finance", 90.0, "VERIFIED", log)
-    assert e1["prev_hash"] == ov.GENESIS and e1["trust_score"] == 90.0 and e1["authorized_by"] == "cfo@x.com"
-    assert store.list_inbox(ws, rid)[0]["status"] == "dismissed"
-    assert any("OVERRIDE" in json.loads(a["detail_json"] if "detail_json" in a else json.dumps(a)).__str__() for a in store.list_audit_events(ws, rid))
-    with pytest.raises(StoreError):  # a dismissed item cannot be overridden twice
-        ov.record_override(store, ws, item, "Second attempt for the same item", "cfo@x.com", "CFO / VP Finance", 90.0, "VERIFIED", log)
-    assert ov.verify_log(log) == (True, "ok")
-
-
 def test_log_tampering_is_detected() -> None:
     log = Path(tempfile.mkdtemp()) / "run_audit_log.json"
     for i in range(3):

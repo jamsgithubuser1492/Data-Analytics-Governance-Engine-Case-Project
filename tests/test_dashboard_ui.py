@@ -84,39 +84,12 @@ def test_each_chart_card_has_a_table_toggle() -> None:
     assert any("Claimed return" in getattr(d.value, "columns", []) for d in at.dataframe)
 
 
-def test_trust_gating_limits_buttons_by_tier() -> None:
+def test_every_open_decision_is_routed_to_the_signoff_desk_with_no_unsigned_shortcut() -> None:
     at = dash()
-    at.sidebar.radio[0].set_value(at.sidebar.radio[0].options[1]).run(timeout=T)  # strict view makes Netflix Directional
-    text = every_text(at)
-    assert "Advisory only" in text or "Full actionability" in text
-    approve = [b for b in at.button if b.label.startswith("Approve")]
-    assert approve  # verified items can be approved
-    at.sidebar.radio[0].set_value(at.sidebar.radio[0].options[0]).run(timeout=T)
-
-
-def test_override_requires_justification_email_and_role_and_writes_audit_log() -> None:
-    import common
-    import overrides
-    at = dash()
-    text_areas = [t for t in at.text_area if t.key.startswith("or_")]
-    emails = [t for t in at.text_input if t.key.startswith("oe_")]
-    assert text_areas and emails
-    key = text_areas[0].key.split("_", 1)[1]
-    text_areas[0].set_value("too short")
-    emails[0].set_value("cfo@example.com")
-    next(b for b in at.button if b.key == f"ob_{key}").click().run(timeout=T)
-    assert any("at least 10 characters" in e.value for e in at.error)
-    at.text_area(key=f"or_{key}").set_value("Contract commitment runs until the Q3 renewal date").run(timeout=T)
-    at.text_input(key=f"oe_{key}").set_value("cfo@example.com").run(timeout=T)
-    next(b for b in at.button if b.key == f"ob_{key}").click().run(timeout=T)
-    assert not at.exception, [e.value for e in at.exception]
-    actor, ws = common.identity()
-    log = Path(common.DATA_ROOT) / "workspaces" / ws / "run_audit_log.json"
-    entries = overrides.read_log(log)
-    assert len(entries) == 1 and entries[0]["authorized_by"] == "cfo@example.com" and entries[0]["trust_tier"]
-    assert overrides.verify_log(log) == (True, "ok")
-    item = [i for i in common.get_store().list_inbox(ws) if i["id"] == key][0]
-    assert item["status"] == "dismissed"
+    labels = [b.label for b in at.button]
+    assert "Review and sign" in labels
+    assert not any(l.startswith(("Approve", "Execute", "Dismiss", "Record override")) for l in labels)
+    assert not [t for t in at.text_area if t.key.startswith("or_")]  # the old inline override form is gone
 
 
 def test_legacy_emoji_in_stored_text_is_scrubbed_on_screen() -> None:

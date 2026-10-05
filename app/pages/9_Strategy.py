@@ -98,6 +98,11 @@ with t_trade:
         sc = charts.sensitivity_chart(sens["table"], be, head)
         ui.chart_card("sens", head, sc.layout.meta["subtitle"], sc, sens["table"].rename(columns={"haircut": "Return on new money below its average", "net": "Net revenue change"}).round(3),
                       v.basis, "Assumption: the return on new money falls by the percentage shown. This is a sensitivity, not a prediction.")
+        if st.button("Send this scenario to the sign-off desk", key="send_scn", help="Adds it to the decision queue. Nothing changes until a person signs."):
+            iid = store.add_inbox_item(ws, run_id, sg.scenario_packet(ch, plan, delay), actor)
+            st.session_state["signoff_item"] = iid
+            st.success("Added to the sign-off desk. Nothing changes until it is signed.")
+            safe_page_link("pages/12_Signoff.py", "Open the sign-off desk", ":material/draw:")
         st.caption(ui.esc("Sources and assumptions: average proven returns from the holdout test; interval bounds from the 95% confidence interval where the strict basis provides one; "
                           f"weekly value divided over a {test_days} day test period. Returns usually fall as spend rises, so consider confirming with a scaled test."))
 

@@ -203,3 +203,30 @@ def default_moves(ch: pd.DataFrame, breakeven: float) -> List[Dict[str, Any]]:
         return []
     share = float(src["spend"]) / len(dest)
     return [dict(source=src["channel"], target=t, amount=share) for t in dest["channel"]]
+
+
+def scenario_packet(ch: pd.DataFrame, plan: Dict[str, Any], delay: Optional[Dict[str, float]] = None) -> Dict[str, Any]:
+    """An inbox packet for a budget scenario so it is signed like any other decision. The weakest evidence level involved governs."""
+    import hashlib
+    t = plan["table"]
+    changed = t[t["change"] != 0]
+    info = ch.set_index("channel")
+    order = {"NOT_DECISION_GRADE": 0, "DIRECTIONAL": 1, "VERIFIED": 2}
+    tiers = [info.loc[c, "tier"] for c in changed["channel"]]
+    tier = min(tiers, key=lambda x: order.get(x, 0)) if tiers else "NOT_DECISION_GRADE"
+    trust = float(np.mean([info.loc[c, "trust_score"] for c in changed["channel"]])) if len(changed) else 0.0
+    key = hashlib.sha256("|".join(f"{r.channel}:{r.change:.0f}" for r in changed.itertuples()).encode()).hexdigest()[:8]
+    sources = ", ".join(changed[changed["change"] < 0]["channel"])
+    targets = ", ".join(changed[changed["change"] > 0]["channel"])
+    metrics = {"Budget moved": _usd(plan["moved"]), "Net revenue change": ("+" if plan["net"] >= 0 else "-") + _usd(plan["net"])}
+    if pd.notna(plan.get("net_low")):
+        metrics["Worst to best case"] = f"{'+' if plan['net_low'] >= 0 else '-'}{_usd(plan['net_low'])} to {'+' if plan['net_high'] >= 0 else '-'}{_usd(plan['net_high'])}"
+    if delay:
+        metrics["Modeled value of waiting, per week"] = _usd(delay["per_week"])
+    return {"packet_id": f"SCENARIO:{key}", "agent_id": "STRATEGY_SCENARIO", "agent_version": 1, "agent_name": "Strategy scenario", "target_persona": "Executive team",
+            "campaign_id": f"SCENARIO-{key}", "channel": "Multiple", "severity": "INFO", "tier": tier, "trust_score": round(trust, 1), "priority": 50,
+            "title": f"Review budget scenario: {_usd(plan['moved'])} from {sources} to {targets}", "value_add_metrics": metrics, "raw_metrics": {"net": plan["net"], "moved": plan["moved"]},
+            "strategic_callout": f"Moving {_usd(plan['moved'])} out of {sources} would change revenue by about {'+' if plan['net'] >= 0 else '-'}{_usd(plan['net'])} at proven average returns. "
+                                 "This is a modeled scenario, not a forecast; returns usually fall as spend rises.",
+            "recommended_action": "REALLOCATE_BUDGET", "notes": [],
+            "proposed_changes": [{"entity": r.channel, "source_spend": float(r.spend_before), "target_spend": float(r.spend_after), "delta": float(r.change)} for r in changed.itertuples()]}

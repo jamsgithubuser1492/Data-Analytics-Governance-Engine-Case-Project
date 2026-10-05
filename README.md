@@ -178,3 +178,9 @@ The app is written for non-technical leadership. Design system in `app/ui.py`, c
 * **Strategy** (`app/pages/9_Strategy.py`): trade-offs with a best and worst case and a break-even sensitivity, a modeled value of waiting, an implications worksheet for five functions (estimates left blank for you), a fact-triggered change plan, an optional tiered budget lens, and a monitor.
 * **AI brief** (`app/pages/10_AI_Brief.py`): a copy ready prompt of numbered, fact-grounded statements for your company's own AI assistant, with personal data redaction, optional name aliases and an answer checker.
 * Governance and privacy: `docs/PRIVACY_AND_GOVERNANCE.md`. What comes next (research engine, sign-off desk, automation blueprint): `docs/NEXT_PHASE.md`.
+
+## Research, sign-off and automation
+
+* **Research next** (`app/pages/11_Research.py`): ranked tests to consider with designs computed from the run, a synthetic control matcher and a media mix model prior calculator.
+* **Sign-off desk** (`app/pages/12_Signoff.py`): every decision (approve, override or reject) is signed with a note, email, role and four acknowledgements, written to a hash chained `run_audit_log.json`. The store refuses to approve, execute or dismiss an item without a signature, and a result that is not decision grade cannot be approved.
+* **Automation blueprint** (`app/pages/13_Automation.py`, `docs/ARCHITECTURE_MCP.md`): the design for connecting AI models through MCP. A design only, with no server. There is no approve or execute tool, and a model cannot supply its own trust score.

@@ -136,6 +136,8 @@ SCHEMA = [
        approved_by TEXT, approved_at TEXT)""",
     """CREATE TABLE IF NOT EXISTS audit_events (id TEXT PRIMARY KEY, workspace_id TEXT, run_id TEXT, item_id TEXT,
        event TEXT, actor TEXT, detail_json TEXT, created_at TEXT)""",
+    """CREATE TABLE IF NOT EXISTS signoffs (id TEXT PRIMARY KEY, workspace_id TEXT, item_id TEXT UNIQUE, run_id TEXT, outcome TEXT,
+       email TEXT, role TEXT, note TEXT, entry_hash TEXT, authentication TEXT, created_at TEXT)""",
 ]
 
 
@@ -470,16 +472,85 @@ class SqlRunStore:
             out.append(d)
         return out
 
+    SIGNED_OUTCOME = {INBOX_APPROVED: ("APPROVED",), INBOX_EXECUTED: ("APPROVED",), INBOX_DISMISSED: ("OVERRIDDEN", "REJECTED")}
+
+    def _apply_transition(self, c: Any, workspace_id: str, item_id: str, new_status: str, actor: str, note: str) -> None:
+        row = c.one("SELECT status, run_id FROM inbox WHERE id = ? AND workspace_id = ?", (item_id, workspace_id))
+        if not row:
+            raise StoreError("Inbox item not found in this workspace")
+        if new_status not in TRANSITIONS.get(row[0], set()):
+            raise StoreError(f"Cannot move inbox item from {row[0]} to {new_status}")
+        needed = self.SIGNED_OUTCOME.get(new_status)
+        if needed:  # the human in the loop rule: a decision only takes effect with a matching signed entry
+            sig = c.one("SELECT outcome FROM signoffs WHERE workspace_id = ? AND item_id = ?", (workspace_id, item_id))
+            if not sig or sig[0] not in needed:
+                raise StoreError("This decision needs a signed sign-off first. Open the Sign-off desk to review and sign it.")
+        c.run("UPDATE inbox SET status = ?, updated_at = ? WHERE id = ?", (new_status, _now(), item_id))
+        c.run("INSERT INTO audit_events VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+              (_uid(), workspace_id, row[1], item_id, f"inbox_{new_status}", actor, json.dumps({"note": note}), _now()))
+
     def transition_inbox(self, workspace_id: str, item_id: str, new_status: str, actor: str, note: str = "") -> None:
+        """Move an inbox item. Approved, executed and dismissed require a signed entry (see ``sign_item``)."""
+        with self._tx() as c:
+            self._apply_transition(c, workspace_id, item_id, new_status, actor, note)
+
+    def get_inbox_item(self, workspace_id: str, item_id: str) -> Dict[str, Any]:
+        with self._tx() as c:
+            row = c.one("SELECT * FROM inbox WHERE id = ? AND workspace_id = ?", (item_id, workspace_id))
+            cols = c.columns
+        if not row:
+            raise StoreError("Inbox item not found in this workspace")
+        d = dict(zip(cols, row))
+        d["packet"] = json.loads(d.pop("packet_json"))
+        return d
+
+    def add_inbox_item(self, workspace_id: str, run_id: str, packet: Dict[str, Any], actor: str = "system") -> str:
+        """Queue a packet (a strategy scenario or research specification) for sign-off. Idempotent per packet and run."""
+        self.get_run(workspace_id, run_id)
+        dedupe = f"{packet['agent_id']}|{packet['campaign_id']}|{run_id}"
+        with self._tx() as c:
+            found = c.one("SELECT id FROM inbox WHERE workspace_id = ? AND dedupe_key = ?", (workspace_id, dedupe))
+            if found:
+                return found[0]
+            item_id = _uid()
+            c.run("INSERT INTO inbox VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                  (item_id, workspace_id, run_id, dedupe, packet["agent_id"], packet["campaign_id"], packet.get("severity", "INFO"),
+                   json.dumps(packet, default=str), INBOX_NEW, _now(), _now()))
+            c.run("INSERT INTO audit_events VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                  (_uid(), workspace_id, run_id, item_id, "inbox_added", actor, json.dumps({"agent_id": packet["agent_id"]}), _now()))
+        return item_id
+
+    def get_signoff(self, workspace_id: str, item_id: str) -> Optional[Dict[str, Any]]:
+        with self._tx() as c:
+            row = c.one("SELECT * FROM signoffs WHERE workspace_id = ? AND item_id = ?", (workspace_id, item_id))
+            cols = c.columns
+        return dict(zip(cols, row)) if row else None
+
+    def list_signoffs(self, workspace_id: str) -> List[Dict[str, Any]]:
+        with self._tx() as c:
+            rows = c.all("SELECT * FROM signoffs WHERE workspace_id = ? ORDER BY created_at, id", (workspace_id,))
+            cols = c.columns
+        return [dict(zip(cols, r)) for r in rows]
+
+    OUTCOME_STATUS = {"APPROVED": INBOX_APPROVED, "OVERRIDDEN": INBOX_DISMISSED, "REJECTED": INBOX_DISMISSED}
+
+    def sign_item(self, workspace_id: str, item_id: str, outcome: str, email: str, role: str, note: str, entry_hash: str, authentication: str = "self_asserted") -> str:
+        """Record one signed decision for an item and apply it, atomically. An item can be signed once."""
+        if outcome not in self.OUTCOME_STATUS:
+            raise StoreError("Unknown outcome")
         with self._tx() as c:
             row = c.one("SELECT status, run_id FROM inbox WHERE id = ? AND workspace_id = ?", (item_id, workspace_id))
             if not row:
                 raise StoreError("Inbox item not found in this workspace")
-            if new_status not in TRANSITIONS.get(row[0], set()):
-                raise StoreError(f"Cannot move inbox item from {row[0]} to {new_status}")
-            c.run("UPDATE inbox SET status = ?, updated_at = ? WHERE id = ?", (new_status, _now(), item_id))
-            c.run("INSERT INTO audit_events VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                  (_uid(), workspace_id, row[1], item_id, f"inbox_{new_status}", actor, json.dumps({"note": note}), _now()))
+            if c.one("SELECT 1 FROM signoffs WHERE workspace_id = ? AND item_id = ?", (workspace_id, item_id)):
+                raise StoreError("This item has already been signed.")
+            if row[0] not in (INBOX_NEW, INBOX_REVIEWED):
+                raise StoreError(f"Only open items can be signed; this one is {row[0]}.")
+            sid = _uid()
+            c.run("INSERT INTO signoffs VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                  (sid, workspace_id, item_id, row[1], outcome, email, role, note, entry_hash, authentication, _now()))
+            self._apply_transition(c, workspace_id, item_id, self.OUTCOME_STATUS[outcome], email, f"SIGNED {outcome} ({role}): {note}")
+        return sid
 
     def log_event(self, workspace_id: str, run_id: Optional[str], event: str, actor: str, detail: Optional[Dict[str, Any]] = None) -> None:
         """Append a free-standing audit event (for example a prompt export, recorded by content hash only)."""
@@ -520,6 +591,7 @@ class _Cursor:
 
     def one(self, sql: str, args: tuple = ()) -> Any:
         self.run(sql, args)
+        self.columns = [d[0] for d in self.cur.description] if self.cur.description else []
         return self.cur.fetchone()
 
     def all(self, sql: str, args: tuple = ()) -> List[Any]:

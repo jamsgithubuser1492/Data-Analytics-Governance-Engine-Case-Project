@@ -72,17 +72,14 @@ def test_3_upload_flow_requires_ack_and_runs() -> None:
     assert any("Run complete" in s.value for s in at.success)
 
 
-def test_4_inbox_approve_then_execute_writes_audit_log() -> None:
+def test_4_dashboard_sends_every_decision_to_the_signoff_desk() -> None:
     import common
     store, (actor, ws) = common.get_store(), common.identity()
     at = page("app.py")
-    next(b for b in at.button if b.label.startswith("Approve")).click().run(timeout=T)
-    clean(at)
-    assert any(i["status"] == "approved" for i in store.list_inbox(ws))
-    next(b for b in at.button if b.label.startswith("Execute")).click().run(timeout=T)
-    clean(at)
-    events = [e["event"] for e in store.list_audit_events(ws)]
-    assert "inbox_approved" in events and "inbox_executed" in events
+    labels = [b.label for b in at.button]
+    assert any(l == "Review and sign" for l in labels)
+    assert not any(l.startswith(("Approve", "Execute", "Dismiss")) for l in labels)  # no unsigned shortcut on the dashboard
+    assert not any(i["status"] in ("approved", "executed", "dismissed") for i in store.list_inbox(ws))  # nothing was decided without a signature
 
 
 def test_5_role_filter_hides_other_personas() -> None:

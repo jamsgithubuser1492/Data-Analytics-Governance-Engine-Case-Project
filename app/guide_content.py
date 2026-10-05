@@ -64,6 +64,21 @@ SECTIONS: List[Tuple[str, str]] = [
      "and you can replace channel and campaign names with aliases. Exports are recorded by fingerprint only.\n\n"
      "Paste the assistant's answer into **Check an AI answer** and every figure is compared with the facts. A figure that is not in the facts may be an assumption or an invention. "
      "The check looks at numbers and overconfident phrasing; it cannot judge whether the reasoning is sound."),
+    ("Research next: what to test after a result",
+     "A result is one measurement of one period. The Research page looks at what the run leaves uncertain and ranks tests to consider: a longer test with a synthetic control when evidence is below Verified, "
+     "a multi-cell step-up test when a strong channel's behavior at higher spend is unknown, a media mix model calibrated with the test result when platforms claim much more than the test confirms, "
+     "a re-test around seasonality, and an audience split for strong channels. Test length, spend in the test markets and the minimum detectable effect are computed from your run; "
+     "people, hours and contract terms are left blank for your teams. Two tools help design a test: a synthetic control matcher (a weighted blend of untreated markets that mimics the test markets before launch, "
+     "with a fit check) and a calculator that turns a test result and its margin of error into a starting belief for a media mix model."),
+    ("The sign-off desk: every decision is signed",
+     "Nothing changes without a signature. For every decision, whether you approve it, override it or reject it, you write a note of at least 10 characters, give your email and role and tick four acknowledgements. "
+     "The decision is written to a log in which each entry is chained to the one before, so a later edit or deletion is visible, and the store refuses to move any item to approved, executed or dismissed without that signature. "
+     "A result that is not decision grade cannot be approved. A perfect trust score does not skip the signature. Rule flags, strategy scenarios and research ideas all arrive in the same queue. "
+     "Until single sign-on is set up, the email is typed by the signer and the log records it as self asserted. Execution is a dry run; nothing is sent to an ad platform."),
+    ("Automation: connecting AI models safely",
+     "The Automation blueprint describes how AI models could connect to the engine through the Model Context Protocol so that data pipelines and proposals run continuously. It is a design, not a running server. "
+     "A connected model would have six narrow tools: five that read and one that stages a proposal. There is no approve tool and no execute tool, the model can never supply its own trust score, "
+     "and a staged proposal does nothing until a person signs it on the Sign-off desk."),
     ("What the system will never do",
      "- It never moves money. Every action needs a human approval, and overrides need a written reason that is saved in a tamper evident log.\n"
      "- It never invents numbers. Every figure comes from the run. Written memos are checked so that any number not tied to a verified fact is rejected.\n"
