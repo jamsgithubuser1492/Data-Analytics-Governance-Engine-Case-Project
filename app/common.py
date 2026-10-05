@@ -87,6 +87,17 @@ def succeeded_runs(workspace_id: str) -> list:
     return [r for r in get_store().list_runs(workspace_id) if r["status"] == SUCCEEDED]
 
 
+def app_version() -> str:
+    """Short commit and date of the running code, so anyone can tell which version they are on."""
+    import subprocess
+    try:
+        out = subprocess.run(["git", "log", "-1", "--format=%h %cs"], cwd=Path(__file__).resolve().parent, capture_output=True, text=True, timeout=3)
+        text = out.stdout.strip()
+        return text if out.returncode == 0 and text else "unknown"
+    except Exception:
+        return "unknown"
+
+
 def page_setup(title: str, icon: str = ":material/analytics:") -> None:
     st.set_page_config(page_title=f"MMGE · {title}", page_icon=icon, layout="wide")
     ui.apply_theme()
@@ -97,6 +108,7 @@ def page_setup(title: str, icon: str = ":material/analytics:") -> None:
             for page, name, icon in items:
                 safe_page_link(page, name, icon)
         st.divider()
+        st.caption(f"Version {app_version()}")
 
 
 def safe_page_link(page: str, label: str, icon: str = "") -> None:

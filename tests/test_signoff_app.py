@@ -83,8 +83,8 @@ def test_signing_an_approval_through_the_ui_writes_the_log_and_unlocks_the_dry_r
     assert len(entries) == 1 and entries[0]["decision_outcome"] == "APPROVED" and entries[0]["authorizing_user"]["authentication"] == "self_asserted" and overrides.verify_log(log)[0]
     at2 = page("12_Signoff.py")
     at2.segmented_control(key="so_filter").set_value("Approved").run(timeout=T)
-    assert "Signed: Approve as suggested" in text(at2) and any(b.label == "Record the dry run" for b in at2.button)
-    next(b for b in at2.button if b.label == "Record the dry run").click().run(timeout=T)
+    assert "Signed: Approve as suggested" in text(at2) and any(b.label == "Record the hand off" for b in at2.button)
+    next(b for b in at2.button if b.label == "Record the hand off").click().run(timeout=T)
     assert store.get_inbox_item(ws, item_id)["status"] == "executed"
 
 

@@ -213,16 +213,16 @@ def rolling_with_band(rolling: pd.DataFrame, window: int = 14, z: float = 1.645)
 def gate(tier: str) -> Dict[str, Any]:
     """What an executive is allowed to do at this trust tier (REQ-02, REQ-03, FR-GT01)."""
     if tier == "VERIFIED":
-        return {"label": "Verified", "can_approve": True, "can_execute": True, "message": "Full actionability: one click execution is enabled."}
+        return {"label": "Ready to act on", "can_approve": True, "can_execute": True, "message": "Ready to act on: the evidence is strong enough to hand this to the team that makes the change."}
     if tier == "DIRECTIONAL":
-        return {"label": "Directional", "can_approve": True, "can_execute": False,
-                "message": "Advisory only: automated execution is off. Review manually before moving money."}
-    return {"label": "Not decision grade", "can_approve": False, "can_execute": False,
-            "message": "Blocked: financial actions are locked until the data is fixed."}
+        return {"label": "Act with care", "can_approve": True, "can_execute": False,
+                "message": "Worth acting on with care: the evidence points one way but is not yet strong enough to hand off for execution. Test further before moving large sums."}
+    return {"label": "Not ready", "can_approve": False, "can_execute": False,
+            "message": "Not ready: the evidence is too weak to base a budget decision on. More testing is needed first."}
 
 
 METRIC_WORDS = {
-    "reported_roas": "claimed return", "mta_roas": "attribution model return", "iroas": "proven return", "spec_iroas": "proven return (spec basis)",
+    "reported_roas": "claimed return", "mta_roas": "attribution model return", "iroas": "proven return", "spec_iroas": "proven return (all test market revenue)",
     "strict_iroas": "proven return (strict lift)", "inflation_ratio": "over-claim multiple", "trust_score": "trust score",
     "total_spend": "spend", "test_period_spend": "test period spend", "tier": "trust level", "has_holdout_coverage": "holdout coverage",
     "margin": "margin", "breakeven_iroas": "breakeven return", "profit_per_dollar": "profit per $1",

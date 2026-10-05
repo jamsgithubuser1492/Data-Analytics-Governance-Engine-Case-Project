@@ -18,10 +18,10 @@ from overrides import EMAIL, EXEC_ROLES, MIN_REASON_CHARS, append_entry
 
 OUTCOMES = {"APPROVED": "Approve as suggested", "OVERRIDDEN": "Override with my own decision", "REJECTED": "Reject"}
 CHECKLIST: List[Tuple[str, str]] = [
-    ("evidence", "I reviewed the evidence level, trust score and counting basis."),
-    ("impact", "I considered how this affects other teams, contracts and commitments."),
+    ("evidence", "I have reviewed the numbers and how sure we are about them."),
+    ("impact", "I understand what this changes and which teams, clients or commitments it touches."),
     ("authority", "I have the authority to make this decision."),
-    ("record", "I understand that this signed record is permanent and cannot be edited."),
+    ("record", "I understand this signed record is permanent and cannot be edited."),
 ]
 NOT_DECISION_GRADE = "NOT_DECISION_GRADE"
 

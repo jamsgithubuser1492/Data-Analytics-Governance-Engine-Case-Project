@@ -39,7 +39,7 @@ with t_big:
                 st.markdown(f"{ui.pill(c['status'], KIND[c['status']])}", unsafe_allow_html=True)
                 st.markdown(f"**{c['name']}**")
                 st.caption(c["does"])
-    st.caption("Status is shown with a shape and a word. Only the items marked Built exist today.")
+    st.caption("Only the items marked Built exist today.")
 
 with t_tools:
     st.markdown("#### The question this answers")

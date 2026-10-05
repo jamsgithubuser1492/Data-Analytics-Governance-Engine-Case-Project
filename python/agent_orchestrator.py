@@ -124,17 +124,17 @@ class AgentOrchestrator:
             "packet_id": f"CAPITAL_PRESERVATION_AGENT:{row['campaign_id']}",
             "agent_id": "CAPITAL_PRESERVATION_AGENT", "target_persona": PERSONA_CFO,
             "campaign_id": row["campaign_id"], "channel": row["channel"], "severity": "CRITICAL",
-            "title": f"Spend not earned back: {row['campaign_id']}",
+            "title": f"{row['campaign_id']}: ${net_unrecouped:,.2f} spent has not been earned back",
             "value_add_metrics": {
-                "Sales Claimed but Not Caused by Ads": f"{cannibalization:.1f}%",
+                "Sales credited to ads that they did not cause": f"{cannibalization:.1f}%",
                 "Spend Not Earned Back": f"${net_unrecouped:,.2f}",
-                "Gap: Claimed vs Proven Return": f"{float(row['reported_roas']) - float(row['incremental_roas']):.2f}x",
+                "Claimed return minus proven return": f"{float(row['reported_roas']) - float(row['incremental_roas']):.2f}x",
             },
             "raw_metrics": {"cannibalization_pct": cannibalization, "net_unrecouped_spend": net_unrecouped},
             "strategic_callout": (
-                f"{row['channel']} claims {row['reported_roas']}x ROAS but randomized holdouts show only "
+                f"{row['channel']} reports a {row['reported_roas']}x return, but our control tests show only "
                 f"{row['incremental_roas']}x. Given that ${net_unrecouped:,.2f} of spend has not been earned back, perhaps we should think about "
-                "reducing budget by 50% until a confirmation test says otherwise."),
+                "cutting this budget in half until a fresh test says otherwise."),
             "recommended_action": "REDUCE_BUDGET_50%",
         }
 
@@ -147,17 +147,17 @@ class AgentOrchestrator:
             "packet_id": f"ATTRIBUTION_SHIELD_AGENT:{row['campaign_id']}",
             "agent_id": "ATTRIBUTION_SHIELD_AGENT", "target_persona": PERSONA_AGENCY,
             "campaign_id": row["campaign_id"], "channel": row["channel"], "severity": "WARNING",
-            "title": f"Platform over-claim: {row['campaign_id']}",
+            "title": f"{row['campaign_id']}: the platform claims more than our tests support",
             "value_add_metrics": {
-                "Platform Over-Claim Multiplier": f"{float(row['inflation_ratio']):.2f}x",
-                "Platform Claim Above Proven Return": margin_txt,
+                "How many times the platform overstates results": f"{float(row['inflation_ratio']):.2f}x",
+                "How far the claim sits above the proven return": margin_txt,
                 "Proven Return": f"{iroas:.2f}x",
             },
             "raw_metrics": {"over_claim_multiplier": float(row["inflation_ratio"]), "discrepancy_margin_pct": margin},
             "strategic_callout": (
-                f"Client governance note: {row['channel']} reports {roas}x ROAS versus {iroas}x holdout "
-                f"iROAS (platform claims {float(row['inflation_ratio']):.2f}x the verified conversions). "
-                "In order to address the gap, we might want to think about explaining MTA deduplication and anchoring reporting on holdout results."),
+                f"{row['channel']} reports a {roas}x return, while our tests prove {iroas}x. "
+                f"The platform is claiming {float(row['inflation_ratio']):.2f} times the conversions we can confirm. "
+                "In order to address the gap, we might want to think about explaining to the client how overlapping credit is counted and anchoring reporting on the test results."),
             "recommended_action": "CLIENT_GOVERNANCE_AUDIT",
         }
 
@@ -169,16 +169,16 @@ class AgentOrchestrator:
             "packet_id": f"SCALE_OPPORTUNITY_AGENT:{row['campaign_id']}",
             "agent_id": "SCALE_OPPORTUNITY_AGENT", "target_persona": PERSONA_PLATFORM,
             "campaign_id": row["campaign_id"], "channel": row["channel"], "severity": "OPPORTUNITY",
-            "title": f"Strong proven return: {row['campaign_id']}",
+            "title": f"{row['campaign_id']}: a strong, proven return",
             "value_add_metrics": {
                 "Proven Return": f"{iroas:.2f}x",
-                "Platform Reporting Accuracy": "High (small over-claim)",
-                "Est. Revenue Gain (+25% Spend)": f"${gain:,.2f}",
+                "How closely the platform matches our tests": "Close match",
+                "Revenue a quarter more budget could add": f"${gain:,.2f}",
             },
             "raw_metrics": {"projected_gain": gain, "added_spend": spend * SCALE_SPEND_INCREASE},
             "strategic_callout": (
-                f"{row['channel']} shows strong incrementality with minimal over-attribution. Given that, perhaps we should think about a 25% budget "
-                f"increase, which would project ${gain:,.2f} of incremental revenue (assumes constant marginal iROAS)."),
+                f"{row['channel']} earns a strong return, and the platform's own numbers line up with our tests. Given that, perhaps we should think about raising this budget by a quarter, "
+                f"which would add about ${gain:,.2f} of revenue if today's return holds."),
             "recommended_action": "SCALE_BUDGET_25%",
         }
 

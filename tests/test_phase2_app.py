@@ -44,7 +44,7 @@ def test_1_empty_state_then_demo_run_from_dashboard() -> None:
     next(b for b in at.button if b.label == "Try with demo data").click().run(timeout=T)
     clean(at)
     text = " ".join(m.value for m in at.markdown)
-    assert "$748,140" in text and "3.33x" in text and "Decisions to review" in text and "Trust score 89 of 100" in text
+    assert "$748,140" in text and "3.33x" in text and "Decisions to review" in text and "Confidence level" in text and "6 out of 8 campaigns show enough statistically significant evidence" in text
     assert "$105,158 of ad spend has not been earned back" in text  # objective, answer first headline
     assert "Scale Google" not in text and "cut Netflix" not in text.lower()  # the system states facts, it does not instruct
 
@@ -87,7 +87,7 @@ def test_5_role_filter_hides_other_personas() -> None:
     next(c for c in at.segmented_control if c.key == "persp").set_value("CFO / Finance").run(timeout=T)
     clean(at)
     text = " ".join(m.value for m in at.markdown)
-    assert "No decision rule is triggered" in text and "has not been earned back" in text  # no capital loss packets under spec view
+    assert "Nothing needs a decision" in text and "has not been earned back" in text  # no capital loss packets under spec view
 
 
 def test_6_runs_page_and_compare() -> None:

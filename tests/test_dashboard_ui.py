@@ -60,7 +60,7 @@ def test_every_perspective_renders_in_both_bases(who: str) -> None:
     persp(at).set_value(who).run(timeout=T)
     assert not at.exception, [e.value for e in at.exception]
     text = every_text(at)
-    assert "The advisory council" in text and "Sources, confidence and method" in text
+    assert "The advisory council" in text and "Sources and how we know this is right" in text
     assert "Trust score" in text and "Counting basis" in text
     assert not EMOJI.search(text), EMOJI.findall(text)
 
@@ -70,7 +70,7 @@ def test_strict_basis_shows_intervals_and_stamps_charts() -> None:
     at.sidebar.radio[0].set_value(at.sidebar.radio[0].options[1]).run(timeout=T)
     assert not at.exception, [e.value for e in at.exception]
     text = every_text(at)
-    assert "95% CI" in text and "Strict lift" in text and "Divergence alert" in text
+    assert "95% sure" in text and "Strict lift" in text and "The two ways of counting results disagree" in text
     assert not EMOJI.search(text)
     at.sidebar.radio[0].set_value(at.sidebar.radio[0].options[0]).run(timeout=T)  # restore the spec view for later tests
 
@@ -111,7 +111,7 @@ def test_switching_basis_back_and_forth_does_not_loop() -> None:
 
 def test_headline_is_an_objective_finding_not_an_instruction() -> None:
     at = dash()
-    if "Strict lift (only" in at.sidebar.radio[0].value:  # earlier tests created a newer strict run; look at the spec basis
+    if "strict lift" in at.sidebar.radio[0].value:  # earlier tests created a newer strict run; look at the spec basis
         at.sidebar.radio[0].set_value(at.sidebar.radio[0].options[0]).run(timeout=T)
     text = " ".join(m.value for m in at.markdown)
     assert "$105,158 of ad spend has not been earned back" in text
@@ -126,4 +126,24 @@ def test_council_section_shows_four_personas_with_evidence() -> None:
     text = every_text(at)
     for name in ("The Steward", "The Builder", "The Translator", "The Mechanic"):
         assert name in text
-    assert "Where the council agrees" in text and "Where the council splits" in text and "Evidence and triggers" in " ".join(e.label for e in at.expander)
+    assert "Where the council agrees" in text and "Where the council splits" in text and "Why they say this" in " ".join(e.label for e in at.expander)
+
+
+def test_app_version_helper_is_safe():
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "app"))
+    import common
+    v = common.app_version()
+    assert isinstance(v, str) and v
+
+
+@pytest.mark.parametrize("who", PERSPECTIVES)
+def test_no_builder_notes_or_jargon_on_screen(who: str) -> None:
+    """Text meant for the builders must never reach the executive's screen."""
+    import voice
+    at = dash()
+    persp(at).set_value(who).run(timeout=T)
+    text = every_text(at).lower()
+    for phrase in voice.BANNED_ON_SCREEN:
+        assert phrase.lower() not in text, (who, phrase)

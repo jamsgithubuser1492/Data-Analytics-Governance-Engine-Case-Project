@@ -18,6 +18,7 @@ import council as cn  # noqa: E402
 import guide_content  # noqa: E402
 import stances as sx  # noqa: E402
 import ui  # noqa: E402
+import voice  # noqa: E402
 from agent_engine import build_facts, default_definitions, evaluate_agents  # noqa: E402
 from agent_schema import ACTIONS, PERSONAS as RULE_PERSONAS  # noqa: E402
 from runview import load_view  # noqa: E402
@@ -27,8 +28,8 @@ actor, ws = identity()
 runs = succeeded_runs(ws)
 
 ui.page_head("Interpretation", "Advisory council",
-             "Four advisors read the same verified facts through different motivations and risk appetites. They offer ideas to consider, never instructions. "
-             "Set your own guardrails in plain business terms, and see how each choice changes what gets flagged.")
+             "Four seasoned advisors look at your results through their own priorities, from protecting the budget to finding room to grow. Their suggestions are ideas to weigh, and the decision stays with you. "
+             "You can also set how cautious the system should be and see how that changes what it flags.")
 
 if not runs:
     ui.callout("There is nothing to interpret yet. Load the case study data from the Dashboard (choose Try with demo data) or upload your own files, then return here.")
@@ -50,16 +51,16 @@ def lean_pill(p: cn.Persona) -> str:
 
 
 def bar_text(p: cn.Persona) -> str:
-    return (f"Wants {cn.TIER_WORDS[p.evidence_floor]} evidence before backing a money move, "
-            f"{'judges a channel by the cautious end of its interval' if p.uses_lower_bound else 'judges a channel by its central estimate'}, "
-            f"treats {p.clearance:g}x breakeven as clearly profitable, and tolerates platforms claiming up to {p.overclaim_tolerance:g}x what the test confirms.")
+    return (f"Wants {cn.BAR_WORDS[p.evidence_floor]} before backing a money move, "
+            f"{'judges each channel on its cautious case' if p.uses_lower_bound else 'judges each channel on its most likely return'}, "
+            f"treats a return of {p.clearance:g} times breakeven as clearly profitable, and tolerates platforms claiming up to {p.overclaim_tolerance:g} times what the tests confirm.")
 
 
 tab_council, tab_rules, tab_how = st.tabs(["The council", "Your guardrails", "How it works"])
 
 # ============================================================================================== the council
 with tab_council:
-    st.markdown(f'<div class="note">Counting basis {ui.pill(v.basis, "info")} Breakeven {v.breakeven:.2f}x. Every number below is computed from this run; the advisors add interpretation only.</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="note">Counting method {ui.pill(v.basis, "info")} Breakeven {v.breakeven:.2f}x.</div>', unsafe_allow_html=True)
     who = st.segmented_control("Show", ["Whole council"] + [p.name for p in cn.PERSONAS], default="Whole council", key="council_who", label_visibility="collapsed") or "Whole council"
     st.write("")
 
@@ -71,7 +72,7 @@ with tab_council:
                 st.markdown(f"- {line}")
         with s, st.container(border=True):
             st.markdown("##### Where the council splits")
-            st.caption("A split shows where judgement and risk appetite, not the data, decide.")
+            st.caption("A split shows where judgement, not the data alone, decides.")
             for line in council.split or ["The advisors read every channel the same way."]:
                 st.markdown(f"- {line}")
         st.write("")
@@ -84,7 +85,7 @@ with tab_council:
                 st.caption(p.role)
                 st.markdown(ui.esc(rd.headline))
                 ui.stat_row(rd.kpis, compact=True)
-                rows = "".join(f"<tr><td>{html.escape(c.channel)}</td><td>{ui.pill(c.stance, STANCE_KIND[c.stance])}</td></tr>" for c in rd.channels)
+                rows = "".join(f"<tr><td>{html.escape(c.channel)}</td><td>{ui.pill(voice.STANCE_WORDS[c.stance], STANCE_KIND[c.stance])}</td></tr>" for c in rd.channels)
                 st.markdown(f'<div class="tblwrap"><table class="mm"><thead><tr><th>Channel</th><th>Where {html.escape(p.name)} stands</th></tr></thead><tbody>{rows}</tbody></table></div>', unsafe_allow_html=True)
                 st.caption(f"First question: {p.first_question}")
         st.caption("Choose an advisor above for their full reading, the facts behind each view and what would change their mind.")
@@ -100,16 +101,16 @@ with tab_council:
             c2.markdown("**Motivations**\n" + "\n".join(f"- {m}" for m in p.motivations))
             c2.markdown(f"**First question.** {p.first_question}")
             st.caption(bar_text(p))
-        st.markdown("##### What the facts say, in their terms")
+        st.markdown("##### What the results mean for them")
         st.markdown(ui.esc(rd.headline))
         ui.stat_row(rd.kpis, compact=True)
         st.markdown("##### Their view, channel by channel")
         for c in rd.channels:
             with st.container(border=True):
-                st.markdown(f"{ui.pill(c.stance, STANCE_KIND[c.stance])} &nbsp; **{html.escape(c.channel)}**", unsafe_allow_html=True)
+                st.markdown(f"{ui.pill(voice.STANCE_WORDS[c.stance], STANCE_KIND[c.stance])} &nbsp; **{html.escape(c.channel)}**", unsafe_allow_html=True)
                 st.markdown(ui.esc(c.text))
-                with st.expander("The facts behind this and what would change their mind"):
-                    st.markdown(ui.esc(f"**Facts.** {c.facts}."))
+                with st.expander("The numbers behind this and what would change their mind"):
+                    st.markdown(ui.esc(f"**The numbers.** {c.facts}."))
                     st.markdown(ui.esc(f"**What would change my mind.** {c.change_my_mind}."))
         if rd.portfolio:
             st.markdown("##### Across the portfolio")
@@ -118,16 +119,16 @@ with tab_council:
         related = defs.get(p.related_rule)
         if related:
             fired = evaluate_agents([{**related, "enabled": True}], facts)
-            with st.expander(f"Evidence from the '{related['name']}' guardrail ({len(fired)} of {len(facts)} campaigns flagged)"):
+            with st.expander(f"Why they say this ({len(fired)} of {len(facts)} campaigns raised a concern)"):
                 st.caption(ui.esc(sx.describe(related)) if related["id"] in sx.RULE_IDS else "")
                 if not fired:
                     st.caption("Nothing flagged under the current guardrail settings.")
                 camp = v.camp.set_index("campaign_id")
                 for pk in fired:
                     r = camp.loc[pk["campaign_id"]]
-                    st.markdown(ui.esc(f"**{pk['campaign_id']}**: trust score {r['trust_score']:.0f} ({cn.TIER_WORDS[r['tier']]}), "
+                    st.markdown(ui.esc(f"**{pk['campaign_id']}**: {voice.conf_phrase(r['tier']).lower()}, "
                                 + ", ".join(f"{ui.scrub(a)} {b}" for a, b in pk["value_add_metrics"].items())))
-        st.caption("Sources: this run's platform, attribution and holdout data. Intervals are 95%.")
+        st.caption("Source: this run's platform, attribution and control test data.")
 
 # ================================================================================================ guardrails
 with tab_rules:

@@ -16,6 +16,7 @@ import streamlit as st  # noqa: E402
 import dashdata as dd  # noqa: E402
 import signoff as so  # noqa: E402
 import ui  # noqa: E402
+import voice  # noqa: E402
 from agent_schema import ACTIONS  # noqa: E402
 from overrides import EXEC_ROLES, read_log, verify_log  # noqa: E402
 from run_store import StoreError  # noqa: E402
@@ -25,15 +26,14 @@ store = get_store()
 actor, ws = identity()
 auth = auth_mode(actor)
 log_path = Path(DATA_ROOT) / "workspaces" / ws / "run_audit_log.json"
-EXTRA_ACTIONS = {"REALLOCATE_BUDGET": "Move budget between channels", "AUTHORIZE_RESEARCH": "Authorize a research test"}
 
 ui.page_head("Decide", "Sign-off desk",
-             "The last step before anything changes. Every decision, whether you approve it, override it or reject it, is signed with a note, your email and role, and written to a log that cannot be quietly edited. "
-             "A strong statistical result never replaces your signature.")
+             "The last step before anything changes. Every decision, whether you approve it, change it or reject it, is signed with a note, your email and your role, and kept in a permanent record that cannot be quietly edited. "
+             "A strong result never replaces your signature.")
 
 items = store.list_inbox(ws)
 if not items:
-    ui.callout("There is nothing to decide yet. Decisions arrive here from the rules on the Dashboard, from scenarios on the Strategy page and from research ideas on the Research next page.")
+    ui.callout("There is nothing to decide yet. Decisions arrive here from the Dashboard, from scenarios on the Strategy page and from research ideas on the Research next page.")
     safe_page_link("app.py", "Go to the Dashboard", ":material/analytics:")
     st.stop()
 
@@ -42,7 +42,7 @@ open_items = [i for i in items if i["status"] in ("new", "reviewed")]
 approved_items = [i for i in items if i["status"] == "approved"]
 n = {k: sum(1 for s in signed.values() if s and s["outcome"] == k) for k in so.OUTCOMES}
 ui.stat_row([dict(label="Awaiting your signature", value=str(len(open_items)), kind="warn" if open_items else "ok"), dict(label="Signed approvals", value=str(n["APPROVED"]), kind="ok"),
-             dict(label="Overrides", value=str(n["OVERRIDDEN"])), dict(label="Rejections", value=str(n["REJECTED"]))], compact=True)
+             dict(label="Changed by you", value=str(n["OVERRIDDEN"])), dict(label="Rejections", value=str(n["REJECTED"]))], compact=True)
 
 view = st.segmented_control("Show", ["Awaiting signature", "Approved", "Signed", "All"], default="Awaiting signature", key="so_filter", label_visibility="collapsed") or "Awaiting signature"
 pool = {"Awaiting signature": open_items, "Approved": approved_items, "Signed": [i for i in items if signed[i["id"]]], "All": items}[view]
@@ -62,16 +62,16 @@ else:
     else:
         trust, tier = float(p.get("trust_score", v.report["average_trust_score"])), p.get("tier", "DIRECTIONAL")
     g = dd.gate(tier)
-    action = ACTIONS.get(p["recommended_action"], (EXTRA_ACTIONS.get(p["recommended_action"], p["recommended_action"]),))[0]
+    action = voice.ACTION_WORDS.get(p["recommended_action"]) or ACTIONS.get(p["recommended_action"], (p["recommended_action"],))[0]
     sig = signed[item_id]
 
     # ------------------------------------------------------------------------------------------ the packet
     with st.container(border=True):
         st.markdown(f"{ui.pill('Decision packet', 'info')} {ui.tier_pill(tier)} {ui.pill(item['status'].capitalize(), 'muted')}", unsafe_allow_html=True)
         st.markdown(f"### {ui.scrub(p['title'])}")
-        ui.stat_row([dict(label="Trust score", value=f"{trust:.0f} of 100", sub=g["label"]), dict(label="Counting basis", value=v.basis), dict(label="Policy version", value=str(v.report["settings_fingerprint"])[:8]),
-                     dict(label="Source run", value=item["run_id"][:8])], compact=True)
-        st.markdown("##### What is proposed")
+        ui.stat_row([dict(label="How sure we are", value=voice.conf_phrase(tier).split(":")[0], sub=g["label"], kind={"VERIFIED": "ok", "DIRECTIONAL": "warn"}.get(tier, "bad")),
+                     dict(label="Counting method", value=v.basis), dict(label="Reference", value=item["run_id"][:8])], compact=True)
+        st.markdown("##### What is being proposed")
         st.markdown(f"**{html.escape(action)}** for {html.escape(p['channel'])}." if p["channel"] != "Multiple" else f"**{html.escape(action)}.**", unsafe_allow_html=True)
         chg = p.get("proposed_changes") or []
         if chg and "source_spend" in chg[0]:
@@ -80,8 +80,9 @@ else:
         elif chg:
             st.markdown("\n".join(f"- {ui.esc(c['entity'])}: {ui.esc(c['change'])}" for c in chg))
         ui.stat_row([dict(label=ui.scrub(k), value=str(x)) for k, x in p["value_add_metrics"].items()], compact=True)
+        st.markdown("##### Why it was raised")
         st.markdown(ui.safe(p["strategic_callout"]))
-        st.markdown(f'<div class="note">{ui.esc("Source: this run (" + v.basis + "). Suggested by " + p.get("agent_name", p["agent_id"]) + ". Intervals are 95%.")}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="note">{ui.esc("Source: this run, counted as " + v.basis + ". Figures show a 95% likely range where one applies.")}</div>', unsafe_allow_html=True)
 
     # ------------------------------------------------------------------------------------------ signed already
     if sig:
@@ -94,19 +95,19 @@ else:
         if item["status"] == "approved":
             st.write("")
             if g["can_execute"]:
-                st.markdown("##### Execution (dry run)")
-                st.caption("Nothing is sent to an ad platform. A dry run records what would be queued, so the approved change can be handed to the team that makes it.")
-                if st.button("Record the dry run", type="primary", key=f"ex_{item_id}"):
+                st.markdown("##### Hand off to the team")
+                st.caption("Nothing is changed in any ad platform from here. This records the approved change so the team that makes it can pick it up.")
+                if st.button("Record the hand off", type="primary", key=f"ex_{item_id}"):
                     try:
-                        store.transition_inbox(ws, item_id, "executed", sig["email"], "dry run: recorded to the simulated action queue")
+                        store.transition_inbox(ws, item_id, "executed", sig["email"], "hand off recorded to the action queue (simulated, nothing sent to a platform)")
                         st.rerun()
                     except StoreError as exc:
                         st.error(str(exc))
             else:
-                ui.callout(f"Execution stays off. {g['message']}", "warn")
+                ui.callout(f"Hand off stays off. {g['message']}", "warn")
         elif item["status"] == "executed":
             st.code(f"INSERT INTO MMGE_DB.GOVERNANCE.ACTION_QUEUE (executed_at, agent_id, item_id, action) VALUES ('{item['updated_at']}', '{p['agent_id']}', '{item_id}', '{p['recommended_action']}');", language="sql")
-            st.caption("Dry run recorded. This is the line that would be queued for the team or system that makes the change.")
+            st.caption("Hand off recorded. This is the entry that would be queued for the team or system that makes the change.")
     # ------------------------------------------------------------------------------------------ the form
     elif item["status"] in ("new", "reviewed"):
         st.write("")
@@ -114,9 +115,9 @@ else:
         key = lambda k: f"so_{k}_{item_id}"  # noqa: E731
         outcome = st.radio("What do you decide?", list(so.OUTCOMES), format_func=so.OUTCOMES.get, key=key("outcome"), index=None)
         if tier == so.NOT_DECISION_GRADE:
-            ui.callout("This result is not decision grade, so it cannot be approved. You can override it with your own decision or reject it.", "bad")
+            ui.callout("The evidence behind this is not yet reliable, so it cannot be approved. You can change it to a decision of your own or reject it.", "bad")
         elif not g["can_execute"]:
-            st.caption("Evidence is Directional. You may approve, but execution stays off until the evidence reaches Verified.")
+            st.caption("The evidence points one way but is not yet strong. You may approve, but handing it off to the team stays off until further testing makes it solid.")
         note = st.text_area("Your note (why you are deciding this way)", key=key("note"), height=100, placeholder="At least 10 characters. For an override, say what you will do instead.")
         c1, c2 = st.columns(2)
         email = c1.text_input("Your email", value=actor if auth == "sso_verified" else "", key=key("email"), disabled=auth == "sso_verified")
@@ -125,7 +126,7 @@ else:
         ticks = [st.checkbox(text, key=key(f"tick_{k}")) for k, text in so.CHECKLIST]
         todo = so.requirements(outcome, note, email, role or "", ticks, tier)
         if auth == "self_asserted":
-            st.caption("Sign-in is not set up, so the email you type is recorded as self asserted rather than verified.")
+            st.caption("Sign-in is not set up, so the email you type is recorded as typed in by you rather than verified.")
         if todo:
             st.markdown('<div class="note"><b>Still needed:</b> ' + " ".join(html.escape(t) for t in todo) + "</div>", unsafe_allow_html=True)
         if st.button("Sign and record this decision", type="primary", disabled=bool(todo), key=key("go")):
@@ -147,7 +148,7 @@ with st.expander(f"Signed decisions log ({len(entries)} entries)"):
     st.markdown(ui.pill("Log intact" if ok else "Log altered", "ok" if ok else "bad") + f" {html.escape(why if not ok else 'Every entry chains to the one before it, so an edit or deletion would show here.')}", unsafe_allow_html=True)
     if entries:
         st.dataframe(pd.DataFrame([{"When": e.get("timestamp_utc", "")[:19], "Decision": e.get("decision_outcome", ""), "Signed by": (e.get("authorizing_user") or {}).get("email", ""),
-                                    "Role": (e.get("authorizing_user") or {}).get("role", ""), "Identity": (e.get("authorizing_user") or {}).get("authentication", ""),
-                                    "Trust score": e.get("trust_score_at_signing", ""), "Note": e.get("justification", "")} for e in entries]), hide_index=True, width="stretch")
+                                    "Role": (e.get("authorizing_user") or {}).get("role", ""), "Sign-in": {"self_asserted": "Typed in by user", "sso_verified": "Verified sign-in"}.get((e.get("authorizing_user") or {}).get("authentication", ""), ""),
+                                    "Confidence score": e.get("trust_score_at_signing", ""), "Note": e.get("justification", "")} for e in entries]), hide_index=True, width="stretch")
         st.download_button("Download the full log", log_path.read_bytes(), "run_audit_log.json", "application/json", key="dl_log")
-st.caption("Why this exists: automation and statistics can suggest, but only a named person decides. Nothing here reaches an ad platform; execution is a dry run until connectors are added with their own safeguards.")
+st.caption("Automation and statistics can suggest, but only a named person decides. Nothing here reaches an ad platform.")

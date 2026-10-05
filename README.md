@@ -64,6 +64,21 @@ python data/generate_synthetic_data.py     # OPTIONAL: new synthetic data in dat
 
 Synthetic data generation is also available inside the app (Upload data, then Generate new synthetic data). It loads the data in memory for experiments and never replaces the verified files. If a verified file is ever changed by accident, restore it with `git checkout -- data/`.
 
+### Updating to the latest version
+
+`pip install` only installs libraries. It never updates the code, and a running app keeps serving the old files. To update:
+
+```bash
+git status                       # if it lists files under outputs/ or data/, they are generated files you can set aside
+git stash                        # (or: git checkout -- outputs data) clears local generated changes
+git checkout main
+git pull origin main
+# stop the running app with Ctrl+C, then start it again
+python -m streamlit run app/app.py
+```
+
+The sidebar shows a small "Version" line (commit and date) so you can confirm which code is running. The optional commands above that write to `outputs/` change tracked files, which is the usual reason a later `git pull` is refused.
+
 ## Snowflake setup
 
 Run `sql/01_raw_schema.sql` in a worksheet. The commented block at its bottom creates the database, schema, CSV file format and internal stage, and lists the `COPY INTO` commands (upload `data/*.csv` to `@MMGE_RAW_STAGE` first). Then run `02` to `05` in order. Nothing in the SQL is DuckDB specific.

@@ -16,8 +16,12 @@ from typing import Any, Dict, List, Optional
 
 import pandas as pd
 
+from voice import STANCE_VERB
+
 TIER_RANK = {"NOT_DECISION_GRADE": 0, "DIRECTIONAL": 1, "VERIFIED": 2}
 TIER_WORDS = {"VERIFIED": "Verified", "DIRECTIONAL": "Directional", "NOT_DECISION_GRADE": "Not decision grade"}
+CONFIDENCE_WORDS = {"VERIFIED": "confident evidence", "DIRECTIONAL": "directional evidence", "NOT_DECISION_GRADE": "evidence not yet reliable"}
+BAR_WORDS = {"VERIFIED": "confident evidence", "DIRECTIONAL": "at least directional evidence", "NOT_DECISION_GRADE": "any evidence"}
 ALLOWED_OPENERS = ("Consider ", "Given that ", "In order to address ")
 STANCES = ["Lean in", "Hold", "Re-test", "Pull back", "Get more evidence"]
 
@@ -100,9 +104,9 @@ def _usd(v: Any) -> str:
 
 
 def _fact_line(r: pd.Series, be: float) -> str:
-    base = f"{r['channel']} returns {_x(r['proven'])} per $1 against a {be:.2f}x breakeven ({TIER_WORDS.get(r['tier'], r['tier'])} evidence"
+    base = f"{r['channel']} returns {_x(r['proven'])} for every $1 spent, against a {be:.2f}x breakeven ({CONFIDENCE_WORDS.get(r['tier'], r['tier'])}"
     if pd.notna(r.get("lower")) and pd.notna(r.get("upper")):
-        base += f", 95% interval {_x(r['lower'])} to {_x(r['upper'])}"
+        base += f"; we are 95% sure the true return is between {_x(r['lower'])} and {_x(r['upper'])}"
     return base + ")"
 
 
@@ -123,12 +127,13 @@ def stance_for(p: Persona, r: pd.Series, be: float) -> str:
 
 
 def _mind(stance: str, p: Persona, be: float) -> str:
+    bar = BAR_WORDS[p.evidence_floor]
     return {
-        "Lean in": f"the lower end of the interval falling below the {be:.2f}x breakeven, or the evidence level dropping below {TIER_WORDS[p.evidence_floor]}",
-        "Hold": f"a confirmation test showing a return of at least {be * p.clearance:.2f}x with {TIER_WORDS[p.evidence_floor]} evidence",
+        "Lean in": f"the return falling toward the {be:.2f}x breakeven, or the evidence weakening below {bar}",
+        "Hold": f"a fresh test showing a return of at least {be * p.clearance:.2f}x with {bar}",
         "Re-test": f"a longer or cleaner test that either clears {be:.2f}x or confirms the shortfall",
-        "Pull back": f"a confirmation test showing a return above {be:.2f}x with {TIER_WORDS[p.evidence_floor]} evidence",
-        "Get more evidence": f"a longer test, more conversions or a cleaner control that lifts the evidence to {TIER_WORDS[p.evidence_floor]}",
+        "Pull back": f"a fresh test showing a return above {be:.2f}x with {bar}",
+        "Get more evidence": f"a longer or larger test that lifts the evidence to {bar}",
     }[stance]
 
 
@@ -136,26 +141,26 @@ def _text(p: Persona, stance: str, r: pd.Series, be: float) -> str:
     ch, x = r["channel"], _x(r["proven"])
     spent = _usd(r.get("unearned"))
     t = {
-        ("STEWARD", "Lean in"): f"Given that {ch} returns {x} against a {be:.2f}x breakeven even at the cautious end of its interval, perhaps we should think about a staged increase with a checkpoint, so the return is confirmed before more is committed.",
-        ("STEWARD", "Hold"): f"Consider holding {ch} at current spend. It covers its cost but does not yet clear the margin of safety finance would want before adding budget.",
-        ("STEWARD", "Re-test"): f"In order to address the shortfall on {ch}, we might want to think about a confirmation test before deciding, since {spent} of spend has not been earned back.",
-        ("STEWARD", "Pull back"): f"Given that {spent} of {ch} spend has not been earned back, perhaps we should think about reducing exposure until a confirmation test shows otherwise.",
-        ("STEWARD", "Get more evidence"): f"In order to address the uncertainty on {ch}, we might want to think about extending or repeating the test before treating the number as final.",
-        ("BUILDER", "Lean in"): f"Given that {ch} returns {x} per $1 against a {be:.2f}x breakeven, perhaps we should think about testing more budget in a controlled way and watching whether the return holds.",
-        ("BUILDER", "Hold"): f"Consider keeping {ch} in the mix while looking for creative or audience changes that could lift its return above {be * p.clearance:.2f}x.",
-        ("BUILDER", "Re-test"): f"Before cutting {ch}, consider whether it plays a role the test cannot see, such as reach or brand. We might want to think about a targeted re-test rather than a cut.",
-        ("BUILDER", "Pull back"): f"Given that {ch} returns {x}, well under breakeven, perhaps we should think about redirecting part of its budget to channels with stronger proven returns.",
-        ("BUILDER", "Get more evidence"): f"In order to avoid missing an opportunity on {ch}, we might want to think about a faster, better powered test so the decision is not left waiting.",
-        ("TRANSLATOR", "Lean in"): f"Given that {ch} is clearly above breakeven with {TIER_WORDS[r['tier']]} evidence, perhaps we should think about featuring it as the proof point in client reporting.",
-        ("TRANSLATOR", "Hold"): f"Consider presenting {ch} as covering its cost, with the interval shown, so the client sees the result without over-reading it.",
-        ("TRANSLATOR", "Re-test"): f"In order to address the gap between claimed and proven return on {ch}, we might want to think about explaining the test design and agreeing a re-test with the client.",
-        ("TRANSLATOR", "Pull back"): f"Given that {ch} has not earned back its spend on the proven basis, perhaps we should think about a candid client conversation, anchored on the test, before the next report.",
-        ("TRANSLATOR", "Get more evidence"): f"Consider telling the client that {ch} is not yet measured to a decision grade standard, and agreeing what would make it so.",
-        ("MECHANIC", "Lean in"): f"Consider checking that tracking on {ch} stays stable while spend rises, since the proven return of {x} depends on clean measurement.",
-        ("MECHANIC", "Hold"): f"Consider reviewing creative and audience settings on {ch}; its return of {x} leaves little room for tracking drift.",
-        ("MECHANIC", "Re-test"): f"In order to address the shortfall on {ch}, we might want to think about auditing tracking and attribution settings before re-running the test.",
-        ("MECHANIC", "Pull back"): f"Given that {ch} returns {x}, perhaps we should think about auditing tracking and campaign structure before assuming the channel itself is the problem.",
-        ("MECHANIC", "Get more evidence"): f"In order to address the weak evidence on {ch}, we might want to think about a longer window, a larger geo sample or a cleaner control market.",
+        ("STEWARD", "Lean in"): f"Given that {ch} returns {x} for every $1 against a {be:.2f}x breakeven, even on a cautious reading, perhaps we should think about adding budget in stages, confirming the return at each step before committing more.",
+        ("STEWARD", "Hold"): f"Consider keeping {ch} at its current budget. It covers its cost, but the cushion is thin for a board that will ask us to defend every dollar.",
+        ("STEWARD", "Re-test"): f"In order to address the shortfall on {ch}, we might want to think about a fresh test before deciding, since {spent} of spend has not been earned back.",
+        ("STEWARD", "Pull back"): f"Given that {spent} of {ch} spend has not been earned back, perhaps we should think about reducing what we put at risk until a new test shows otherwise.",
+        ("STEWARD", "Get more evidence"): f"In order to address how uncertain the {ch} result is, we might want to think about running a longer or larger test before the number goes into a budget decision.",
+        ("BUILDER", "Lean in"): f"Given that {ch} returns {x} for every $1 against a {be:.2f}x breakeven, perhaps we should think about putting more budget behind it in a controlled way and watching whether the return holds.",
+        ("BUILDER", "Hold"): f"Consider keeping {ch} in the mix while we look for creative or audience changes that could lift its return above {be * p.clearance:.2f}x.",
+        ("BUILDER", "Re-test"): f"Before cutting {ch}, consider whether it plays a role the test cannot see, such as reach or brand awareness. We might want to think about a targeted re-test rather than a cut.",
+        ("BUILDER", "Pull back"): f"Given that {ch} returns {x}, well under breakeven, perhaps we should think about moving part of its budget to channels with stronger proven returns.",
+        ("BUILDER", "Get more evidence"): f"In order to avoid missing an opportunity on {ch}, we might want to think about a faster, larger test so this decision is not left waiting.",
+        ("TRANSLATOR", "Lean in"): f"Given that {ch} is clearly above breakeven and the result is solid, perhaps we should think about featuring it as the proof point in client reporting.",
+        ("TRANSLATOR", "Hold"): f"Consider presenting {ch} to the client as covering its cost, with the likely range shown, so they see the result without reading too much into it.",
+        ("TRANSLATOR", "Re-test"): f"In order to address the gap between what the platform reports and what we can prove on {ch}, we might want to think about walking the client through how it was tested and agreeing a re-test.",
+        ("TRANSLATOR", "Pull back"): f"Given that {ch} has not earned back its spend on the proven numbers, perhaps we should think about an open client conversation, anchored on the test results, before the next report.",
+        ("TRANSLATOR", "Get more evidence"): f"Consider telling the client that {ch} is not yet measured well enough to base a decision on, and agreeing what would make it so.",
+        ("MECHANIC", "Lean in"): f"Consider checking that conversion counting on {ch} stays stable as spend rises, since the proven return of {x} depends on clean measurement.",
+        ("MECHANIC", "Hold"): f"Consider reviewing creative and audience settings on {ch}. A return of {x} leaves little room for measurement slipping.",
+        ("MECHANIC", "Re-test"): f"In order to address the shortfall on {ch}, we might want to think about checking how its conversions are being counted before running the test again.",
+        ("MECHANIC", "Pull back"): f"Given that {ch} returns {x}, perhaps we should think about checking campaign setup and conversion counting before assuming the channel itself is the problem.",
+        ("MECHANIC", "Get more evidence"): f"In order to address the weak evidence on {ch}, we might want to think about a longer test, more test markets or a cleaner comparison group.",
     }
     return t[(p.id, stance)]
 
@@ -167,12 +172,12 @@ def _overclaim_items(p: Persona, cd: pd.DataFrame) -> List[str]:
         return []
     worst = over.sort_values("overclaim_ratio", ascending=False).iloc[0]
     n, m = len(over), len(d)
-    base = f"{n} of {m} campaigns claim more than {p.overclaim_tolerance:g}x what the test confirms (largest: {worst['campaign_id']} at {worst['overclaim_ratio']:.1f}x)"
+    base = f"{n} of {m} campaigns report more than {p.overclaim_tolerance:g} times the results the test can confirm (the widest gap is {worst['campaign_id']}, at {worst['overclaim_ratio']:.1f} times)"
     return [{
         "STEWARD": f"Given that {base}, perhaps we should think about reconciling the revenue finance sees with the proven figure before the next budget cycle.",
         "BUILDER": f"Given that {base}, perhaps we should think about whether the strongest platform claims are real before planning growth around them.",
         "TRANSLATOR": f"In order to address the fact that {base}, we might want to think about anchoring client reporting on the proven number.",
-        "MECHANIC": f"In order to address the fact that {base}, we might want to think about checking attribution windows and deduplication for those campaigns.",
+        "MECHANIC": f"In order to address the fact that {base}, we might want to think about checking how those campaigns count conversions.",
     }[p.id]]
 
 
@@ -184,32 +189,37 @@ def _kpis(p: Persona, ch: pd.DataFrame, cd: pd.DataFrame, tot: Dict[str, Any], b
                 dict(label="Proven return per $1", value=_x(tot["proven"]))]
     if p.id == "BUILDER":
         share = float(above["spend"].sum() / ch["spend"].sum()) if ch["spend"].sum() else 0.0
-        return [dict(label="Proven return per $1", value=_x(tot["proven"])), dict(label="Spend in channels above breakeven", value=f"{share:.0%}"),
+        return [dict(label="Proven return per $1", value=_x(tot["proven"])), dict(label="Budget in channels above breakeven", value=f"{share:.0%}"),
                 dict(label="Channels above breakeven", value=f"{len(above)} of {int(ch['proven'].notna().sum())}")]
     if p.id == "TRANSLATOR":
         n_over = int((cd["overclaim_ratio"] > p.overclaim_tolerance).sum())
-        return [dict(label="Platforms claim versus proven", value=f"{_x(ch['claimed'].mean())} vs {_x(tot['proven'])}"), dict(label="Campaigns over-claiming", value=f"{n_over} of {len(cd)}"),
-                dict(label="Campaigns with verified evidence", value=f"{verified_share:.0%}")]
+        return [dict(label="Platforms report versus proven", value=f"{_x(ch['claimed'].mean())} vs {_x(tot['proven'])}"), dict(label="Campaigns overstated", value=f"{n_over} of {len(cd)}"),
+                dict(label="Campaigns we can act on with confidence", value=f"{verified_share:.0%}")]
     n_weak = int((cd["tier"] != "VERIFIED").sum())
     worst = cd["overclaim_ratio"].max()
-    return [dict(label="Campaigns needing stronger evidence", value=f"{n_weak} of {len(cd)}"), dict(label="Largest over-claim", value=_x(worst)), dict(label="Holdout coverage", value=f"{holdout_cov:.0%}")]
+    return [dict(label="Campaigns needing more testing", value=f"{n_weak} of {len(cd)}"), dict(label="Biggest gap between claimed and proven", value=_x(worst)), dict(label="Campaigns with a control test", value=f"{holdout_cov:.0%}")]
 
 
 def _headline(p: Persona, ch: pd.DataFrame, tot: Dict[str, Any], be: float) -> str:
     below = ch[ch["proven"] < be * 0.95]
     unmeasured = int(ch["proven"].isna().sum())
     if p.id == "STEWARD":
-        return (f"{_usd(tot['unearned'])} of ad spend has not been earned back, and platforms claim {_usd(tot['overclaim_revenue'])} more revenue than the test supports. "
-                f"{len(below)} of {len(ch)} channels sit below breakeven.")
+        return (f"{_usd(tot['unearned'])} of ad spend has not been earned back, and platforms claim {_usd(tot['overclaim_revenue'])} more revenue than our tests support. "
+                f"{len(below)} of {len(ch)} channels do not repay their cost.")
     if p.id == "BUILDER":
         above = ch[ch["proven"] >= be * 1.05]
-        return (f"{len(above)} of {len(ch)} channels are above breakeven, returning {_x(tot['proven'])} per $1 across the portfolio. "
-                f"{len(below)} sit below it and {unmeasured} are not yet measured.")
+        return (f"{len(above)} of {len(ch)} channels earn more than they cost, and the portfolio returns {_x(tot['proven'])} for every $1 spent. "
+                f"{len(below)} fall short of breakeven and {unmeasured} have not been measured yet.")
     if p.id == "TRANSLATOR":
-        return (f"Platforms report an average of {_x(ch['claimed'].mean())} while the test proves {_x(tot['proven'])}. That gap is the conversation to have with clients.")
+        return (f"Platforms report an average return of {_x(ch['claimed'].mean())}, while the tests prove {_x(tot['proven'])}. That gap is the conversation to have with clients.")
     weak = ch[ch["tier"] != "VERIFIED"]
-    return (f"{len(weak)} of {len(ch)} channels are measured below the Verified standard"
-            + (f" ({', '.join(weak['channel'])})." if len(weak) else ".") + " Tracking and test quality decide how far the numbers can be trusted.")
+    return (f"{len(weak)} of {len(ch)} channels are not yet measured well enough to bet on"
+            + (f" ({', '.join(weak['channel'])})." if len(weak) else ".") + " How cleanly each campaign is tracked and tested decides how far its numbers can be trusted.")
+
+
+def _names(v: List[str]) -> str:
+    v = [n.replace("The ", "the ", 1) for n in v]
+    return v[0] if len(v) == 1 else ", ".join(v[:-1]) + " and " + v[-1]
 
 
 def convene(ch: pd.DataFrame, cd: pd.DataFrame, tot: Dict[str, Any], breakeven: float, is_strict: bool, holdout_coverage: float = 1.0) -> Council:
@@ -226,10 +236,10 @@ def convene(ch: pd.DataFrame, cd: pd.DataFrame, tot: Dict[str, Any], breakeven: 
         picks = {rd.persona.name: next(v.stance for v in rd.channels if v.channel == ch_name) for rd in readings}
         kinds = set(picks.values())
         if len(kinds) == 1:
-            agree.append(f"All four personas land on '{next(iter(kinds))}' for {ch_name}.")
+            agree.append(f"All four advisors would {STANCE_VERB[next(iter(kinds))]} {ch_name}.")
         else:
             groups: Dict[str, List[str]] = {}
             for name, s in picks.items():
                 groups.setdefault(s, []).append(name)
-            split.append(f"{ch_name}: " + "; ".join(f"{', '.join(v)} say '{k}'" for k, v in groups.items()) + ".")
+            split.append(f"{ch_name}: " + "; ".join(f"{_names(v)} would {STANCE_VERB[k]} it" for k, v in groups.items()) + ".")
     return Council(readings, agree, split, "Strict lift" if is_strict else "Reported by spec")

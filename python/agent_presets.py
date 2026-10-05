@@ -13,14 +13,14 @@ PRESETS: List[Dict[str, Any]] = [
         "priority": 10, "action": "REDUCE_BUDGET_50%", "requires_min_tier": "DIRECTIONAL",
         "trigger": {"all": [{"metric": "reported_roas", "op": ">=", "value": 1.5}, {"metric": "iroas", "op": "<", "value": 1.0}]},
         "value_add": [
-            {"label": "Sales Claimed but Not Caused by Ads", "format": "pct1",
+            {"label": "Sales credited to ads that they did not cause", "format": "pct1",
              "expression": "max(0, div(total_platform_conversions - total_holdout_conversions, total_platform_conversions) * 100)"},
             {"label": "Spend Not Earned Back", "format": "usd", "expression": "max(0, total_spend - total_holdout_revenue)"},
-            {"label": "Gap: Claimed vs Proven Return", "format": "x2", "expression": "reported_roas - iroas"},
+            {"label": "Claimed return minus proven return", "format": "x2", "expression": "reported_roas - iroas"},
         ],
-        "title": "Spend not earned back: {campaign_id}",
-        "callout": ("{channel} claims {reported_roas}x ROAS but randomized holdouts show only {iroas}x. "
-                    "Given that {m2} of spend has not been earned back, perhaps we should think about reducing budget by 50% until a confirmation test says otherwise."),
+        "title": "{campaign_id}: {m2} spent has not been earned back",
+        "callout": ("{channel} reports a {reported_roas}x return, but our control tests show only {iroas}x. "
+                    "Given that {m2} of spend has not been earned back, perhaps we should think about cutting this budget in half until a fresh test says otherwise."),
     },
     {
         "id": "ATTRIBUTION_SHIELD_AGENT", "name": "Attribution shield", "persona": PERSONA_AGENCY, "severity": "WARNING",
@@ -28,14 +28,13 @@ PRESETS: List[Dict[str, Any]] = [
         "priority": 20, "action": "CLIENT_GOVERNANCE_AUDIT", "requires_min_tier": "NOT_DECISION_GRADE",
         "trigger": {"all": [{"metric": "inflation_ratio", "op": ">", "value": 1.25}, {"metric": "inflation_ratio", "op": "<=", "value": 3.0}]},
         "value_add": [
-            {"label": "Platform Over-Claim Multiplier", "format": "x2", "expression": "inflation_ratio"},
-            {"label": "Platform Claim Above Proven Return", "format": "pct1", "expression": "(reported_roas / iroas - 1) * 100"},
+            {"label": "How many times the platform overstates results", "format": "x2", "expression": "inflation_ratio"},
+            {"label": "How far the claim sits above the proven return", "format": "pct1", "expression": "(reported_roas / iroas - 1) * 100"},
             {"label": "Proven Return", "format": "x2", "expression": "iroas"},
         ],
-        "title": "Platform over-claim: {campaign_id}",
-        "callout": ("Client governance note: {channel} reports {reported_roas}x ROAS versus {iroas}x holdout iROAS "
-                    "(platform claims {inflation_ratio:.2f}x the verified conversions). "
-                    "In order to address the gap, we might want to think about explaining MTA deduplication and anchoring reporting on holdout results."),
+        "title": "{campaign_id}: the platform claims more than our tests support",
+        "callout": ("{channel} reports a {reported_roas}x return, while our tests prove {iroas}x. The platform is claiming {inflation_ratio:.2f} times the conversions we can confirm. "
+                    "In order to address the gap, we might want to think about explaining to the client how overlapping credit is counted and anchoring reporting on the test results."),
     },
     {
         "id": "SCALE_OPPORTUNITY_AGENT", "name": "Scale opportunity", "persona": PERSONA_PLATFORM, "severity": "OPPORTUNITY",
@@ -44,12 +43,12 @@ PRESETS: List[Dict[str, Any]] = [
         "trigger": {"all": [{"metric": "iroas", "op": ">=", "value": 3.0}, {"metric": "inflation_ratio", "op": "<=", "value": 1.25}]},
         "value_add": [
             {"label": "Proven Return", "format": "x2", "expression": "iroas"},
-            {"label": "Platform Reporting Accuracy", "format": "text", "expression": "'High (small over-claim)'"},
-            {"label": "Est. Revenue Gain (+25% Spend)", "format": "usd", "expression": "total_spend * 0.25 * iroas"},
+            {"label": "How closely the platform matches our tests", "format": "text", "expression": "'Close match'"},
+            {"label": "Revenue a quarter more budget could add", "format": "usd", "expression": "total_spend * 0.25 * iroas"},
         ],
-        "title": "Strong proven return: {campaign_id}",
-        "callout": ("{channel} shows strong incrementality with minimal over-attribution. Given that, perhaps we should think about a 25% budget increase, "
-                    "which would project {m3} of incremental revenue (assumes constant marginal iROAS)."),
+        "title": "{campaign_id}: a strong, proven return",
+        "callout": ("{channel} earns a strong return, and the platform's own numbers line up with our tests. Given that, perhaps we should think about raising this budget by a quarter, "
+                    "which would add about {m3} of revenue if today's return holds."),
     },
 ]
 

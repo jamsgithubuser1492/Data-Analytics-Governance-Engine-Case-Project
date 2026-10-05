@@ -270,7 +270,7 @@ def portfolio_chart(ch: pd.DataFrame, headline: str) -> go.Figure:
                         hovertemplate="%{customdata[0]}<br>Share of spend %{x:.0%}<br>Share of proven revenue %{y:.0%}<br>Proven return %{customdata[1]:.2f}x<extra></extra>")
     fig.update_xaxes(range=[0, lim], tickformat=".0%", title_text="Share of ad spend", showgrid=True, gridcolor=t["grid"])
     fig.update_yaxes(range=[0, lim], tickformat=".0%", title_text="Share of proven revenue")
-    return _layout(fig, headline, "Above the dotted line a channel earns more than its share of the budget; below it, less. Marker shape and the label show where each channel's return stands.", 400, bottom=80)
+    return _layout(fig, headline, "Above the dotted line a channel earns more than its share of the budget; below it, less.", 400, bottom=80)
 
 
 def _alpha(hex_color: str, a: float) -> str:

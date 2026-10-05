@@ -25,6 +25,7 @@ import charts  # noqa: E402
 import council as cn  # noqa: E402
 import dashdata as dd  # noqa: E402
 import ui  # noqa: E402
+import voice  # noqa: E402
 from agent_engine import build_facts, default_definitions, evaluate_agents  # noqa: E402
 from agent_orchestrator import PERSONA_AGENCY, PERSONA_CFO, PERSONA_PLATFORM  # noqa: E402
 from config import HEADLINE_SPEC, HEADLINE_STRICT, PolicySettings  # noqa: E402
@@ -40,7 +41,7 @@ LENS_COPY = {
     "ATTRIBUTION_SHIELD_AGENT": ("warn", "Attribution shield", "Agency Director / Platform Lead", "Finds platforms that claim more credit than the evidence supports, so reporting can be corrected."),
     "SCALE_OPPORTUNITY_AGENT": ("ok", "Scale opportunity", "CMO / Growth VP", "Finds campaigns with strong, verified returns and little over-claiming that can take more budget."),
 }
-OLD_BASIS = {HEADLINE_SPEC: "Reported by spec (all revenue in the test markets)", HEADLINE_STRICT: "Strict lift (only the gap the ads caused)"}
+OLD_BASIS = {HEADLINE_SPEC: "All revenue in the test markets (reported by spec)", HEADLINE_STRICT: "Only revenue the ads caused (strict lift)"}
 
 store, runner = get_store(), get_runner()
 actor, ws = identity()
@@ -105,7 +106,7 @@ if OPTIONS[choice] != settings.headline_metric:
     wait_for_run(ws, new_id, "Re-running under the new counting basis...")
     st.session_state["pending_run"] = new_id  # an identical earlier run is reused, so point the picker at it explicitly
     st.rerun()
-st.sidebar.caption("Strict lift is the more conservative and defensible basis. Both are always computed; switching creates a new run so every number stays tied to the basis that produced it.")
+st.sidebar.caption("Counting only the revenue the ads caused is the more conservative and defensible choice. Both are always calculated; switching creates a new run so every number stays tied to how it was counted.")
 st.sidebar.caption("Light or dark mode follows your system, or choose one from the menu at the top right.")
 
 
@@ -152,48 +153,68 @@ with bar_r:
 personas = PERSPECTIVES[persp]
 
 # ------------------------------------------------------------------------------------------------- hero
-ci_txt = f" [95% CI {xfmt(tot['lower'])} to {xfmt(tot['upper'])}]" if pd.notna(tot["lower"]) else ""
+ci_txt = f" (likely between {xfmt(tot['lower'])} and {xfmt(tot['upper'])})" if pd.notna(tot["lower"]) else ""
 n_over = int((cd["overclaim_ratio"] > settings.inflation_moderate).sum()) if is_strict else int((recon["inflation_ratio"] > settings.inflation_moderate).sum())
 n_low = int((cd["tier"] != "VERIFIED").sum())
 n_above = int((ch["proven"] >= BE * 1.05).sum())
 n_meas = int(ch["proven"].notna().sum())
 spend_above = float(ch.loc[ch["proven"] >= BE * 1.05, "spend"].sum() / ch["spend"].sum()) if ch["spend"].sum() else 0.0
 unearned_head = (f"{money(tot['unearned'])} of ad spend has not been earned back" if tot["unearned"] > 0 else "Every campaign earned back its ad spend on this basis")
-common_lede = (f"Platforms claim <b>{money(tot['overclaim_revenue'])}</b> more revenue than the holdout test supports. The portfolio returns <b>{xfmt(tot['proven'])}</b>{ci_txt} per $1 of ad spend "
-               f"against a breakeven of <b>{BE:.2f}x</b>. {report['tier_counts']['VERIFIED']} of {report['campaigns_audited']} campaigns have Verified evidence.")
+sig_ids = {c["campaign_id"] for c in report["campaigns"] if any(k["check_id"] == 8 and k["status"] in ("PASS", "WARN") for k in c["checks"])}
+n_sig, n_all = len(sig_ids), int(report["campaigns_audited"])
+ready_ids = {c["campaign_id"] for c in report["campaigns"] if c["tier"] == "VERIFIED"}
+n_ready = len(ready_ids)
+need_test = [c["campaign_id"] for c in report["campaigns"] if c["campaign_id"] not in ready_ids]
+if n_ready == n_all:
+    ready_txt = f"All {n_all} campaigns have statistically significant evidence, enough to make a confident recommendation on each."
+elif n_ready == 0:
+    ready_txt = f"None of the {n_all} campaigns has strong enough evidence yet for a confident recommendation, so further testing comes first."
+else:
+    ready_txt = (f"{n_ready} out of {n_all} campaigns show enough statistically significant evidence to make a confident recommendation. "
+                 f"The other {len(need_test)} ({names(need_test)}) need further testing before money moves.")
+common_lede = (f"While platforms have self-reported revenue figures, our holdout tests reveal a <b>{money(tot['overclaim_revenue'])}</b> gap between what they claim and what our measurements support. "
+               f"The portfolio returns <b>{xfmt(tot['proven'])}</b> for every $1 of ad spend (breakeven is {BE:.2f}x). {ready_txt}")
 HEADLINES = {
     "Everyone": (unearned_head, common_lede),
     "CFO / Finance": (unearned_head, common_lede),
     "CMO / Growth": (f"{n_above} of {n_meas} measured channels return more than breakeven, holding {spend_above:.0%} of spend",
-                     f"The portfolio returns <b>{xfmt(tot['proven'])}</b>{ci_txt} per $1 against a breakeven of <b>{BE:.2f}x</b>. "
-                     + (f"At today's proven return, a 25% rise in spend on {names(head['channels'])} would imply about <b>{money(head['expected_monthly_revenue'])}</b> of revenue a month." if head["channels"] else "No channel clears the bar for a measured growth case yet.")),
+                     f"The portfolio returns <b>{xfmt(tot['proven'])}</b> for every $1 spent, against a breakeven of <b>{BE:.2f}x</b>. "
+                     + (f"If today's return holds, adding a quarter more budget to {names(head['channels'])} would bring in about <b>{money(head['expected_monthly_revenue'])}</b> of revenue a month." if head["channels"] else "No channel earns enough yet to make a confident case for more budget.")),
     "Agency Director": (f"Platforms report {xfmt(audit['platform_roas'].mean())} on average; the test proves {xfmt(tot['proven'])}",
-                        "The side by side view below shows reported and proven returns for each channel in client-ready terms."),
-    "Platform Lead": (f"{n_over} of {report['campaigns_audited']} campaigns claim more than {settings.inflation_moderate:g}x what the test confirms; {n_low} are measured below Verified",
-                      "The over-claim table and data health panel below show where the claims and the evidence stand."),
+                        "Below, each channel shows what the platform reports next to what our tests prove, in terms you can take to a client."),
+    "Platform Lead": (f"{n_over} of {report['campaigns_audited']} campaigns report more than {settings.inflation_moderate:g} times the results our tests confirm; {n_low} need more testing before they can be relied on",
+                      "The tables below show where each platform's claims and our evidence stand, and how well each campaign is being measured."),
 }
 h1, lede = HEADLINES[persp]
 ui.hero(f"Media Measurement and Governance &nbsp;·&nbsp; {html.escape(run['label'] or 'Run')} &nbsp;·&nbsp; {run['created_at'][:10]}", html.escape(h1), lede,
-        [("The answer", "answer"), ("Advisory council", "council"), ("Evidence", "evidence"), ("Decisions", "decisions"), ("What if", "whatif"), ("Sources and confidence", "sources")])
+        [("The answer", "answer"), ("Advisory council", "council"), ("Evidence", "evidence"), ("Decisions", "decisions"), ("What if", "whatif"), ("Sources", "sources")])
 st.write("")
 
-# trust gate banner (always visible: REQ-02, REQ-03) and divergence alert (FR-GT02)
+# how sure we are: plain confidence strip, then the two counting methods note
+cov_ = (run["validation"] or {}).get("coverage") or {}
 kind = {"VERIFIED": "ok", "DIRECTIONAL": "warn", "NOT_DECISION_GRADE": "bad"}[run_tier]
-ui.callout(f"{ui.tier_pill(run_tier)} &nbsp; <b>Trust score {run_score:.0f} of 100.</b> {run_gate['message']}", kind)
+ui.stat_row([dict(label="Confidence level", value="95%", sub="We are 95% sure the true return sits inside the ranges shown", kind="ok"),
+             dict(label="Statistically significant", value=f"{n_sig} of {n_all}", sub="Campaigns where the lift is clearly more than zero", kind="ok" if n_sig == n_all else "warn"),
+             dict(label="Ready for a confident decision", value=f"{n_ready} of {n_all}", sub="Strong enough evidence to move budget", kind="ok" if n_ready == n_all else "warn"),
+             dict(label="Test coverage", value=f"{float(cov_.get('holdout', 1) or 0):.0%}", sub=f"Campaigns with a control test, over {days} days of data")], compact=True)
+st.markdown(f'<div class="note"><b>What this means for your decision.</b> {html.escape(voice.conf_phrase(run_tier))}. '
+            + (f"{n_ready} of {n_all} campaigns can move budget now. " if ready_ids and len(ready_ids) < n_all else "")
+            + (f"Test further before moving money on {html.escape(names(need_test))}." if need_test else "Every campaign is ready for a decision.") + "</div>", unsafe_allow_html=True)
 if len(div):
     st.write("")
-    ui.callout(f"<b>Divergence alert.</b> Reported by spec exceeds strict lift by more than 15% for {len(div)} of {len(cd)} campaigns "
-               f"(spec is up to {(div['spec_iroas'] / div['strict_iroas'].where(div['strict_iroas'] > 0)).max():.1f} times the strict figure). "
-               + ("You are viewing the strict basis, the safer of the two." if is_strict else "Consider comparing both counting bases in the sidebar before moving budget."), "warn")
+    ui.callout(f"<b>The two ways of counting results disagree.</b> Counting all revenue in the test markets makes ads look up to "
+               f"<b>{(div['spec_iroas'] / div['strict_iroas'].where(div['strict_iroas'] > 0)).max():.1f} times</b> better than counting only the extra revenue the ads actually caused. "
+               f"This happens on {len(div)} of {len(cd)} campaigns. "
+               + ("You are viewing the safer count, which credits ads only with revenue they caused." if is_strict else "The count of revenue the ads caused is the safer basis for budget decisions, so consider comparing both in the sidebar before moving money."), "warn")
 
 # ---------------------------------------------------------------------------------------- headline stats
-SPEC_NOTE = "" if is_strict else "No interval is available on the spec basis."
+SPEC_NOTE = "" if is_strict else "No likely range is available when counting all test market revenue."
 if persp == "CFO / Finance":
     cards = [dict(label="Spend not earned back", value=money(tot["unearned"]), sub="Ad spend the proven revenue did not repay", kind="bad", term="unearned"),
              dict(label="Claimed organic sales", value=money(tot["overclaim_revenue"]), sub="Revenue platforms claim that the test does not support", kind="warn", term="phantom"),
-             dict(label="Proven return per $1", value=xfmt(tot["proven"]), sub=(f"95% CI {xfmt(tot['lower'])} to {xfmt(tot['upper'])}" if is_strict else SPEC_NOTE), term="proven")]
+             dict(label="Proven return per $1", value=xfmt(tot["proven"]), sub=(f"95% sure it is between {xfmt(tot['lower'])} and {xfmt(tot['upper'])}" if is_strict else SPEC_NOTE), term="proven")]
 elif persp == "CMO / Growth":
-    cards = [dict(label="Portfolio proven return", value=xfmt(tot["proven"]), sub=f"Breakeven {BE:.2f}x" + (f" · 95% CI {xfmt(tot['lower'])} to {xfmt(tot['upper'])}" if is_strict else ""), term="proven"),
+    cards = [dict(label="Portfolio proven return", value=xfmt(tot["proven"]), sub=f"Breakeven {BE:.2f}x" + (f" · 95% sure it is between {xfmt(tot['lower'])} and {xfmt(tot['upper'])}" if is_strict else ""), term="proven"),
              dict(label="Modeled value of moving Netflix spend", value=money(realloc["net"], True) if realloc else "n/a", sub=f"A scenario to {realloc['dest']} at proven returns, not a recommendation" if realloc else "No clear source and destination for a move"),
              dict(label="Growth headroom", value=money(head["added_monthly_spend"]) + " a month", sub=("Scale leaders: " + names(head["channels"])) if head["channels"] else "No channel qualifies yet", term="headroom")]
 elif persp == "Agency Director":
@@ -208,21 +229,21 @@ elif persp == "Platform Lead":
 else:
     cards = [dict(label="Total media spend", value=money(tot["spend"]), sub="All channels in this run" if not is_strict else "Test period spend"),
              dict(label="Revenue caused by ads", value=money(tot["proven_revenue"]), sub=PLAIN_BASIS, kind="ok"),
-             dict(label="Proven return per $1", value=xfmt(tot["proven"]), sub=(f"95% CI {xfmt(tot['lower'])} to {xfmt(tot['upper'])}" if is_strict else f"Breakeven {BE:.2f}x"), term="proven")]
+             dict(label="Proven return per $1", value=xfmt(tot["proven"]), sub=(f"95% sure it is between {xfmt(tot['lower'])} and {xfmt(tot['upper'])}" if is_strict else f"Breakeven {BE:.2f}x"), term="proven")]
 open_items = [i for i in inbox if i["status"] in ("new", "reviewed", "approved")]
 cards.append(dict(label="Decisions to review", value=str(len(open_items)), sub="Open items for your sign-off"))
 ui.stat_row(cards)
 st.markdown(f'<div class="note">Counting basis: <b>{html.escape(PLAIN_BASIS)}</b>. Breakeven {BE:.2f}x'
             + (f" at a {margin:.0%} margin ({'declared by you' if econ.get('source') == 'user' else 'industry proxy'})." if margin else " on revenue only; add a margin in Settings to see profit.")
-            + f" Intervals are 95% confidence intervals. Policy version {report['settings_fingerprint']}.</div>", unsafe_allow_html=True)
+            + "</div>", unsafe_allow_html=True)
 
 
 # ----------------------------------------------------------------------------------------- figure factories
 def fig_returns():
     f = charts.returns_chart(ch, BE, BE_LABEL, charts.SERIES_NAMES["proven"], charts.returns_headline(ch, BE))
     t = ch[["channel", "claimed", "model", "proven", "lower", "upper", "tier"]].copy()
-    t.columns = ["Channel", "Claimed return", "Attribution model", "Proven return", "Proven low (95%)", "Proven high (95%)", "Trust level"]
-    t["Trust level"] = t["Trust level"].map(lambda v: ui.TIER_LABEL.get(v, (v,))[0])
+    t.columns = ["Channel", "Claimed return", "Attribution model", "Proven return", "Proven low (95%)", "Proven high (95%)", "Confidence"]
+    t["Confidence"] = t["Confidence"].map(lambda v: ui.TIER_LABEL.get(v, (v,))[0])
     return f, t.round(3), "Source: platform exports, attribution model output and the geo holdout test for this run."
 
 
@@ -244,7 +265,7 @@ def fig_trend():
     t = roll[["date", "channel", "iroas", "band_low", "band_high"]].copy()
     t["date"] = t["date"].astype(str).str[:10]
     t.columns = ["Date", "Channel", "7 day return", "Recent low", "Recent high"]
-    return f, t.round(3), "Daily series on the spec basis; the strict view needs the full test period."
+    return f, t.round(3), "Daily series counting all test market revenue; the stricter count needs the full test period."
 
 
 def fig_waterfall():
@@ -256,8 +277,8 @@ def fig_waterfall():
 def fig_portfolio():
     f = charts.portfolio_chart(ch, charts.portfolio_headline(ch))
     t = ch[["channel", "action", "spend_share", "revenue_share", "proven", "tier"]].copy()
-    t.columns = ["Channel", "Position", "Share of spend", "Share of proven revenue", "Proven return", "Trust level"]
-    t["Trust level"] = t["Trust level"].map(lambda v: ui.TIER_LABEL.get(v, (v,))[0])
+    t.columns = ["Channel", "Position", "Share of spend", "Share of proven revenue", "Proven return", "Confidence"]
+    t["Confidence"] = t["Confidence"].map(lambda v: ui.TIER_LABEL.get(v, (v,))[0])
     t["Position"] = t["Position"].map(lambda v: ui.ACTION_LABEL.get(v, v))
     return f, t.round(3), "Strong return means Verified evidence and a return of 1.5x the portfolio average or more; below breakeven means under 95% of breakeven."
 
@@ -272,7 +293,7 @@ def card(key: str) -> None:
     if key == "trend":  # a daily series exists only on the spec basis: stamp it truthfully
         basis = "Reported by spec"
         if is_strict:
-            sub += " This daily view is only available on the spec basis, which overstates returns; read direction, not level."
+            sub += " This daily view counts all test market revenue, which overstates returns, so read the direction rather than the level."
     ui.chart_card(key, f.layout.meta["headline"], sub, f, t, basis, src)
     shown.add(key)
 
@@ -298,7 +319,7 @@ if persp in ("Everyone", "CMO / Growth"):
                        + (f" (range {money(head['rev_low'])} to {money(head['rev_high'])})" if pd.notna(head["rev_low"]) else "") + ". Returns usually fall as spend grows, so consider confirming with a scaled test.", "ok")
     else:
         card("returns")
-        html_table(["Channel", "Where the return stands", "Proven return", "Trust level"],
+        html_table(["Channel", "Where the return stands", "Proven return", "Confidence"],
                    [[html.escape(r.channel), ui.action_pill(r.action), xfmt(r.proven) + (f" [{xfmt(r.lower)} to {xfmt(r.upper)}]" if pd.notna(r.lower) else ""), ui.tier_pill(r.tier)] for r in ch.sort_values("proven", ascending=False).itertuples()])
 elif persp == "CFO / Finance":
     card("waterfall")
@@ -320,7 +341,7 @@ elif persp == "CFO / Finance":
             st.write("")
             ui.callout(f"<b>{html.escape(worst['campaign_id'])}</b>: {html.escape(txt)}", "warn")
 elif persp == "Agency Director":
-    st.markdown("##### Reported by spec and strict lift, side by side")
+    st.markdown("##### Two ways of counting, side by side")
     st.caption("Both views are always computed. The spec view counts all revenue in test markets; strict lift counts only the gap the ads caused.")
     spec_by_ch = audit.set_index("channel")["incremental_roas"]
     both = cd.groupby("channel").apply(lambda g: pd.Series({"strict": (g["strict_iroas"] * g["test_spend"]).sum() / g["test_spend"].sum()}), include_groups=False).reset_index()
@@ -329,8 +350,8 @@ elif persp == "Agency Director":
     for col, r in zip(cols, both.itertuples()):
         with col, st.container(border=True):
             st.markdown(f"**{html.escape(r.channel)}**")
-            st.markdown(f'<div class="note">Reported by spec</div><div style="font-size:1.6rem;font-weight:720">{xfmt(r.spec)}</div>'
-                        f'<div class="note" style="margin-top:8px">Strict lift</div><div style="font-size:1.6rem;font-weight:720;color:{theme["proven"]}">{xfmt(r.strict)}</div>'
+            st.markdown(f'<div class="note">All test market revenue</div><div style="font-size:1.6rem;font-weight:720">{xfmt(r.spec)}</div>'
+                        f'<div class="note" style="margin-top:8px">Only revenue the ads caused</div><div style="font-size:1.6rem;font-weight:720;color:{theme["proven"]}">{xfmt(r.strict)}</div>'
                         f'<div class="note" style="margin-top:8px">{ui.action_pill(ch.set_index("channel").loc[r.channel, "action"])}</div>', unsafe_allow_html=True)
     st.write("")
     card("returns")
@@ -345,7 +366,7 @@ elif persp == "Agency Director":
     safe_page_link("pages/5_Memos.py", "Open the executive narrative generator", ":material/description:")
 else:  # Platform Lead
     st.markdown("##### Over-claim alert table")
-    st.caption("Every campaign, worst first. Status is shown with a shape and a label.")
+    st.caption("Every campaign, with the biggest gap between claimed and proven results first.")
     oc_series = cd["overclaim_ratio"] if is_strict else pd.Series(recon.set_index("campaign_id")["inflation_ratio"].reindex(cd["campaign_id"]).values, index=cd.index)
     tb = cd.assign(oc=oc_series).sort_values("oc", ascending=False, na_position="last")
     html_table(["Campaign", "Channel", "Claimed", "Proven", "Over-claim", "Status", "Trust"],
@@ -366,7 +387,7 @@ else:  # Platform Lead
         col.progress(min(max(v, 0.0), 1.0), text=f"{label}: {v:.0%} of campaigns")
 
 # ------------------------------------------------------------------------------------- 02 advisory council
-ui.section("02", "The advisory council", "Four advisors read these same facts through different motivations and risk appetites. They offer ideas to consider; the decision stays with you.", "council")
+ui.section("02", "The advisory council", "Four seasoned advisors look at the same results through their own priorities. Their suggestions are ideas to weigh, and the decision stays with you.", "council")
 defs = {d["id"]: d for d in (store.get_agent_definitions(ws) or default_definitions())}
 facts = build_facts(recon, report, is_strict)
 council = cn.convene(ch, cd, tot, BE, is_strict, float(((run["validation"] or {}).get("coverage") or {}).get("holdout", 1) or 0))
@@ -387,31 +408,31 @@ for i, rd in enumerate(council.readings):
         st.markdown(ui.lean_pill(pr.lean), unsafe_allow_html=True)
         st.markdown(f"#### {pr.name}")
         st.caption(pr.role)
-        st.markdown(html.escape(rd.headline))
-        rows = "".join(f"<tr><td>{html.escape(c.channel)}</td><td>{ui.pill(c.stance, ui.STANCE_KIND[c.stance])}</td></tr>" for c in rd.channels)
+        st.markdown(ui.esc(rd.headline))
+        rows = "".join(f"<tr><td>{html.escape(c.channel)}</td><td>{ui.pill(voice.STANCE_WORDS[c.stance], ui.STANCE_KIND[c.stance])}</td></tr>" for c in rd.channels)
         st.markdown(f'<div class="tblwrap"><table class="mm"><thead><tr><th>Channel</th><th>Where they stand</th></tr></thead><tbody>{rows}</tbody></table></div>', unsafe_allow_html=True)
         d = defs.get(pr.related_rule)
         fired = evaluate_agents([{**d, "enabled": True}], facts) if d else []
-        with st.expander(f"Evidence and triggers ({len(fired)} of {len(facts)} campaigns flagged by the '{d['name'] if d else ''}' rule)"):
+        with st.expander(f"Why they say this ({len(fired)} of {len(facts)} campaigns raised a concern)"):
             st.caption(dd.rule_in_words(d) if d else "")
             if not fired:
-                st.caption("Nothing flagged under the current guardrail settings.")
+                st.caption("Nothing stands out under your current guardrail settings.")
             for pk in fired:
                 ev = dd.evidence_for(pk["campaign_id"], report["campaigns"])
                 row = cd.set_index("campaign_id").loc[pk["campaign_id"]]
                 passed = sum(c["status"] == "PASS" for c in ev.checks)
                 applicable = sum(c["status"] != "NA" for c in ev.checks)
-                st.markdown(f"**{pk['campaign_id']}**: trust score {ev.trust_score:.0f} ({ui.TIER_LABEL[ev.tier][0]}), {passed} of {applicable} checks passed. "
-                            f"Claimed {xfmt(row['claimed_roas'])}, proven {xfmt(row['proven'])}"
-                            + (f" (95% CI {xfmt(row['lower'])} to {xfmt(row['upper'])})" if pd.notna(row["lower"]) else "") + ".")
+                st.markdown(f"**{pk['campaign_id']}**: {voice.conf_phrase(ev.tier).lower()} ({passed} of {applicable} quality checks passed). "
+                            f"The platform claims {xfmt(row['claimed_roas'])}; our tests prove {xfmt(row['proven'])}"
+                            + (f", and we are 95% sure the true figure is between {xfmt(row['lower'])} and {xfmt(row['upper'])}" if pd.notna(row["lower"]) else "") + ".")
                 txt = dd.best_worst_case(row, margin, BE)
                 if txt:
                     st.caption(ui.esc(txt))
-            st.caption(f"Source: holdout test, {days} days of data; rule {pr.related_rule} version {d.get('version', 1) if d else ''}; run {run_id[:8]}.")
+            st.caption(f"Source: control test results, {days} days of data, run {run_id[:8]}.")
 safe_page_link("pages/4_Agents.py", "Open the full advisory council and set your guardrails", ":material/groups:")
 
 # -------------------------------------------------------------------------------------------- 03 evidence
-ui.section("03", "The evidence", "Every chart leads with its finding, states its counting basis, and has a table view for screen readers and spreadsheets.", "evidence")
+ui.section("03", "The evidence", "The charts behind the answer. Each one can be switched to a table you can copy into a spreadsheet.", "evidence")
 for key in ("returns", "overclaim", "trend", "waterfall", "portfolio"):
     if key not in shown:
         card(key)
@@ -425,18 +446,17 @@ with st.expander("Benchmark context for these charts"):
         st.markdown(f"- **Breakeven line**: {econ.get('note') or 'revenue breakeven of 1.00x because no margin was declared.'}\n"
                     + (f"- **How certain is any single test?** {roi[0]['definition']} (peer reviewed, confidence {roi[0]['confidence']}). Read returns as ranges, not exact points.\n" if roi else "")
                     + (f"- **Typical test length**: Meta geo tests in a large industry study ran about {dur[0]['value']:.1f} days on average (confidence {dur[0]['confidence']}).\n" if dur else "")
-                    + "- **What we deliberately do not draw**: a benchmark band for channel return. No verified, comparable channel return range exists in the registry, and vendor ranges conflict, "
-                      "so adding one would imply precision we cannot support. See the Benchmarks page.")
+                    + "- **Industry comparison**: no channel return range is shown because no reliable, like for like range exists. See the Benchmarks page.")
     except Exception:
         st.caption("Benchmark registry unavailable for this view.")
 
 # ------------------------------------------------------------------------------------------ 04 decisions
-ui.section("04", "Decisions for your sign-off", "The rules flag and suggest; people decide. Every decision, whether to approve, override or reject, is signed on the Sign-off desk and written to a tamper evident log.", "decisions")
+ui.section("04", "Decisions for your sign-off", "The system flags what deserves attention; people decide. Every decision, whether you approve, change or reject it, is signed by you on the Sign-off desk and kept in a permanent record.", "decisions")
 visible = [i for i in inbox if not personas or i["packet"]["target_persona"] in personas]
 if is_strict:
-    st.caption("Strict lift view: dollar amounts cover the test period only.")
+    st.caption("Dollar amounts here cover the test period only.")
 if not visible:
-    ui.callout("No decision rule is triggered for this perspective. All channels are within nominal parameters.", "ok")
+    ui.callout("Nothing needs a decision for this view right now. Every channel is within your guardrails.", "ok")
 log_path = Path(DATA_ROOT) / "workspaces" / ws / "run_audit_log.json"
 for item in visible:
     p = item["packet"]
@@ -447,9 +467,9 @@ for item in visible:
     with st.container(border=True):
         st.markdown(f"{ui.pill(sev, sev_kind)} {ui.tier_pill(t)} {ui.pill(item['status'].capitalize(), 'muted')}", unsafe_allow_html=True)
         st.markdown(f"#### {ui.scrub(p['title'])}")
-        st.caption(f"For {p['target_persona']} · {p['channel']} · rule {p['agent_id']} v{p.get('agent_version', 1)} · trust score {score_of.get(p['campaign_id'], p.get('trust_score', 0)):.0f}")
+        st.caption(f"Raised for {p['target_persona']} · {p['channel']} · {voice.conf_phrase(t)}")
         ui.stat_row([dict(label=ui.scrub(name), value=str(val)) for name, val in p["value_add_metrics"].items()], compact=True)
-        st.markdown(f"**Suggested by the rule:** {ui.safe(p['strategic_callout'])}")
+        st.markdown(f"**What this means:** {ui.safe(p['strategic_callout'])}")
         row = cd[cd["campaign_id"] == p["campaign_id"]]
         bw = dd.best_worst_case(row.iloc[0], margin, BE) if len(row) else None
         if bw:
@@ -488,7 +508,13 @@ else:
     st.caption(f"Counting basis: {PLAIN_BASIS}. Assumes returns hold at the new spend level. Real returns usually fall as a channel saturates, so consider confirming with a scaled test before moving the full amount.")
 
 # ------------------------------------------------------------------------------ 06 sources and confidence
-ui.section("06", "Sources, confidence and method", "Where every number comes from, how sure we are, and which rules flagged what.", "sources")
+ui.section("06", "Sources and how we know this is right", "Where every number comes from, how sure we are, and the checks behind each result.", "sources")
+checks_all = [k for c in report["campaigns"] for k in c["checks"]]
+passed_all, total_all = sum(k["status"] == "PASS" for k in checks_all), sum(k["status"] != "NA" for k in checks_all)
+st.markdown(f"Three independent sources are reconciled: what the platforms report, what the attribution model credits, and what a controlled test in matched markets proves. "
+            f"Results come from the controlled test, and we show a 95% likely range around each one. {n_sig} of {n_all} campaigns are statistically significant, meaning the lift is clearly more than zero, "
+            f"and the campaigns passed {passed_all} of {total_all} quality checks overall.")
+st.write("")
 inputs_info = []
 for tname, label_ in (("RAW_PLATFORM_DATA", "Platform reported performance"), ("RAW_MTA_OUTPUT", "Attribution model output"), ("RAW_HOLDOUT_DATA", "Geo holdout test")):
     try:
@@ -500,27 +526,27 @@ for tname, label_ in (("RAW_PLATFORM_DATA", "Platform reported performance"), ("
 st.markdown("##### Data sources")
 html_table(["Source", "Rows", "Dates covered", "Content hash"], [[html.escape(c) for c in r] for r in inputs_info])
 st.write("")
-st.markdown("##### Confidence and checks by campaign")
-st.caption("Parallel trends, sample size and interval precision decide the trust score. A check marked N/A did not have verified data to compare against.")
+st.markdown("##### Quality checks by campaign")
+st.caption("Six checks decide how far each result can be trusted: whether test and comparison markets behaved alike beforehand, whether the test was big enough, how narrow the likely range is, how the result compares with industry norms, whether seasonality is distorting it, and whether our sources agree. N/A means there was nothing reliable to compare against.")
 check_names = {1: "Parallel trends", 2: "Sample size", 3: "Interval precision", 4: "Benchmark range", 5: "Seasonality", 6: "Sources agree"}
 rows = []
 for c in report["campaigns"]:
     st_ = {k["check_id"]: k["status"] for k in c["checks"]}
     rows.append([html.escape(c["campaign_id"]), ui.tier_pill(c["tier"]), f"{c['trust_score']:.0f}",
                  f"{xfmt(c['strict_iroas'])} [{xfmt(c['strict_iroas_lower'])} to {xfmt(c['strict_iroas_upper'])}]"] + [("N/A" if st_.get(i) in (None, "NA") else st_[i].title()) for i in check_names])
-html_table(["Campaign", "Trust level", "Score", "Strict lift [95% CI]"] + list(check_names.values()), rows)
+html_table(["Campaign", "Confidence", "Score", "Proven return (95% range)"] + list(check_names.values()), rows)
 st.write("")
-st.markdown("##### Rules and triggers")
+st.markdown("##### What each guardrail watches for")
 rule_rows = []
 for lid in LENS_IDS:
     d = defs.get(lid)
     if d:
         rule_rows.append([html.escape(d["name"]), f"v{d.get('version', 1)}", html.escape(dd.rule_in_words(d)), str(len(evaluate_agents([{**d, 'enabled': True}], facts)))])
-html_table(["Rule", "Version", "Fires when", "Flagged"], rule_rows)
+html_table(["Guardrail", "Version", "Raises a concern when", "Campaigns"], rule_rows)
 st.write("")
 bctx = report.get("benchmark_context") or {}
 sf = (run["validation"] or {}).get("scale_factor") or {}
-st.markdown("##### Method and versions")
+st.markdown("##### Method")
 st.markdown(f"- Counting basis **{PLAIN_BASIS}**; both are always computed.\n- Policy version **{report['settings_fingerprint']}**; code version **{str(run.get('code_version', ''))[:8]}**; run **{run_id[:8]}**.\n"
             + (f"- Benchmark registry version **{bctx['benchmark_set_version']}**.\n" if bctx.get("benchmark_set_version") else "- No outside benchmark version was used in scoring; the built in channel ranges are illustrative placeholders.\n")
             + (f"- Test market size check: the treatment markets hold {sf['census_share']:.1%} of the US population against a declared sample of {sf['declared_fraction']:.1%}.\n" if sf else "")
@@ -544,10 +570,10 @@ with st.expander("Glossary: every term and formula"):
 if econ.get("margin"):
     with st.expander("Profit view by campaign"):
         prof = cd[["campaign_id", "channel", "proven", "tier"]].copy()
-        prof.columns = ["Campaign", "Channel", "Proven return per $1", "Trust level"]
+        prof.columns = ["Campaign", "Channel", "Proven return per $1", "Confidence"]
         prof["Breakeven"] = BE
         prof["Profit per $1 of ad spend"] = prof["Proven return per $1"] * margin - 1.0
-        prof["Trust level"] = prof["Trust level"].map(lambda v: ui.TIER_LABEL.get(v, (v,))[0])
+        prof["Confidence"] = prof["Confidence"].map(lambda v: ui.TIER_LABEL.get(v, (v,))[0])
         st.dataframe(prof.round(3), hide_index=True, width="stretch")
 with st.expander("Raw tables"):
     st.dataframe(audit, width="stretch", hide_index=True)

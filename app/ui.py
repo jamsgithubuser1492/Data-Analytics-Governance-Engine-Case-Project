@@ -140,7 +140,7 @@ def apply_theme() -> None:
 
 # ------------------------------------------------------------------------------------------- glossary
 GLOSSARY: Dict[str, Tuple[str, str, str]] = {
-    "proven": ("Proven return per $1", "Revenue the holdout test shows the ads actually caused, for each $1 spent.", "caused revenue / ad spend  (iROAS)"),
+    "proven": ("Proven return per $1", "Revenue the holdout test shows the ads actually caused, for each $1 spent.", "caused revenue / ad spend"),
     "claimed": ("Claimed return", "Revenue the ad platform says it generated, for each $1 spent. Platforms grade their own work, so it runs high.", "platform reported revenue / ad spend  (ROAS)"),
     "model": ("Attribution model estimate", "The same question answered by our attribution model, which removes double counting between platforms.", "MTA attributed revenue / ad spend"),
     "breakeven": ("Breakeven", "The return needed to cover the cost of advertising. At a 50% margin you need $2 of revenue per $1 spent.", "1 / contribution margin"),
@@ -174,7 +174,7 @@ SHAPES = {"ok": '<circle cx="6" cy="6" r="5" fill="currentColor"/>', "warn": '<r
           "bad": '<path d="M6 1 11 11H1z" fill="currentColor"/>', "info": '<path d="M6 .8 11.2 6 6 11.2.8 6z" fill="currentColor"/>',
           "muted": '<circle cx="6" cy="6" r="4.2" fill="none" stroke="currentColor" stroke-width="1.6"/>'}
 ACTION_KIND = {"Scale": "ok", "Maintain": "warn", "Restructure": "info", "Cut": "bad"}
-TIER_LABEL = {"VERIFIED": ("Verified", "ok"), "DIRECTIONAL": ("Directional", "warn"), "NOT_DECISION_GRADE": ("Not decision grade", "bad")}
+TIER_LABEL = {"VERIFIED": ("Confident", "ok"), "DIRECTIONAL": ("Leaning", "warn"), "NOT_DECISION_GRADE": ("Not yet reliable", "bad")}
 SEVERITY_LABEL = {"CRITICAL": ("Critical", "bad"), "WARNING": ("Warning", "warn"), "OPPORTUNITY": ("Opportunity", "ok"), "INFO": ("Info", "info")}
 
 
