@@ -56,14 +56,26 @@ The council is four personas who read the same verified facts through different 
 
 The council is the **interpretation layer**. Everything else in the app states facts. The personas offer possibilities in tentative language ("Consider...", "Given that..., perhaps we should think about...", "In order to address..., we might want to think about...") and always show the facts and what would change their mind. The decision stays with the executive.
 
-## 10. What the system will never do
+## 10. Business strategy: from results to company decisions
+
+The Strategy page works from the same run. It shows what moving budget would change and how sure that is (a best and worst case on the strict basis), a modeled value of waiting per week, and a sensitivity that answers the usual objection: **how much lower could the return on the new money be before the move stops adding revenue?**
+
+It then lists, for Finance, Marketing and creative, Agencies, Data and engineering, and Legal, what changes and what would need to be found out. The system computes what the data supports and leaves the rest (costs, hours, contract terms) blank for you, so it never states an unsourced figure as fact. A change plan suggests who may care about what and a phased path. An optional budget lens compares today's spend with a tiered target mix you set. A monitor shows whether returns are holding and which campaigns would meet a capital protection rule; it is information only.
+
+## 11. The AI brief and the answer check
+
+The AI brief turns a run into a prompt you can paste into your company's approved AI service. Every number is a numbered fact [F#] computed from the run, an interval appears only when the run computed one, and the rules ask the assistant to cite facts, label assumptions, argue both sides and never tell you to move money. Raw rows and personal data are never included, anything you type is scanned and redacted, and you can replace channel and campaign names with aliases. Exports are recorded by fingerprint only.
+
+Paste the assistant's answer into **Check an AI answer** and every figure is compared with the facts. A figure that is not in the facts may be an assumption or an invention. The check looks at numbers and overconfident phrasing; it cannot judge whether the reasoning is sound.
+
+## 12. What the system will never do
 
 - It never moves money. Every action needs a human approval, and overrides need a written reason that is saved in a tamper evident log.
 - It never invents numbers. Every figure comes from the run. Written memos are checked so that any number not tied to a verified fact is rejected.
-- It never tells you what to do. Headlines state findings. Personas suggest ideas to consider.
+- It never tells you what to do. Headlines state findings. Personas and strategy notes suggest ideas to consider.
 - It never hides uncertainty. Results carry intervals, trust levels and the counting basis.
 
-## 11. Limits and honest caveats
+## 13. Limits and honest caveats
 
 - The demo data is synthetic and built so that the case study is repeatable. Real data will be noisier.
 - Scaling a test sample to the full market assumes the test markets are representative. The engine checks this against population data when you declare the geos.

@@ -277,3 +277,46 @@ def _alpha(hex_color: str, a: float) -> str:
     h = hex_color.lstrip("#")
     r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
     return f"rgba({r},{g},{b},{a})"
+
+
+def spend_shift_chart(table: pd.DataFrame, headline: str) -> go.Figure:
+    """Spend by channel before and after a scenario, on one axis."""
+    t = _THEME
+    fig = go.Figure()
+    fig.add_bar(x=table["channel"], y=table["spend_before"], name="Spend today", marker_color=t["claimed"], text=table["spend_before"].map(lambda v: f"${v:,.0f}"), textposition="outside", cliponaxis=False)
+    fig.add_bar(x=table["channel"], y=table["spend_after"], name="Spend in the scenario", marker_color=t["proven"], text=table["spend_after"].map(lambda v: f"${v:,.0f}"), textposition="outside", cliponaxis=False)
+    hi = padded_range(list(table["spend_before"]) + list(table["spend_after"]), pad=0.2)[1]
+    fig.update_yaxes(range=[0, hi], tickprefix="$", tickformat="~s", title_text="Ad spend")
+    fig.update_layout(barmode="group", bargap=0.3)
+    return _layout(fig, headline, "Spend by channel today and after the scenario. Total spend does not change.", 400)
+
+
+def sensitivity_chart(table: pd.DataFrame, break_even: float, headline: str) -> go.Figure:
+    """Net revenue change as the return on the new money falls below its average. One axis, a zero line, a marked break-even point."""
+    t = _THEME
+    pct = table["haircut"] * 100
+    fig = go.Figure()
+    fig.add_scatter(x=pct, y=table["net"], mode="lines+markers+text", line=dict(color=t["proven"], width=3), marker=dict(size=9), name="Net revenue change",
+                    text=table["net"].map(lambda v: f"${v:,.0f}"), textposition="top center", cliponaxis=False)
+    fig.add_hline(y=0, line_dash="dash", line_color=danger(), line_width=2)
+    fig.add_scatter(x=[None], y=[None], mode="lines", name="No net change", line=dict(color=danger(), dash="dash", width=2))
+    lo, hi = padded_range(table["net"], include=[0.0], floor_zero=False, pad=0.2)
+    fig.update_yaxes(range=[lo, hi], tickprefix="$", tickformat="~s", title_text="Net revenue change")
+    fig.update_xaxes(title_text="How much lower the return on the new money is than its average", ticksuffix="%")
+    if pd.notna(break_even) and 0 < break_even < table["haircut"].max() * 2:
+        fig.add_vline(x=break_even * 100, line_dash="dot", line_color=caution(), line_width=1.5)
+        fig.add_annotation(x=break_even * 100, yref="paper", y=1.0, text=f"Net change reaches zero at {break_even:.0%}", showarrow=False, yanchor="bottom", font=dict(color=caution(), size=11))
+    return _layout(fig, headline, "If returns fall as spend rises, the net gain shrinks. The dashed line marks where the move stops adding revenue.", 400, bottom=90)
+
+
+def allocation_chart(table: pd.DataFrame, headline: str) -> go.Figure:
+    """Current share of spend by tier against an editable target mix."""
+    t = _THEME
+    d = table.copy()
+    fig = go.Figure()
+    fig.add_bar(x=d["tier"], y=d["share"], name="Current share of spend", marker_color=t["proven"], text=d["share"].map(lambda v: f"{v:.0%}"), textposition="outside", cliponaxis=False)
+    tg = d.dropna(subset=["target"])
+    fig.add_bar(x=tg["tier"], y=tg["target"], name="Target mix", marker_color=t["claimed"], text=tg["target"].map(lambda v: f"{v:.0%}"), textposition="outside", cliponaxis=False)
+    fig.update_yaxes(range=[0, max(1.0, float(d["share"].max())) * 1.15], tickformat=".0%", title_text="Share of spend")
+    fig.update_layout(barmode="group", bargap=0.3)
+    return _layout(fig, headline, "Where today's spend sits by evidence and return tier, against the target mix you set.", 380)

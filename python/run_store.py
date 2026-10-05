@@ -481,6 +481,12 @@ class SqlRunStore:
             c.run("INSERT INTO audit_events VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                   (_uid(), workspace_id, row[1], item_id, f"inbox_{new_status}", actor, json.dumps({"note": note}), _now()))
 
+    def log_event(self, workspace_id: str, run_id: Optional[str], event: str, actor: str, detail: Optional[Dict[str, Any]] = None) -> None:
+        """Append a free-standing audit event (for example a prompt export, recorded by content hash only)."""
+        with self._tx() as c:
+            c.run("INSERT INTO audit_events VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                  (_uid(), workspace_id, run_id or "", "", event, actor, json.dumps(detail or {}), _now()))
+
     def list_audit_events(self, workspace_id: str, run_id: Optional[str] = None) -> List[Dict[str, Any]]:
         sql, args = "SELECT * FROM audit_events WHERE workspace_id = ?", [workspace_id]
         if run_id:

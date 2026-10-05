@@ -172,3 +172,9 @@ The app is written for non-technical leadership. Design system in `app/ui.py`, c
 * **Every chart** states its finding, stamps the counting basis, and has a Chart or Table toggle. No dual axes. Axes are sized to the data, breakeven and thresholds.
 * **Plain labels with an always-on glossary** (hover definitions and formulas). No emojis: status uses a distinct shape plus a text label. Light and dark themes follow the system or the Streamlit menu; data colors are Okabe-Ito based.
 * **Honest benchmarks.** No channel return band is drawn because no verified comparable one exists; see the Benchmarks page.
+
+## Strategy and AI brief
+
+* **Strategy** (`app/pages/9_Strategy.py`): trade-offs with a best and worst case and a break-even sensitivity, a modeled value of waiting, an implications worksheet for five functions (estimates left blank for you), a fact-triggered change plan, an optional tiered budget lens, and a monitor.
+* **AI brief** (`app/pages/10_AI_Brief.py`): a copy ready prompt of numbered, fact-grounded statements for your company's own AI assistant, with personal data redaction, optional name aliases and an answer checker.
+* Governance and privacy: `docs/PRIVACY_AND_GOVERNANCE.md`. What comes next (research engine, sign-off desk, automation blueprint): `docs/NEXT_PHASE.md`.

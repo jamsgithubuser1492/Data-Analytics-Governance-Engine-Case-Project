@@ -23,10 +23,15 @@ TIER_BADGE = {k: v[0] for k, v in ui.TIER_LABEL.items()}
 TIER_KIND = {k: v[1] for k, v in ui.TIER_LABEL.items()}
 pill, takeaway = ui.pill, ui.callout
 
-NAV = [("app.py", "Dashboard", ":material/analytics:"), ("pages/1_Upload.py", "Upload data", ":material/upload:"),
-       ("pages/2_Runs.py", "Runs", ":material/history:"), ("pages/3_Settings.py", "Settings", ":material/tune:"),
-       ("pages/4_Agents.py", "Advisory council", ":material/groups:"), ("pages/5_Memos.py", "Memos", ":material/description:"),
-       ("pages/6_Benchmarks.py", "Benchmarks", ":material/menu_book:"), ("pages/7_Guide.py", "How it works", ":material/help:")]
+NAV_GROUPS = [
+    ("Understand", [("app.py", "Dashboard", ":material/analytics:"), ("pages/1_Upload.py", "Upload data", ":material/upload:"),
+                    ("pages/2_Runs.py", "Runs", ":material/history:"), ("pages/3_Settings.py", "Settings", ":material/tune:")]),
+    ("Interpret", [("pages/4_Agents.py", "Advisory council", ":material/groups:")]),
+    ("Strategize", [("pages/9_Strategy.py", "Strategy", ":material/account_tree:"), ("pages/10_AI_Brief.py", "AI brief", ":material/auto_awesome:")]),
+    ("Reference", [("pages/5_Memos.py", "Memos", ":material/description:"), ("pages/6_Benchmarks.py", "Benchmarks", ":material/menu_book:"),
+                   ("pages/7_Guide.py", "How it works", ":material/help:")]),
+]
+NAV = [item for _, items in NAV_GROUPS for item in items]
 
 
 @st.cache_resource
@@ -79,8 +84,10 @@ def page_setup(title: str, icon: str = ":material/analytics:") -> None:
     ui.apply_theme()
     with st.sidebar:
         st.markdown("**Media Measurement and Governance**")
-        for page, name, icon in NAV:
-            safe_page_link(page, name, icon)
+        for group, items in NAV_GROUPS:
+            st.markdown(f'<div class="kicker" style="margin:.9rem 0 .2rem">{group}</div>', unsafe_allow_html=True)
+            for page, name, icon in items:
+                safe_page_link(page, name, icon)
         st.divider()
 
 
