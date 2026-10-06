@@ -6,7 +6,7 @@
 ![Licence: all rights reserved](https://img.shields.io/badge/licence-all%20rights%20reserved-lightgrey)
 ![Python 3.11 and 3.12](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)
 
-**[Open the live demo](https://YOUR-APP-URL.streamlit.app)** (no install, about 20 seconds to load) &nbsp;|&nbsp; **[Watch the 90 second walkthrough](docs/VIDEO_SCRIPT.md)** &nbsp;|&nbsp; **[Read the page by page guide](docs/PAGE_GUIDE.md)**
+**[Open the live demo](https://james-moy-data-governance-engine-portfolio.streamlit.app/)** (no install, about 20 seconds to load) &nbsp;|&nbsp; **[Watch the 90 second walkthrough](docs/VIDEO_SCRIPT.md)** &nbsp;|&nbsp; **[Read the page by page guide](docs/PAGE_GUIDE.md)**
 
 ![A short tour of the dashboard, the advisory council, the charts and the sign-off desk](docs/img/walkthrough.gif)
 
