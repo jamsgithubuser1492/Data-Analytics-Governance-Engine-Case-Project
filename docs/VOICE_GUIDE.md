@@ -2,6 +2,8 @@
 
 Everything on screen is written for a leader who thinks in revenue, budget, resources and where to focus next. They do not have a marketing science or data science background. This guide keeps new text consistent. Shared wording lives in `python/voice.py`.
 
+See also `docs/DESIGN_SYSTEM.md` for colour, layout and components.
+
 ## Principles
 1. **Lead with the business consequence.** Say what it means for money, a client or a team, then give the number.
 2. **Sound like a person briefing a senior colleague.** One clear sentence beats three statistics. Example: "While platforms have self-reported revenue figures, our holdout tests reveal a $399,188 gap between what they claim and what our measurements support."

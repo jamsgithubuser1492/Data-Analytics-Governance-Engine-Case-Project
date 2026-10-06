@@ -2,16 +2,17 @@
 font = "sans serif"
 
 [theme.light]
-primaryColor = "#1d4ed8"
-backgroundColor = "#ffffff"
-secondaryBackgroundColor = "#f4f7fb"
-textColor = "#121a27"
+primaryColor = "#18345B"
+backgroundColor = "#F8FAFC"
+secondaryBackgroundColor = "#FFFFFF"
+textColor = "#10284A"
+borderColor = "#DDE5ED"
 
 [theme.dark]
-primaryColor = "#8fb0ff"
-backgroundColor = "#0f141c"
-secondaryBackgroundColor = "#171e29"
-textColor = "#e8edf5"
+primaryColor = "#8FB0FF"
+backgroundColor = "#0E1A2E"
+secondaryBackgroundColor = "#14233B"
+textColor = "#E6EDF7"
 
 [client]
 toolbarMode = "minimal"

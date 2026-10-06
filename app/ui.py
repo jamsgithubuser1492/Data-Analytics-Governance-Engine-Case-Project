@@ -14,14 +14,14 @@ import pandas as pd
 import streamlit as st
 
 # ------------------------------------------------------------------------------------------- tokens
-LIGHT: Dict[str, str] = dict(bg="#ffffff", surface="#f5f8fc", surface2="#ecf1f8", border="#dfe6f0", ink="#121a27", muted="#526075",
-                             accent="#1d4ed8", accent_soft="#e8eefc", ok="#15734d", ok_bg="#e3f4eb", warn="#855400", warn_bg="#fcf0d6",
-                             bad="#a62a1e", bad_bg="#fbe6e3", grid="#e6ebf2", claimed="#9aa7bd", model="#7d98d6", proven="#1d4ed8",
-                             hero_a="#f1f5ff", hero_b="#ffffff")
-DARK: Dict[str, str] = dict(bg="#0f141c", surface="#171e29", surface2="#1e2735", border="#2a3547", ink="#e8edf5", muted="#9aa8bd",
-                            accent="#8fb0ff", accent_soft="#1a2848", ok="#5fd1a0", ok_bg="#123226", warn="#f0c25e", warn_bg="#3a2f12",
-                            bad="#ff8f84", bad_bg="#3d1a18", grid="#263143", claimed="#6f7d93", model="#5d7fcc", proven="#8fb0ff",
-                            hero_a="#16213a", hero_b="#0f141c")
+LIGHT: Dict[str, str] = dict(bg="#F8FAFC", card="#FFFFFF", surface="#F4F7FA", surface2="#F1F6FB", border="#DDE5ED", ink="#10284A", muted="#5B6B80",
+                             accent="#18345B", accent2="#24466F", accent_soft="#EAF2FC", ok="#087F6A", ok_bg="#E5F5F0", ok_mid="#159A83", warn="#8A5A00", warn_bg="#FFF5DE",
+                             bad="#B23B43", bad_bg="#FDEBEC", grid="#E6ECF2", claimed="#4E8FE7", model="#8D82D8", proven="#159A83",
+                             hero_a="#F1F6FB", hero_b="#FFFFFF", shadow="rgba(16,40,74,.06)")
+DARK: Dict[str, str] = dict(bg="#0E1A2E", card="#14233B", surface="#122038", surface2="#1A2C47", border="#27395A", ink="#E6EDF7", muted="#9FB0C6",
+                            accent="#8FB0FF", accent2="#B4CAFF", accent_soft="#1B2E52", ok="#5FD1B3", ok_bg="#10332D", ok_mid="#43B69F", warn="#F0C25E", warn_bg="#3A2F12",
+                            bad="#FF9AA0", bad_bg="#3D1A1E", grid="#233450", claimed="#6FA5F0", model="#A89FE6", proven="#43B69F",
+                            hero_a="#16263F", hero_b="#0E1A2E", shadow="rgba(0,0,0,.25)")
 # Okabe-Ito based channel colors: distinguishable under the common forms of color blindness
 CHANNEL_COLORS = {"Google Ads": "#E69F00", "Meta Ads": "#0072B2", "TikTok Ads": "#009E73", "Netflix Ads": "#CC79A7"}
 FALLBACK = ["#56B4E9", "#D55E00", "#F0E442", "#999999"]
@@ -65,71 +65,108 @@ def channel_color(name: str, i: int = 0) -> str:
 def _css(t: Dict[str, str]) -> str:
     return f"""
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 :root {{ --mm-accent: {t['accent']}; --mm-ink: {t['ink']}; --mm-muted: {t['muted']}; --mm-border: {t['border']}; --mm-surface: {t['surface']}; }}
+html, body, .stApp, [data-testid="stMarkdownContainer"], .stButton button, input, textarea, select {{font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;}}
 [data-testid="stSidebarNav"] {{display: none;}}
 [data-testid="stHeader"] {{background: transparent;}}
 .block-container {{padding-top: 1.6rem; padding-bottom: 5rem; max-width: 1240px;}}
-h1, h2, h3, h4, h5 {{letter-spacing: -0.015em;}}
-h5 {{font-weight: 650; font-size: 1.12rem; margin-bottom: .1rem;}}
+h1, h2, h3, h4, h5 {{letter-spacing: -0.02em; color: {t['ink']};}}
+h5 {{font-weight: 600; font-size: 1.08rem; margin-bottom: .1rem;}}
 [data-testid="stSidebar"] {{border-right: 1px solid {t['border']};}}
-[data-testid="stMetric"] {{background: {t['surface']}; border: 1px solid {t['border']}; border-radius: 14px; padding: 14px 16px;}}
-[data-testid="stMetricValue"] {{font-weight: 700; font-variant-numeric: tabular-nums; font-size: 1.7rem;}}
+[data-testid="stMetric"] {{background: {t['card']}; border: 1px solid {t['border']}; border-radius: 12px; padding: 14px 16px; box-shadow: 0 1px 3px {t['shadow']};}}
+[data-testid="stMetricValue"] {{font-weight: 600; font-variant-numeric: tabular-nums; font-size: 1.7rem;}}
 [data-testid="stMetricValue"] *, [data-testid="stMetricLabel"] * {{white-space: normal !important; overflow: visible !important; text-overflow: clip !important; overflow-wrap: anywhere;}}
-[data-testid="stVerticalBlockBorderWrapper"] {{border-radius: 16px; border-color: {t['border']};}}
-[data-testid="stExpander"] {{border-radius: 12px; border-color: {t['border']};}}
-.stButton > button {{border-radius: 10px; font-weight: 600;}}
-.hero {{position: relative; overflow: hidden; border: 1px solid {t['border']}; border-radius: 22px; padding: 44px 48px 36px;
-  background: radial-gradient(1200px 400px at 85% -10%, {t['accent_soft']} 0%, transparent 60%), linear-gradient(180deg, {t['hero_a']}, {t['hero_b']});}}
-.kicker {{font-size: .78rem; letter-spacing: .12em; text-transform: uppercase; color: {t['muted']}; font-weight: 650;}}
-.hero h1 {{font-size: clamp(1.9rem, 3.6vw, 3.1rem); line-height: 1.08; margin: .5rem 0 .9rem; font-weight: 750; color: {t['ink']}; max-width: 900px;}}
-.hero .lede {{font-size: 1.12rem; line-height: 1.6; color: {t['muted']}; max-width: 780px;}}
+[data-testid="stVerticalBlockBorderWrapper"] {{border-radius: 12px; border-color: {t['border']}; background: {t['card']}; box-shadow: 0 1px 3px {t['shadow']};}}
+[data-testid="stExpander"] {{border-radius: 10px; border-color: {t['border']};}}
+.stButton > button, .stDownloadButton > button {{border-radius: 8px; font-weight: 600; transition: background-color .18s ease-out, border-color .18s ease-out, transform .18s ease-out;}}
+.stButton > button:hover {{transform: translateY(-1px);}}
+.brand {{display: flex; align-items: center; gap: 10px; padding: 4px 0 6px;}}
+.brand svg {{flex: none;}}
+.brand .wm {{font-size: 1.35rem; font-weight: 700; letter-spacing: .02em; color: {t['ink']}; line-height: 1;}}
+.brand .sub {{font-size: .68rem; line-height: 1.25; color: {t['muted']}; margin-top: 3px;}}
+.hero {{position: relative; overflow: hidden; border: 1px solid {t['border']}; border-radius: 14px; padding: 40px 44px 32px;
+  background: linear-gradient(180deg, {t['hero_a']}, {t['hero_b']}); box-shadow: 0 1px 3px {t['shadow']};}}
+.kicker {{font-size: .74rem; letter-spacing: .1em; text-transform: uppercase; color: {t['muted']}; font-weight: 600;}}
+.hero h1 {{font-family: Georgia, "Times New Roman", serif; font-size: clamp(1.9rem, 3.4vw, 2.7rem); line-height: 1.12; margin: .5rem 0 .9rem; font-weight: 600; color: {t['ink']}; max-width: 900px;}}
+.hero .lede {{font-size: 1.08rem; line-height: 1.6; color: {t['muted']}; max-width: 780px;}}
 .hero .lede b {{color: {t['ink']};}}
-.chips {{display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px;}}
-.chip {{display: inline-block; padding: 7px 14px; border-radius: 999px; border: 1px solid {t['border']}; background: {t['bg']};
-  color: {t['ink']} !important; text-decoration: none !important; font-size: .86rem; font-weight: 600;}}
-.chip:hover {{border-color: {t['accent']}; color: {t['accent']} !important;}}
-.sec {{margin: 4.2rem 0 1.1rem; scroll-margin-top: 70px;}}
-.sec .num {{font-variant-numeric: tabular-nums; color: {t['accent']}; font-weight: 700; font-size: .9rem; letter-spacing: .08em;}}
-.sec h2 {{font-size: 1.85rem; margin: .15rem 0 .35rem; font-weight: 720; color: {t['ink']};}}
-.sec p {{color: {t['muted']}; font-size: 1.04rem; max-width: 820px; line-height: 1.55; margin: 0;}}
-.pill {{display: inline-flex; align-items: center; gap: 6px; padding: 3px 11px 3px 9px; border-radius: 999px; font-size: .78rem; font-weight: 650;
+.chips {{display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px;}}
+.chip {{display: inline-block; padding: 6px 14px; border-radius: 999px; border: 1px solid {t['border']}; background: {t['card']};
+  color: {t['ink']} !important; text-decoration: none !important; font-size: .84rem; font-weight: 500; transition: border-color .18s ease-out, color .18s ease-out;}}
+.chip:hover {{border-color: {t['ok_mid']}; color: {t['ok']} !important;}}
+.brief {{display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 18px; align-items: stretch;}}
+.brief .main {{border: 1px solid {t['border']}; border-radius: 14px; padding: 30px 34px; background: linear-gradient(180deg, {t['ok_bg']}, {t['card']} 70%); box-shadow: 0 1px 3px {t['shadow']};}}
+.brief h1 {{font-family: Georgia, "Times New Roman", serif; font-size: clamp(1.7rem, 3vw, 2.35rem); line-height: 1.14; font-weight: 600; margin: .7rem 0 .8rem; color: {t['ink']};}}
+.brief .lede {{font-size: 1.02rem; line-height: 1.62; color: {t['muted']};}}
+.brief .lede b {{color: {t['ink']};}}
+.brief .impact {{border: 1px solid {t['border']}; border-radius: 14px; padding: 24px 26px; background: {t['card']}; box-shadow: 0 1px 3px {t['shadow']}; display: flex; flex-direction: column;}}
+.brief .impact .big {{font-size: 2.6rem; font-weight: 600; color: {t['ok']}; letter-spacing: -.02em; line-height: 1.1; font-variant-numeric: tabular-nums; margin: 6px 0 2px;}}
+.brief .impact .big.neutral {{color: {t['ink']};}}
+.brief .facts {{display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; border-top: 1px solid {t['border']}; margin-top: 16px; padding-top: 14px;}}
+.brief .facts .v {{font-size: 1.12rem; font-weight: 600; color: {t['ink']}; font-variant-numeric: tabular-nums;}}
+.brief .facts .l {{font-size: .74rem; color: {t['muted']}; line-height: 1.35; margin-top: 2px;}}
+.brief .conf {{margin-top: auto; padding-top: 14px; border-top: 1px solid {t['border']}; font-size: .84rem; color: {t['muted']}; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;}}
+.brief .conf span:nth-child(2) {{flex: 1 1 170px;}}
+.brief .conf a {{margin-left: auto; color: {t['accent']}; font-weight: 600; text-decoration: none;}}
+.brief .conf a:hover {{text-decoration: underline;}}
+@media (max-width: 900px) {{ .brief {{grid-template-columns: 1fr;}} .brief .main {{padding: 22px 22px;}} }}
+.sec {{margin: 3.6rem 0 1rem; scroll-margin-top: 70px;}}
+.sec .num {{font-variant-numeric: tabular-nums; color: {t['ok']}; font-weight: 600; font-size: .86rem; letter-spacing: .08em;}}
+.sec h2 {{font-size: 1.6rem; margin: .15rem 0 .3rem; font-weight: 600; color: {t['ink']};}}
+.sec p {{color: {t['muted']}; font-size: 1rem; max-width: 820px; line-height: 1.55; margin: 0;}}
+.pill {{display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px 2px 8px; border-radius: 999px; font-size: .76rem; font-weight: 600;
   line-height: 1.5; border: 1px solid transparent; white-space: nowrap;}}
 .pill svg {{flex: none;}}
 .pill-ok {{background: {t['ok_bg']}; color: {t['ok']};}} .pill-warn {{background: {t['warn_bg']}; color: {t['warn']};}}
 .pill-bad {{background: {t['bad_bg']}; color: {t['bad']};}} .pill-info {{background: {t['accent_soft']}; color: {t['accent']};}}
 .pill-muted {{background: {t['surface2']}; color: {t['muted']};}}
 .stats {{display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; margin: 18px 0 8px;}}
-.stat {{background: {t['surface']}; border: 1px solid {t['border']}; border-radius: 16px; padding: 18px 20px;}}
-.stat .l {{font-size: .82rem; color: {t['muted']}; font-weight: 600;}}
-.stat .v {{font-size: 2rem; font-weight: 740; letter-spacing: -.02em; color: {t['ink']}; font-variant-numeric: tabular-nums; line-height: 1.15; margin-top: 4px;}}
-.stat .s {{font-size: .82rem; color: {t['muted']}; margin-top: 4px; line-height: 1.4;}}
+.stat {{background: {t['card']}; border: 1px solid {t['border']}; border-radius: 12px; padding: 16px 18px; box-shadow: 0 1px 3px {t['shadow']}; transition: border-color .18s ease-out;}}
+.stat:hover {{border-color: {t['ok_mid']};}}
+.stat .l {{font-size: .8rem; color: {t['muted']}; font-weight: 500;}}
+.stat .v {{font-size: 1.85rem; font-weight: 600; letter-spacing: -.02em; color: {t['ink']}; font-variant-numeric: tabular-nums; line-height: 1.15; margin-top: 4px;}}
+.stat .s {{font-size: .8rem; color: {t['muted']}; margin-top: 4px; line-height: 1.4;}}
 .stats.compact {{grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin: 12px 0;}}
-.stats.compact .stat {{padding: 12px 14px; border-radius: 12px;}}
-.stats.compact .stat .v {{font-size: 1.35rem;}}
+.stats.compact .stat {{padding: 12px 14px; border-radius: 10px;}}
+.stats.compact .stat .v {{font-size: 1.3rem;}}
 .stat.ok .v {{color: {t['ok']};}} .stat.bad .v {{color: {t['bad']};}} .stat.warn .v {{color: {t['warn']};}}
-.callout {{border: 1px solid {t['border']}; border-left: 4px solid {t['accent']}; background: {t['surface']}; padding: 16px 20px; border-radius: 12px; line-height: 1.55;}}
+.callout {{border: 1px solid {t['border']}; border-left: 4px solid {t['accent']}; background: {t['surface2']}; padding: 14px 18px; border-radius: 10px; line-height: 1.55;}}
 .callout.bad {{border-left-color: {t['bad']}; background: {t['bad_bg']};}} .callout.ok {{border-left-color: {t['ok']}; background: {t['ok_bg']};}}
 .callout.warn {{border-left-color: {t['warn']}; background: {t['warn_bg']};}}
 .tblwrap {{overflow-x: auto; max-width: 100%;}}
-.stat .v, .stat .l, .lens, .callout, .hero h1, .sec h2 {{overflow-wrap: anywhere;}}
+.stat .v, .stat .l, .lens, .callout, .hero h1, .sec h2, .brief h1 {{overflow-wrap: anywhere;}}
 .note {{color: {t['muted']}; font-size: .86rem; line-height: 1.5;}}
 .src {{color: {t['muted']}; font-size: .78rem; border-top: 1px dashed {t['border']}; padding-top: 8px; margin-top: 6px; line-height: 1.5;}}
 .tip {{border-bottom: 1px dotted {t['muted']}; cursor: help; position: relative;}}
 .tip:hover::after, .tip:focus::after {{content: attr(data-tip); position: absolute; left: 0; top: 130%; z-index: 99; width: 280px; white-space: normal;
-  background: {t['ink']}; color: {t['bg']}; padding: 10px 12px; border-radius: 10px; font-size: .8rem; font-weight: 450; line-height: 1.45; box-shadow: 0 8px 24px rgba(0,0,0,.25);}}
-.lens {{border: 1px solid {t['border']}; border-radius: 16px; padding: 18px 20px; background: {t['surface']}; min-height: 360px;}}
+  background: {t['accent']}; color: {t['card']}; padding: 10px 12px; border-radius: 8px; font-size: .8rem; font-weight: 400; line-height: 1.45; box-shadow: 0 8px 24px rgba(0,0,0,.2);}}
+.lens {{border: 1px solid {t['border']}; border-radius: 12px; padding: 18px 20px; background: {t['card']}; min-height: 360px;}}
 .lens h4 {{margin: 6px 0 4px; font-size: 1.1rem;}}
-.lens .rule {{font-size: .86rem; color: {t['muted']}; background: {t['bg']}; border: 1px solid {t['border']}; border-radius: 10px; padding: 8px 10px; margin: 8px 0;}}
+.lens .rule {{font-size: .86rem; color: {t['muted']}; background: {t['surface']}; border: 1px solid {t['border']}; border-radius: 8px; padding: 8px 10px; margin: 8px 0;}}
 .step {{display: flex; gap: 10px; flex-wrap: wrap; margin: 6px 0 22px;}}
-.step .s {{flex: 1 1 140px; border: 1px solid {t['border']}; border-radius: 12px; padding: 10px 14px; background: {t['surface']}; font-size: .86rem;}}
-.step .s b {{display: block; font-size: .7rem; letter-spacing: .1em; text-transform: uppercase; color: {t['muted']};}}
+.step .s {{flex: 1 1 140px; border: 1px solid {t['border']}; border-radius: 10px; padding: 10px 14px; background: {t['card']}; font-size: .86rem;}}
+.step .s b {{display: block; font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: {t['muted']};}}
 .step .s.on {{border-color: {t['accent']}; background: {t['accent_soft']};}} .step .s.done b::after {{content: " complete"; color: {t['ok']};}}
-.page-head {{margin: .2rem 0 1.4rem;}} .page-head h1 {{font-size: 2.3rem; margin: .2rem 0 .3rem; font-weight: 740;}}
-.page-head p {{color: {t['muted']}; font-size: 1.05rem; max-width: 760px; line-height: 1.55; margin: 0;}}
-table.mm {{border-collapse: collapse; width: 100%; font-size: .9rem;}} table.mm th {{text-align: left; color: {t['muted']}; font-weight: 650; font-size: .76rem;
+.flow {{display: flex; gap: 0; flex-wrap: wrap; margin: 8px 0 16px; border: 1px solid {t['border']}; border-radius: 10px; overflow: hidden; background: {t['card']};}}
+.flow .f {{flex: 1 1 130px; padding: 10px 14px; font-size: .82rem; color: {t['muted']}; border-right: 1px solid {t['border']}; display: flex; gap: 8px; align-items: center;}}
+.flow .f:last-child {{border-right: 0;}}
+.flow .f.done {{color: {t['ok']};}} .flow .f.now {{background: {t['accent_soft']}; color: {t['accent']}; font-weight: 600;}}
+.gov {{display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 8px 18px; margin: 8px 0;}}
+.gov div {{display: flex; gap: 8px; align-items: center; font-size: .88rem; color: {t['ink']};}}
+.trio {{display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 10px 0;}}
+.trio .m {{border: 1px solid {t['border']}; border-top: 3px solid var(--c); border-radius: 10px; padding: 10px 12px; background: {t['card']};}}
+.trio .m .l {{font-size: .74rem; color: {t['muted']};}} .trio .m .v {{font-size: 1.3rem; font-weight: 600; font-variant-numeric: tabular-nums; color: {t['ink']};}}
+.ring {{display: flex; gap: 22px; align-items: center; flex-wrap: wrap;}}
+.ring .rows {{flex: 1 1 220px; display: grid; gap: 8px;}}
+.ring .row {{display: flex; justify-content: space-between; font-size: .88rem; border-bottom: 1px solid {t['border']}; padding-bottom: 6px;}}
+.ring .row b {{font-variant-numeric: tabular-nums;}}
+.page-head {{margin: .2rem 0 1.4rem;}} .page-head h1 {{font-size: 2.1rem; margin: .2rem 0 .3rem; font-weight: 600;}}
+.page-head p {{color: {t['muted']}; font-size: 1.02rem; max-width: 760px; line-height: 1.55; margin: 0;}}
+table.mm {{border-collapse: collapse; width: 100%; font-size: .9rem;}} table.mm th {{text-align: left; color: {t['muted']}; font-weight: 600; font-size: .74rem;
   letter-spacing: .05em; text-transform: uppercase; border-bottom: 1px solid {t['border']}; padding: 8px 10px;}}
 table.mm td {{padding: 9px 10px; border-bottom: 1px solid {t['border']}; font-variant-numeric: tabular-nums;}}
-@media (max-width: 760px) {{ .hero {{padding: 28px 22px;}} .sec h2 {{font-size: 1.5rem;}} }}
+@media (max-width: 760px) {{ .hero {{padding: 26px 20px;}} .sec h2 {{font-size: 1.4rem;}} .trio {{grid-template-columns: 1fr;}} .brief .facts {{grid-template-columns: 1fr;}} }}
 </style>
 """
 
@@ -147,7 +184,7 @@ GLOSSARY: Dict[str, Tuple[str, str, str]] = {
     "overclaim": ("Over-claim multiple", "How many times more a platform claims than the test confirms. 1.0x means they agree.", "claimed / proven (return basis) or platform conversions / holdout conversions"),
     "phantom": ("Unearned or claimed organic sales", "Revenue a platform takes credit for that would have happened without the ads.", "platform claimed revenue - proven revenue"),
     "unearned": ("Spend not earned back", "Ad spend that the proven revenue did not repay.", "max(0, spend - proven revenue x margin)"),
-    "trust": ("Trust score", "0 to 100 quality score of the evidence. 75 and above is Verified, 50 to 74 Directional, below 50 Not decision grade.", "weighted result of six statistical and data checks"),
+    "trust": ("Measurement confidence", "0 to 100 quality score of the evidence. 75 and above is Confident, 50 to 74 Leaning, below 50 Not yet reliable.", "weighted result of six statistical and data checks"),
     "ci": ("95% confidence interval", "The range the true value falls in 95 times out of 100. A narrow range means a precise result.", "estimate +/- sampling uncertainty"),
     "strict": ("Strict lift", "Counts only the gap between test markets and a synthetic control, scaled to the full market.", "(actual - counterfactual) / sample fraction"),
     "spec": ("Reported by spec", "Counts all revenue in the test markets as caused by ads. Simple, but it overstates when markets already sell.", "treatment market revenue / spend"),
@@ -203,6 +240,71 @@ def lean_pill(lean: str) -> str:
 
 
 # ------------------------------------------------------------------------------------------- layout components
+LOGO_SVG = ('<svg width="34" height="34" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 58V30" stroke="#18345B" stroke-width="4" stroke-linecap="round" fill="none"/>'
+            '<path d="M32 34C32 20 24 12 10 12c0 14 8 22 22 22z" fill="#159A83"/><path d="M32 28C32 16 39 8 53 8c0 12-8 20-21 20z" fill="#18345B"/>'
+            '<path d="M32 44c0-8 5-13 14-13 0 8-5 13-14 13z" fill="#43B69F"/></svg>')
+CHECK_SVG = '<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><circle cx="7" cy="7" r="6.5" fill="currentColor" opacity=".15"/><path d="M4 7.3 6.1 9.4 10 5" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+OPEN_SVG = '<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><circle cx="7" cy="7" r="5.5" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>'
+
+
+def brand() -> str:
+    return (f'<div class="brand">{LOGO_SVG}<div><div class="wm">MMGE</div><div class="sub">Media Measurement and<br>Governance Engine</div></div></div>')
+
+
+def briefing(kicker: str, headline: str, summary: str, impact_label: str, impact_value: str, impact_sub: str,
+             facts: Sequence[Tuple[str, str]], confidence: str, link: str = "#sources", neutral: bool = False,
+             chips: Sequence[Tuple[str, str]] = ()) -> None:
+    """The executive briefing: the finding, a plain summary, the modeled impact and how sure we are. Inputs are pre-escaped HTML."""
+    facts_html = "".join(f'<div><div class="v">{v}</div><div class="l">{l}</div></div>' for v, l in facts)
+    chip_html = "".join(f'<a class="chip" href="#{h}">{html.escape(l)}</a>' for l, h in chips)
+    st.markdown(
+        f'<div class="brief"><div class="main"><div class="kicker">{kicker}</div><h1>{headline}</h1><div class="lede">{summary}</div>'
+        f'<div class="chips">{chip_html}</div></div>'
+        f'<div class="impact"><div class="kicker">{impact_label}</div><div class="big{" neutral" if neutral else ""}">{impact_value}</div>'
+        f'<div class="note">{impact_sub}</div><div class="facts">{facts_html}</div>'
+        f'<div class="conf"><span style="color:{tokens()["ok"]}">{CHECK_SVG}</span><span>{confidence}</span><a href="{link}">View methodology</a></div></div></div>',
+        unsafe_allow_html=True)
+
+
+def decision_flow(current: int) -> None:
+    """Where this decision stands: the human approval boundary made visible (steps 1 to 5)."""
+    steps = ["Evidence analyzed", "Recommendation prepared", "You review", "You sign", "Handed to the team"]
+    cells = []
+    for i, name in enumerate(steps, 1):
+        cls = "done" if i < current else ("now" if i == current else "")
+        icon = CHECK_SVG if i < current else OPEN_SVG
+        cells.append(f'<div class="f {cls}">{icon}<span>{name}</span></div>')
+    st.markdown(f'<div class="flow">{"".join(cells)}</div>', unsafe_allow_html=True)
+
+
+def governance_status(items: Sequence[Tuple[str, bool]]) -> None:
+    """A short list of checks, each with a check mark when passed or an open circle when it needs review."""
+    t = tokens()
+    cells = "".join(f'<div><span style="color:{t["ok"] if ok else t["warn"]}">{CHECK_SVG if ok else OPEN_SVG}</span>{html.escape(label)}</div>' for label, ok in items)
+    st.markdown(f'<div class="gov">{cells}</div>', unsafe_allow_html=True)
+
+
+def measurement_trio(platform: str, model: str, proven: str, proven_label: str = "Proven by test") -> None:
+    """Platform, attribution model and holdout side by side, in their fixed colours."""
+    t = tokens()
+    cells = "".join(f'<div class="m" style="--c:{c}"><div class="l">{html.escape(l)}</div><div class="v">{html.escape(v)}</div></div>'
+                    for l, v, c in (("Platform reports", platform, t["claimed"]), ("Attribution model", model, t["model"]), (proven_label, proven, t["proven"])))
+    st.markdown(f'<div class="trio">{cells}</div>', unsafe_allow_html=True)
+
+
+def validity_ring(score: float, rows: Sequence[Tuple[str, str]]) -> None:
+    """Measurement validity: a ring with the average measurement score and a short breakdown."""
+    t = tokens()
+    pct = max(0.0, min(score, 100.0)) / 100
+    circ = 2 * 3.14159 * 52
+    svg = (f'<svg width="130" height="130" viewBox="0 0 130 130" role="img" aria-label="Measurement score {score:.0f} out of 100"><circle cx="65" cy="65" r="52" fill="none" stroke="{t["border"]}" stroke-width="12"/>'
+           f'<circle cx="65" cy="65" r="52" fill="none" stroke="{t["ok_mid"]}" stroke-width="12" stroke-linecap="round" stroke-dasharray="{circ * pct:.1f} {circ:.1f}" transform="rotate(-90 65 65)"/>'
+           f'<text x="65" y="64" text-anchor="middle" font-size="26" font-weight="600" fill="{t["ink"]}">{score:.0f}</text>'
+           f'<text x="65" y="84" text-anchor="middle" font-size="11" fill="{t["muted"]}">out of 100</text></svg>')
+    body = "".join(f'<div class="row"><span>{html.escape(l)}</span><b>{html.escape(v)}</b></div>' for l, v in rows)
+    st.markdown(f'<div class="ring">{svg}<div class="rows">{body}</div></div>', unsafe_allow_html=True)
+
+
 def hero(kicker: str, title: str, lede: str, chips: Sequence[Tuple[str, str]] = ()) -> None:
     chip_html = "".join(f'<a class="chip" href="#{h}">{html.escape(l)}</a>' for l, h in chips)
     st.markdown(f'<div class="hero"><div class="kicker">{kicker}</div><h1>{title}</h1><div class="lede">{lede}</div>'

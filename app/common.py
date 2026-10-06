@@ -142,7 +142,7 @@ def page_setup(title: str, icon: str = ":material/analytics:") -> None:
     ui.apply_theme()
     ensure_demo_run()
     with st.sidebar:
-        st.markdown("**Media Measurement and Governance**")
+        st.markdown(ui.brand(), unsafe_allow_html=True)
         for group, items in NAV_GROUPS:
             st.markdown(f'<div class="kicker" style="margin:.9rem 0 .2rem">{group}</div>', unsafe_allow_html=True)
             for page, name, icon in items:

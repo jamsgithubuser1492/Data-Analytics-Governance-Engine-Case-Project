@@ -16,6 +16,8 @@
 > * **Nothing here moves real money.** Signing and hand off are simulated. Nothing connects to an ad platform.
 > * **This is a portfolio project,** not production software and not financial advice.
 
+<sub>The visual design follows the written [MMGE design system](docs/DESIGN_SYSTEM.md): calm navy and green, evidence before recommendation, and a person always in control.</sub>
+
 ## The idea in one minute
 
 Companies spend a lot on online advertising. The ad platforms (the "channels") report how much sales their own ads created, and those reports tend to be generous. A leader who trusts them may keep paying for ads that are not really working.

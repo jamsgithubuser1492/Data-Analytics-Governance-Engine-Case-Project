@@ -1,6 +1,13 @@
 # Changelog
 
-## Portfolio ready (latest)
+## Design system refresh (latest)
+* Written style guide: `docs/DESIGN_SYSTEM.md` (north star, colour meaning, type, layout, components, language, motion, imagery).
+* New navy and green palette on a light page with white cards, Inter with a Georgia headline, subtle borders and shadows, 150 to 250 ms motion, and a branching leaf brand mark.
+* New components: executive briefing with impact panel, measurement validity ring, platform, attribution model and holdout comparison, governance checks, and a decision flow that shows where the human approval sits.
+* Charts use fixed colours for the three methods (blue, purple, green). Decision cards and the Sign-off desk follow the recommendation card layout.
+* Friendlier empty state; Streamlit theme updated for light and dark.
+
+## Portfolio ready
 * Public demo mode (`MMGE_DEMO_MODE`): the verified sample data loads by itself, every visitor gets a private throwaway workspace, uploads and settings are read only, and a plain disclaimer is shown.
 * README rebuilt for non technical reviewers: one minute idea, findings table, screenshots and GIF, case study, honest limits box, how it was built.
 * New guides: page by page guide, glossary, role fit, deploy steps, video script.

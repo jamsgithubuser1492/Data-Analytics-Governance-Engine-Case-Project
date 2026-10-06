@@ -61,7 +61,7 @@ def test_every_perspective_renders_in_both_bases(who: str) -> None:
     assert not at.exception, [e.value for e in at.exception]
     text = every_text(at)
     assert "The advisory council" in text and "Sources and how we know this is right" in text
-    assert "Trust score" in text and "Counting basis" in text
+    assert "Measurement confidence" in text and "Counting basis" in text
     assert not EMOJI.search(text), EMOJI.findall(text)
 
 

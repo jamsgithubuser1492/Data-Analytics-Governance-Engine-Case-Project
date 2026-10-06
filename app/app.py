@@ -69,9 +69,9 @@ def names(rows) -> str:
 if demo_mode():
     ui.callout(DEMO_NOTICE)
 if not runs:
-    ui.hero("Media Measurement and Governance", "Know which channels truly earn back their spend.",
-            "Bring your platform, attribution and holdout test data. In minutes you get a plain-language answer, the evidence behind it, "
-            "and decision cards you can approve with confidence. Nothing runs until the data checks pass.")
+    ui.hero("Media Measurement and Governance Engine", "Let's get your first measurement run started.",
+            "Upload your platform and measurement files. MMGE will reconcile the inputs, check data quality and prepare the first analysis, "
+            "with the evidence behind every answer and a person signing every decision. Nothing runs until the data checks pass.")
     st.write("")
     c1, c2, c3 = st.columns(3)
     with c1:
@@ -188,8 +188,14 @@ HEADLINES = {
                       "The tables below show where each platform's claims and our evidence stand, and how well each campaign is being measured."),
 }
 h1, lede = HEADLINES[persp]
-ui.hero(f"Media Measurement and Governance &nbsp;·&nbsp; {html.escape(run['label'] or 'Run')} &nbsp;·&nbsp; {run['created_at'][:10]}", html.escape(h1), lede,
-        [("The answer", "answer"), ("Advisory council", "council"), ("Evidence", "evidence"), ("Decisions", "decisions"), ("What if", "whatif"), ("Sources", "sources")])
+if realloc:
+    imp = (f"Modeled value of moving {money(realloc['amount'])} of Netflix budget", money(realloc["net"], True), "A scenario at proven returns, not a forecast and not a recommendation",
+           [(money(realloc["amount"]), "Budget moved in the scenario"), (money(realloc["gross"]), "Revenue expected from the new channels"), (money(realloc["lost"]), "Netflix revenue given up")], False)
+else:
+    imp = ("Revenue the ads caused", money(tot["proven_revenue"]), PLAIN_BASIS, [(money(tot["spend"]), "Total media spend"), (xfmt(tot["proven"]), "Proven return per $1"), (f"{BE:.2f}x", "Breakeven")], True)
+ui.briefing(f"Executive briefing &nbsp;·&nbsp; {html.escape(run['label'] or 'Run')} &nbsp;·&nbsp; {run['created_at'][:10]}", html.escape(h1), lede, imp[0], imp[1], imp[2], imp[3],
+            f"Measurement confidence: {n_ready} of {n_all} campaigns are ready for a confident decision.", neutral=imp[4],
+            chips=[("The answer", "answer"), ("Advisory council", "council"), ("Evidence", "evidence"), ("Decisions", "decisions"), ("What if", "whatif"), ("Sources", "sources")])
 st.write("")
 
 # how sure we are: plain confidence strip, then the two counting methods note
@@ -470,6 +476,10 @@ for item in visible:
         st.markdown(f"{ui.pill(sev, sev_kind)} {ui.tier_pill(t)} {ui.pill(item['status'].capitalize(), 'muted')}", unsafe_allow_html=True)
         st.markdown(f"#### {ui.scrub(p['title'])}")
         st.caption(f"Raised for {p['target_persona']} · {p['channel']} · {voice.conf_phrase(t)}")
+        _row = cd[cd["campaign_id"] == p["campaign_id"]]
+        if len(_row):
+            st.markdown(f"**Suggested action:** {html.escape(voice.ACTION_WORDS.get(p['recommended_action'], p['recommended_action']))}")
+            ui.measurement_trio(xfmt(_row.iloc[0]["claimed_roas"]), xfmt(_row.iloc[0]["model_roas"]), xfmt(_row.iloc[0]["proven"]))
         ui.stat_row([dict(label=ui.scrub(name), value=str(val)) for name, val in p["value_add_metrics"].items()], compact=True)
         st.markdown(f"**What this means:** {ui.safe(p['strategic_callout'])}")
         row = cd[cd["campaign_id"] == p["campaign_id"]]
@@ -516,6 +526,8 @@ passed_all, total_all = sum(k["status"] == "PASS" for k in checks_all), sum(k["s
 st.markdown(f"Three independent sources are reconciled: what the platforms report, what the attribution model credits, and what a controlled test in matched markets proves. "
             f"Results come from the controlled test, and we show a 95% likely range around each one. {n_sig} of {n_all} campaigns are statistically significant, meaning the lift is clearly more than zero, "
             f"and the campaigns passed {passed_all} of {total_all} quality checks overall.")
+ui.validity_ring(run_score, [("Test coverage", f"{float(cov_.get('holdout', 1) or 0):.0%}"), ("Statistically significant campaigns", f"{n_sig / max(n_all, 1):.0%}"),
+                             ("Quality checks passed", f"{passed_all / max(total_all, 1):.0%}"), ("Campaigns ready for a decision", f"{n_ready / max(n_all, 1):.0%}")])
 st.write("")
 inputs_info = []
 for tname, label_ in (("RAW_PLATFORM_DATA", "Platform reported performance"), ("RAW_MTA_OUTPUT", "Attribution model output"), ("RAW_HOLDOUT_DATA", "Geo holdout test")):

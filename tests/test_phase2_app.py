@@ -40,7 +40,7 @@ def clean(at: AppTest) -> None:
 def test_1_empty_state_then_demo_run_from_dashboard() -> None:
     at = page("app.py")
     clean(at)
-    assert any("Know which channels truly earn back" in m.value for m in at.markdown)  # empty state is never a dead end
+    assert any("Let's get your first measurement run started" in m.value for m in at.markdown)  # empty state is never a dead end
     next(b for b in at.button if b.label == "Try with demo data").click().run(timeout=T)
     clean(at)
     text = " ".join(m.value for m in at.markdown)

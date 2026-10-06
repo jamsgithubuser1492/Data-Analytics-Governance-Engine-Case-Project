@@ -66,11 +66,17 @@ else:
     sig = signed[item_id]
 
     # ------------------------------------------------------------------------------------------ the packet
+    ui.decision_flow(6 if item["status"] == "executed" else (5 if item["status"] == "approved" else (4 if sig else 3)))
     with st.container(border=True):
         st.markdown(f"{ui.pill('Decision packet', 'info')} {ui.tier_pill(tier)} {ui.pill(item['status'].capitalize(), 'muted')}", unsafe_allow_html=True)
         st.markdown(f"### {ui.scrub(p['title'])}")
         ui.stat_row([dict(label="How sure we are", value=voice.conf_phrase(tier).split(":")[0], sub=g["label"], kind={"VERIFIED": "ok", "DIRECTIONAL": "warn"}.get(tier, "bad")),
                      dict(label="Counting method", value=v.basis), dict(label="Reference", value=item["run_id"][:8])], compact=True)
+        _c = next((c for c in v.report["campaigns"] if c["campaign_id"] == p["campaign_id"]), None)
+        _r = v.cd.set_index("campaign_id") if "campaign_id" in v.cd.columns else v.cd
+        if p["campaign_id"] in _r.index:
+            _x = lambda v: "n/a" if pd.isna(v) else f"{v:.2f}x"  # noqa: E731
+            ui.measurement_trio(_x(_r.loc[p["campaign_id"], "claimed_roas"]), _x(_r.loc[p["campaign_id"], "model_roas"]), _x(_r.loc[p["campaign_id"], "proven"]))
         st.markdown("##### What is being proposed")
         st.markdown(f"**{html.escape(action)}** for {html.escape(p['channel'])}." if p["channel"] != "Multiple" else f"**{html.escape(action)}.**", unsafe_allow_html=True)
         chg = p.get("proposed_changes") or []
@@ -82,6 +88,13 @@ else:
         ui.stat_row([dict(label=ui.scrub(k), value=str(x)) for k, x in p["value_add_metrics"].items()], compact=True)
         st.markdown("##### Why it was raised")
         st.markdown(ui.safe(p["strategic_callout"]))
+        if _c:
+            _names = {1: "Test and comparison markets moved together beforehand", 2: "The test was large enough", 3: "The likely range is narrow enough",
+                      5: "Seasonality is not distorting the result", 6: "Our sources agree", 8: "The result is clear enough to base a decision on"}
+            _items = [(_names[k["check_id"]], k["status"] == "PASS") for k in _c["checks"] if k["check_id"] in _names and k["status"] != "NA"]
+            if _items:
+                st.markdown("##### Governance checks")
+                ui.governance_status(_items)
         st.markdown(f'<div class="note">{ui.esc("Source: this run, counted as " + v.basis + ". Figures show a 95% likely range where one applies.")}</div>', unsafe_allow_html=True)
 
     # ------------------------------------------------------------------------------------------ signed already
