@@ -1,6 +1,6 @@
 # Media Measurement and Governance Engine
 
-**A tool that tells a business leader, in plain language, whether their advertising money is really earning money back, and makes every budget decision signed, explained and reviewable.**
+**The system that enables a business leader how to optimize tactics, strategy, and investments to maximize ROI and effective decision making in a dynamic business environment, using informed data insights, and human-in-the-loop AI-powered data governance, protections and effective informed business decision-making.**
 
 [![CI](https://github.com/jamsgithubuser1492/Data-Analytics-Governance-Engine-Case-Project/actions/workflows/ci.yml/badge.svg)](https://github.com/jamsgithubuser1492/Data-Analytics-Governance-Engine-Case-Project/actions/workflows/ci.yml)
 ![Licence: all rights reserved](https://img.shields.io/badge/licence-all%20rights%20reserved-lightgrey)
