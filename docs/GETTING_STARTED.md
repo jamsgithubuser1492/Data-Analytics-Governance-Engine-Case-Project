@@ -31,6 +31,7 @@ The optional commands `python python/database_manager.py` and `python python/gov
 ## Checks
 ```bash
 python python/verify_data.py   # confirms data/*.csv match the verified originals
+python data/generate_audience_data.py   # optional: rebuilds the synthetic audience example (never touches the verified files)
 pytest                         # full test suite
 ```
 
@@ -40,6 +41,7 @@ pytest                         # full test suite
 | How numbers are produced and what they mean | `docs/METHODOLOGY.md` (also the How it works page) |
 | Privacy and governance | `docs/PRIVACY_AND_GOVERNANCE.md` |
 | Writing rules | `docs/VOICE_GUIDE.md` |
+| Colour, type and components | `docs/DESIGN_SYSTEM.md` |
 | Automation design | `docs/ARCHITECTURE_MCP.md` |
 | Status and roadmap | `docs/NEXT_PHASE.md` |
 | History | `docs/CHANGELOG.md` |

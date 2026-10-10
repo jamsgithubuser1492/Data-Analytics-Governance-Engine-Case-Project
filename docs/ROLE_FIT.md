@@ -10,6 +10,7 @@ This table is meant for recruiters and hiring managers. Each row says what a rol
 | Telling real results from platform claims | The Dashboard headline and the "two ways of counting" note |
 | Understanding controlled tests and uncertainty | [docs/METHODOLOGY.md](METHODOLOGY.md), the confidence cards and quality checks under Sources |
 | Planning the next test | The Research next page |
+| Matching test and control markets fairly, with honest pass or fail checks | The control market match cards and `python/propensity_scm.py` |
 | Finding where ad money buys sales that would have happened anyway | The Audience tiers section on the Dashboard |
 | Explaining measurement to non specialists | [docs/GLOSSARY.md](GLOSSARY.md), the Advisory council |
 
@@ -47,7 +48,7 @@ This table is meant for recruiters and hiring managers. Each row says what a rol
 ## Technical program and delivery roles
 | What the role needs | Where to see it |
 | --- | --- |
-| Quality gates and repeatability | Over 450 automated tests, continuous integration, pinned dependencies |
+| Quality gates and repeatability | Nearly 500 automated tests, continuous integration, pinned dependencies |
 | Shipping and operating | One command Docker setup, a public demo, deploy guide |
 | Communicating status | Changelog and roadmap |
 

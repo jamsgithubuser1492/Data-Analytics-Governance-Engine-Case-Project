@@ -77,10 +77,11 @@ I treated it as a product for busy executives, not a statistics tool.
 2. **Show proof, not opinion.** Results come from a controlled test, shown with a 95% likely range and quality checks, and every number can be traced to its source.
 3. **Keep people in charge.** The system suggests in cautious language ("Consider...") and never acts alone. Each decision is signed with a note, an email and a role.
 4. **Protect the data and the company.** Personal data is blocked or removed, the AI assistant only ever sees summary totals, and the design for connecting AI tools gives the AI no power to approve or spend.
-5. **Write it so a non specialist understands it.** A written voice guide keeps jargon off the screen, and an automated test fails if building notes or jargon leak into the pages.
+5. **Look below the average.** An overall return can hide that a platform is mostly reaching people who would have bought anyway. The audience tier view splits spend by how likely people were to buy without an ad, compares test and control markets, and shows how many dollars of each tier are paying for sales that would have happened anyway. It only judges tiers with enough data, and checks that the control markets are a fair match first.
+6. **Write it so a non specialist understands it.** A written voice guide keeps jargon off the screen, and an automated test fails if building notes or jargon leak into the pages.
 
 ### The result
-A working product with 13 pages, a verified sample dataset, and over 450 automated tests. On the sample data it shows that the platforms' claims and the controlled tests differ by hundreds of thousands of dollars, that most of the money not earned back sits in one channel, and which campaigns are strong enough to act on.
+A working product with 13 pages, a verified sample dataset, an audience tier view that shows which groups of people the money reaches, and nearly 500 automated tests. On the sample data it shows that the platforms' claims and the controlled tests differ by hundreds of thousands of dollars, that most of the money not earned back sits in one channel, and which campaigns are strong enough to act on.
 
 ### Trade-offs I made, and why
 * **Plain language over precision on screen.** Technical names move to a sources section. The cost is that experts must look one level deeper; the gain is that executives actually read it.
@@ -107,6 +108,7 @@ I acted as the product owner and orchestrator. I set the goals, made the decisio
 | If you want | Read |
 | --- | --- |
 | Each page explained in plain words | [docs/PAGE_GUIDE.md](docs/PAGE_GUIDE.md) |
+| How it looks and why (colour, type, components) | [docs/DESIGN_SYSTEM.md](docs/DESIGN_SYSTEM.md) |
 | Which skills this shows, for which roles | [docs/ROLE_FIT.md](docs/ROLE_FIT.md) |
 | Terms explained simply | [docs/GLOSSARY.md](docs/GLOSSARY.md) |
 | How the numbers are produced | [docs/METHODOLOGY.md](docs/METHODOLOGY.md) |
@@ -142,20 +144,32 @@ The sections below are for engineers.
             +--> python/causal_impact_runner.py --> python/governance_checker.py (8 checks, trust score, JSON + markdown)
             +--> python/agent_orchestrator.py  --> app/app.py (Streamlit, persona filtered agent packets)
             +--> outputs/*.csv
+
+ AUDIENCE LAYER (optional, aggregate only; data/audience/ or your own three files)
+   AUDIENCE_DMA_PROPENSITY + AUDIENCE_DMA_SERIES --> python/propensity_scm.py  (control markets matched on sales history and audience mix; match quality)
+   AUDIENCE_TIER_PERFORMANCE ---------------------> python/audience_tiers.py  (tier lift, 95% ranges, sample guard, spend paying for sales that would have happened anyway)
+            |
+            +--> AUDIENCE_TIER_RESULTS, AUDIENCE_MATCH_QUALITY --> guardrail packets (REDUCE_TIER_SPEND) --> Sign-off desk
 ```
 
 ## Repository layout
 
 | Path | Purpose |
 | --- | --- |
-| `data/` | Generator plus the four raw CSVs |
-| `sql/` | Five ANSI SQL files (Snowflake and DuckDB compatible) |
+| `data/` | Generator plus the four verified raw CSVs (checksummed) |
+| `data/audience/`, `data/generate_audience_data.py` | Synthetic audience layer (tier performance, market sales, audience mix) and its seeded generator; kept apart from the verified files |
+| `sql/` | Five ANSI SQL pipeline files plus `audience_tier_views.sql` (staging tables and the tier view, Snowflake and DuckDB compatible) |
 | `python/database_manager.py` | Builds the in-memory DuckDB warehouse and exports `outputs/` |
 | `python/causal_impact_runner.py` | Synthetic control (OLS) estimate: point estimate, 95% CI, relative lift |
 | `python/governance_checker.py`, `report_generator.py` | 8-point audit, JSON and markdown reports |
 | `python/agent_orchestrator.py` | Three persona agents and simulated Snowflake action log |
-| `app/app.py` | Streamlit executive dashboard |
-| `tests/test_pipeline.py` | Pytest suite |
+| `python/propensity_scm.py` | Propensity weighted synthetic control: matches control markets on sales history and audience mix, with computed match quality |
+| `python/audience_tiers.py` | Audience tier incrementality, sample guard, 95% ranges, aggregate data contract and match quality table |
+| `python/signoff.py`, `overrides.py`, `run_store.py` | Signed decisions, the tamper evident log and the run store |
+| `app/app.py` | Streamlit executive dashboard (pages in `app/pages/`) |
+| `app/ui.py`, `charts.py` | The design system and chart builders (see `docs/DESIGN_SYSTEM.md`) |
+| `scripts/make_screenshots.py` | Rebuilds the README screenshots and GIF from the demo |
+| `tests/` | The automated test suite (about 500 tests) |
 
 ## Run it
 
@@ -175,6 +189,7 @@ python python/verify_data.py               # confirms data/*.csv still match the
 pytest                                     # the full test suite
 python python/database_manager.py          # standalone SQL pipeline -> outputs/*.csv (reference outputs)
 python python/governance_checker.py        # standalone causal impact + 8 point audit -> outputs/governance_audit_report.{json,md}
+python data/generate_audience_data.py      # OPTIONAL: rebuilds the synthetic audience example in data/audience/ (same seed, same files)
 python data/generate_synthetic_data.py     # OPTIONAL: new synthetic data in data/generated/ (never overwrites the verified files)
 ```
 

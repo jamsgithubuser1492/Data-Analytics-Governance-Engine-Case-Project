@@ -93,5 +93,6 @@ Natural, bright, understated and professional: a desk, notebook, coffee, plant, 
 | Chart colours and layout | `app/charts.py` |
 | Sidebar, brand mark | `app/common.py` |
 | Executive briefing and confidence | `app/app.py` |
+| Cannibalization meter, control match card | `app/ui.py`; the tier charts are in `app/charts.py` |
 | Recommendation, governance status, decision flow | `app/pages/12_Signoff.py` and the decision cards in `app/app.py` |
 | Logo file | `docs/img/logo.svg` |
