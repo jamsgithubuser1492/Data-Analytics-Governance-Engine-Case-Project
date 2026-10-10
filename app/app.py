@@ -22,6 +22,7 @@ import pandas as pd  # noqa: E402
 import streamlit as st  # noqa: E402
 
 import charts  # noqa: E402
+import audience_tiers as aud  # noqa: E402
 import council as cn  # noqa: E402
 import dashdata as dd  # noqa: E402
 import ui  # noqa: E402
@@ -102,7 +103,7 @@ OPTIONS = {OLD_BASIS[HEADLINE_SPEC]: HEADLINE_SPEC, OLD_BASIS[HEADLINE_STRICT]: 
 current = next(k for k, v in OPTIONS.items() if v == settings.headline_metric)
 choice = st.sidebar.radio("How to count the return", list(OPTIONS), index=list(OPTIONS).index(current))
 if OPTIONS[choice] != settings.headline_metric:
-    inputs = SourceTables(*(store.load_table(ws, run_id, f"INPUT_{n}") for n in ("RAW_PLATFORM_DATA", "RAW_MTA_OUTPUT", "RAW_HOLDOUT_DATA", "BUSINESS_BENCHMARKS")))
+    inputs = SourceTables.from_store(lambda n: store.load_table(ws, run_id, n))
     new_settings = PolicySettings(**{**settings.to_dict(), "headline_metric": OPTIONS[choice]})
     new_id = runner.submit(ws, inputs, new_settings, run["declarations"], (run["label"] or "Run") + " (view change)")
     wait_for_run(ws, new_id, "Re-running under the new counting basis...")
@@ -195,7 +196,7 @@ else:
     imp = ("Revenue the ads caused", money(tot["proven_revenue"]), PLAIN_BASIS, [(money(tot["spend"]), "Total media spend"), (xfmt(tot["proven"]), "Proven return per $1"), (f"{BE:.2f}x", "Breakeven")], True)
 ui.briefing(f"Executive briefing &nbsp;·&nbsp; {html.escape(run['label'] or 'Run')} &nbsp;·&nbsp; {run['created_at'][:10]}", html.escape(h1), lede, imp[0], imp[1], imp[2], imp[3],
             f"Measurement confidence: {n_ready} of {n_all} campaigns are ready for a confident decision.", neutral=imp[4],
-            chips=[("The answer", "answer"), ("Advisory council", "council"), ("Evidence", "evidence"), ("Decisions", "decisions"), ("What if", "whatif"), ("Sources", "sources")])
+            chips=[("The answer", "answer"), ("Audience tiers", "audience"), ("Advisory council", "council"), ("Evidence", "evidence"), ("Decisions", "decisions"), ("What if", "whatif"), ("Sources", "sources")])
 st.write("")
 
 # how sure we are: plain confidence strip, then the two counting methods note
@@ -394,8 +395,100 @@ else:  # Platform Lead
         v = float(cov.get(key, 0) or 0)
         col.progress(min(max(v, 0.0), 1.0), text=f"{label}: {v:.0%} of campaigns")
 
-# ------------------------------------------------------------------------------------- 02 advisory council
-ui.section("02", "The advisory council", "Four seasoned advisors look at the same results through their own priorities. Their suggestions are ideas to weigh, and the decision stays with you.", "council")
+# ------------------------------------------------------------------------------------- 02 audience tiers
+ui.section("02", "Audience tiers: who the money actually reaches", "Ad platforms tend to credit themselves for people who were already going to buy. This view separates the sales ads caused from the sales that would have happened anyway, tier by tier.", "audience")
+try:
+    tiers_tab = store.load_table(ws, run_id, "AUDIENCE_TIER_RESULTS")
+    match_tab = store.load_table(ws, run_id, "AUDIENCE_MATCH_QUALITY")
+except Exception:
+    tiers_tab, match_tab = None, None
+if tiers_tab is None or tiers_tab.empty:
+    ui.callout("Audience tier data has not been added to this run. Add the three aggregate audience files on the Upload data page, or use the demo data, to see which audiences are paying for sales that would have happened anyway.")
+else:
+    asum = aud.summary(tiers_tab, settings)
+    scen = aud.shift_scenario(tiers_tab)
+    crit = settings.cannibalization_critical_threshold
+    n_crit = asum["critical_tiers"]
+    if persp == "CMO / Growth":
+        if scen:
+            lead = (f"<b>{money(scen['net'], True)} of revenue is the modeled value of moving {money(scen['amount'])} from {html.escape(scen['from']['channel'])}, {html.escape(scen['from']['tier_name'])} "
+                    f"to {html.escape(scen['to']['channel'])}, {html.escape(scen['to']['tier_name'])}.</b> This is a scenario at today's tier returns, not a forecast; returns usually fall as a tier takes more money.")
+        else:
+            lead = "<b>No audience tier yet shows a clearly stronger caused return than the tiers it could be funded from.</b> Consider testing a broader audience on a small budget."
+    elif persp == "Agency Director":
+        lead = (f"<b>Platforms credit {money(asum['reported_revenue'])} across the audience tiers we can judge; ads caused {money(asum['strict_revenue'])}.</b> "
+                f"The {money(asum['reported_revenue'] - asum['strict_revenue'])} difference is where client and platform reports will disagree.")
+    elif persp == "Platform Lead":
+        n_un = int((tiers_tab["evidence_tier"] == "NOT_DECISION_GRADE").sum())
+        n_fail = int((~match_tab["passed"]).sum()) if match_tab is not None and len(match_tab) else 0
+        lead = f"<b>{n_un} audience tier{'s' if n_un != 1 else ''} cannot be judged yet and {n_fail} control market group{'s' if n_fail != 1 else ''} need review.</b> Tiers with too few people never raise a recommendation."
+    else:
+        lead = (f"<b>{money(asum['critical_spend_for_organic'])} of spend in {n_crit} audience tier{'s' if n_crit != 1 else ''} is paying for sales that would have happened anyway.</b> "
+                f"Across every tier we can judge, {asum['cannibalization_pct']:.0f}% of the revenue platforms credit would have happened without the ads.") if n_crit else (
+                f"<b>No audience tier has crossed the {crit:g}% line for sales that would have happened anyway.</b> Across every tier we can judge, {asum['cannibalization_pct']:.0f}% of credited revenue would have happened without the ads.")
+    ui.callout(lead, "warn" if n_crit else "ok")
+    st.write("")
+    n_review = int(tiers_tab["status"].isin(["Critical", "Review"]).sum())
+    ui.stat_row([dict(label="Spend paying for sales that would have happened anyway", value=money(asum["spend_for_organic_sales"]), sub=f"Of {money(asum['judged_spend'])} of judged spend", kind="warn" if asum["spend_for_organic_sales"] else "ok"),
+                 dict(label="Audience tiers judged", value=f"{asum['judged']} of {asum['tiers']}", sub="Tiers with enough people and conversions to judge"),
+                 dict(label="Tiers to review", value=str(n_review), sub=f"At or above {settings.cannibalization_warning_threshold:g}% not caused by ads", kind="warn" if n_review else "ok"),
+                 dict(label="Credited sales that ads did not cause", value=f"{asum['cannibalization_pct']:.0f}%", sub="Share of platform credited revenue, judged tiers")])
+    st.write("")
+    inbox_by_key = {i["packet"]["campaign_id"]: i for i in inbox if i["packet"].get("audience_tier")}
+    worst = tiers_tab[(tiers_tab["status"] == "Critical") & (tiers_tab["evidence_tier"] != "NOT_DECISION_GRADE")].sort_values("spend_for_organic_sales", ascending=False).head(3)
+    if len(worst):
+        st.markdown("##### The tiers paying most for sales that would have happened anyway")
+    for _, tr in worst.iterrows():
+        key_ = f"{tr['campaign_id']}|{tr['tier_name']}"
+        ui.cannibalization_meter(html.escape(f"{tr['channel']}, {tr['campaign_id']}, {tr['tier_name']}"), float(tr["cannibalization_pct"]), float(tr["spend_for_organic_sales"]), float(tr["spend_for_net_new_sales"]),
+                                 note=html.escape(f"Platform credit {xfmt(tr['reported_roas'])} per $1; caused by ads {xfmt(tr['strict_iroas'])} (95% range {xfmt(tr['strict_iroas_low'])} to {xfmt(tr['strict_iroas_high'])}). {voice.conf_phrase(tr['evidence_tier'])}."),
+                                 range_text=f"likely between {(1 - tr['lift_high']) * 100:.0f}% and {(1 - tr['lift_low']) * 100:.0f}%")
+        it = inbox_by_key.get(key_)
+        if it and it["status"] in ("new", "reviewed", "approved"):
+            if st.button("Review and sign this decision", key=f"aud_{it['id']}", type="secondary"):
+                st.session_state["signoff_item"] = it["id"]
+                st.switch_page("pages/12_Signoff.py")
+    roll = charts.tier_rollup(tiers_tab)
+    if len(roll):
+        be_label = f"Breakeven {BE:.2f}x"
+        f1 = charts.tier_chart(roll, BE, be_label, charts.tier_headline(roll, BE))
+        t1 = roll[["tier_name", "spend", "reported_roas", "strict_iroas", "lo", "hi", "cannibalization_pct"]].copy()
+        t1.columns = ["Audience tier", "Spend", "Credited by the platform (per $1)", "Caused by the ads (per $1)", "Caused, low (95%)", "Caused, high (95%)", "Credited sales not caused by ads (%)"]
+        ui.chart_card("tiers", f1.layout.meta["headline"], f1.layout.meta["subtitle"], f1, t1.round(3), "Strict lift", "Source: audience tier performance for the test period; tiers with too little data are left out.")
+        f2 = charts.tier_split_chart(roll, charts.tier_split_headline(roll))
+        t2 = roll[["tier_name", "spend", "organic_spend", "net_new_spend"]].copy()
+        t2.columns = ["Audience tier", "Spend", "Paying for sales that would have happened anyway", "Driving new sales"]
+        ui.chart_card("tiersplit", f2.layout.meta["headline"], f2.layout.meta["subtitle"], f2, t2.round(0), "Strict lift", "Spend split in proportion to the share of credited sales the control comparison says ads did not cause.")
+    if match_tab is not None and len(match_tab):
+        st.markdown("##### How well the control markets match the test markets")
+        st.caption("A comparison is only as good as the markets it is made against. Each test group is matched to control markets on its sales history and on the mix of people in them.")
+        mcols = st.columns(2)
+        for i_, (_, mr) in enumerate(match_tab.iterrows()):
+            with mcols[i_ % 2]:
+                tail = (" " + mr["reasons"][0].upper() + mr["reasons"][1:] + ".") if mr["reasons"] else ""
+                ui.match_card(mr["channel"], bool(mr["passed"]),
+                              [("Sales history explained", f"{mr['r2']:.0%}", f"standard {settings.match_min_r2:.0%}"), ("Audience mix overlap", f"{mr['overlap']:.1%}", f"standard {settings.match_min_overlap:.0%}"),
+                               ("Pre-period error", f"{mr['relative_rmspe']:.1%} of sales", f"limit {settings.match_max_rmspe_pct:g}%")],
+                              f"Control markets used: {mr['top_markets']}. Matching on audience mix as well as sales history moved the overlap from {mr['baseline_overlap']:.1%} to {mr['overlap']:.1%}." + tail)
+    st.markdown("##### What each advisor sees in the audience tiers")
+    ac = st.columns(2)
+    for i_, rd_ in enumerate(cn.tier_readings(tiers_tab, match_tab if match_tab is not None else pd.DataFrame(), asum, scen, crit)):
+        pr_ = cn.PERSONA_BY_ID[rd_["persona"]]
+        with ac[i_ % 2], st.container(border=True):
+            st.markdown(f"**{pr_.name}**, {pr_.role}")
+            st.markdown(ui.esc(rd_["headline"]))
+            st.caption(ui.esc(rd_["suggestion"]))
+    with st.expander("Every audience tier in detail"):
+        det = tiers_tab[["channel", "campaign_id", "tier_name", "spend", "reported_roas", "strict_iroas", "strict_iroas_low", "strict_iroas_high", "cannibalization_pct",
+                         "spend_for_organic_sales", "evidence_tier", "status", "action"]].copy()
+        det["evidence_tier"] = det["evidence_tier"].map(lambda v: ui.TIER_LABEL.get(v, (v,))[0])
+        det.columns = ["Channel", "Campaign", "Audience tier", "Spend", "Credited per $1", "Caused per $1", "Caused, low", "Caused, high", "Credited sales not caused (%)",
+                       "Spend paying for sales that would have happened anyway", "Confidence", "Status", "Suggested next step"]
+        st.dataframe(det.round(2), hide_index=True, width="stretch")
+    st.caption("Counting method for this section: only the extra conversions the ads caused (strict lift). Ranges are 95% ranges. Source: audience tier performance and control market data for this run.")
+
+# ------------------------------------------------------------------------------------- 03 advisory council
+ui.section("03", "The advisory council", "Four seasoned advisors look at the same results through their own priorities. Their suggestions are ideas to weigh, and the decision stays with you.", "council")
 defs = {d["id"]: d for d in (store.get_agent_definitions(ws) or default_definitions())}
 facts = build_facts(recon, report, is_strict)
 council = cn.convene(ch, cd, tot, BE, is_strict, float(((run["validation"] or {}).get("coverage") or {}).get("holdout", 1) or 0))
@@ -440,7 +533,7 @@ for i, rd in enumerate(council.readings):
 safe_page_link("pages/4_Agents.py", "Open the full advisory council and set your guardrails", ":material/groups:")
 
 # -------------------------------------------------------------------------------------------- 03 evidence
-ui.section("03", "The evidence", "The charts behind the answer. Each one can be switched to a table you can copy into a spreadsheet.", "evidence")
+ui.section("04", "The evidence", "The charts behind the answer. Each one can be switched to a table you can copy into a spreadsheet.", "evidence")
 for key in ("returns", "overclaim", "trend", "waterfall", "portfolio"):
     if key not in shown:
         card(key)
@@ -459,7 +552,7 @@ with st.expander("Benchmark context for these charts"):
         st.caption("Benchmark registry unavailable for this view.")
 
 # ------------------------------------------------------------------------------------------ 04 decisions
-ui.section("04", "Decisions for your sign-off", "The system flags what deserves attention; people decide. Every decision, whether you approve, change or reject it, is signed by you on the Sign-off desk and kept in a permanent record.", "decisions")
+ui.section("05", "Decisions for your sign-off", "The system flags what deserves attention; people decide. Every decision, whether you approve, change or reject it, is signed by you on the Sign-off desk and kept in a permanent record.", "decisions")
 visible = [i for i in inbox if not personas or i["packet"]["target_persona"] in personas]
 if is_strict:
     st.caption("Dollar amounts here cover the test period only.")
@@ -505,7 +598,7 @@ for item in visible:
             st.error(str(exc))
 
 # ------------------------------------------------------------------------------------------- 05 what if
-ui.section("05", "Scenario: moving the Netflix budget", "An illustration at proven returns. It is a scenario, not a forecast and not a recommendation.", "whatif")
+ui.section("06", "Scenario: moving the Netflix budget", "An illustration at proven returns. It is a scenario, not a forecast and not a recommendation.", "whatif")
 if base_realloc is None:
     ui.callout("The what-if needs Netflix, Google and Meta Ads data with holdout coverage. Upload data covering those channels to use it.")
 else:
@@ -520,7 +613,7 @@ else:
     st.caption(f"Counting basis: {PLAIN_BASIS}. Assumes returns hold at the new spend level. Real returns usually fall as a channel saturates, so consider confirming with a scaled test before moving the full amount.")
 
 # ------------------------------------------------------------------------------ 06 sources and confidence
-ui.section("06", "Sources and how we know this is right", "Where every number comes from, how sure we are, and the checks behind each result.", "sources")
+ui.section("07", "Sources and how we know this is right", "Where every number comes from, how sure we are, and the checks behind each result.", "sources")
 checks_all = [k for c in report["campaigns"] for k in c["checks"]]
 passed_all, total_all = sum(k["status"] == "PASS" for k in checks_all), sum(k["status"] != "NA" for k in checks_all)
 st.markdown(f"Three independent sources are reconciled: what the platforms report, what the attribution model credits, and what a controlled test in matched markets proves. "

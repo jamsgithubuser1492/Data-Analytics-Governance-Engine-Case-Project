@@ -161,6 +161,15 @@ h5 {{font-weight: 600; font-size: 1.08rem; margin-bottom: .1rem;}}
 .ring .rows {{flex: 1 1 220px; display: grid; gap: 8px;}}
 .ring .row {{display: flex; justify-content: space-between; font-size: .88rem; border-bottom: 1px solid {t['border']}; padding-bottom: 6px;}}
 .ring .row b {{font-variant-numeric: tabular-nums;}}
+.meter {{border: 1px solid {t['border']}; border-radius: 12px; padding: 14px 18px; background: {t['card']}; box-shadow: 0 1px 3px {t['shadow']}; margin-bottom: 10px;}}
+.meter .mt {{font-weight: 600; margin-bottom: 8px;}}
+.meter .mb {{height: 14px; background: {t['surface2']}; border-radius: 999px; overflow: hidden; border: 1px solid {t['border']};}}
+.meter .mb span {{display: block; height: 100%; border-radius: 999px; transition: width .25s ease-out;}}
+.meter .mn {{margin-top: 8px; font-size: .92rem;}}
+.meter .ml {{display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 4px 18px; font-size: .86rem; color: {t['muted']}; margin-top: 6px;}}
+.meter .ml b {{color: {t['ink']};}}
+.matchcard {{border: 1px solid {t['border']}; border-radius: 12px; padding: 14px 18px; background: {t['card']}; box-shadow: 0 1px 3px {t['shadow']};}}
+.matchcard .mt {{font-weight: 600; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 8px;}}
 .page-head {{margin: .2rem 0 1.4rem;}} .page-head h1 {{font-size: 2.1rem; margin: .2rem 0 .3rem; font-weight: 600;}}
 .page-head p {{color: {t['muted']}; font-size: 1.02rem; max-width: 760px; line-height: 1.55; margin: 0;}}
 table.mm {{border-collapse: collapse; width: 100%; font-size: .9rem;}} table.mm th {{text-align: left; color: {t['muted']}; font-weight: 600; font-size: .74rem;
@@ -266,6 +275,29 @@ def briefing(kicker: str, headline: str, summary: str, impact_label: str, impact
         unsafe_allow_html=True)
 
 
+def cannibalization_meter(title: str, pct: float, organic_spend: float, net_new_spend: float, note: str = "", range_text: str = "") -> None:
+    """A bar showing how much of a tier's spend pays for sales that would have happened anyway. Inputs other than numbers are pre-escaped."""
+    t = tokens()
+    pct = max(0.0, min(pct, 100.0))
+    colour = t["bad"] if pct >= 75 else (t["warn"] if pct >= 50 else t["ok"])
+    st.markdown(
+        f'<div class="meter"><div class="mt">{title}</div>'
+        f'<div class="mb" role="img" aria-label="{pct:.0f} percent of spend pays for sales that would have happened anyway"><span style="width:{pct:.1f}%;background:{colour}"></span></div>'
+        f'<div class="mn"><b style="color:{colour}">{pct:.1f}%</b> of credited sales would have happened anyway{(" (" + range_text + ")") if range_text else ""}</div>'
+        f'<div class="ml"><div><b>${organic_spend:,.0f}</b> of spend is paying for sales that would have happened anyway</div>'
+        f'<div><b>${net_new_spend:,.0f}</b> of spend is driving new sales</div></div>'
+        + (f'<div class="note">{note}</div>' if note else "") + "</div>", unsafe_allow_html=True)
+
+
+def match_card(channel: str, passed: bool, rows: Sequence[Tuple[str, str, str]], summary: str) -> None:
+    """How well the control markets match the test markets: status, three measures against their standards, and a plain sentence."""
+    t = tokens()
+    body = "".join(f'<div class="row"><span>{html.escape(l)}</span><span><b>{html.escape(v)}</b> <span class="note">{html.escape(s)}</span></span></div>' for l, v, s in rows)
+    badge = pill("Match passed" if passed else "Review required", "ok" if passed else "warn")
+    st.markdown(f'<div class="matchcard"><div class="mt">{html.escape(channel)} {badge}</div><div class="ring"><div class="rows">{body}</div></div>'
+                f'<div class="note" style="margin-top:8px">{html.escape(summary)}</div></div>', unsafe_allow_html=True)
+
+
 def decision_flow(current: int) -> None:
     """Where this decision stands: the human approval boundary made visible (steps 1 to 5)."""
     steps = ["Evidence analyzed", "Recommendation prepared", "You review", "You sign", "Handed to the team"]
@@ -352,8 +384,8 @@ def chart_card(key: str, headline: str, subtitle: str, fig, table: pd.DataFrame,
     with st.container(border=True):
         left, right = st.columns([5, 2])
         with left:
-            st.markdown(f"##### {scrub(headline)}")
-            st.caption(subtitle)
+            st.markdown(f"##### {safe(headline)}")
+            st.caption(esc(subtitle))
         with right:
             view = st.segmented_control("View", ["Chart", "Table"], default="Chart", key=f"view_{key}", label_visibility="collapsed") or "Chart"
             st.markdown(f'<div style="text-align:right">{pill(basis, "info")}</div>', unsafe_allow_html=True)

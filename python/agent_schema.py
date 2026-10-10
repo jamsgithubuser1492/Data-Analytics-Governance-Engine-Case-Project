@@ -28,6 +28,7 @@ ACTIONS: Dict[str, Tuple[str, bool]] = {
     "HOLD_SCALE_REQUESTS": ("Pause scale requests", False),
     "RERUN_HOLDOUT": ("Rerun or extend the holdout", False),
     "REVIEW_MEASUREMENT": ("Review the measurement setup", False),
+    "REDUCE_TIER_SPEND": ("Reduce audience tier spend", True),
 }
 OPPOSING_MONEY = {"REDUCE_BUDGET_50%": "SCALE_BUDGET_25%", "SCALE_BUDGET_25%": "REDUCE_BUDGET_50%"}
 
@@ -38,10 +39,10 @@ NUMERIC_BOUNDS: Dict[str, Tuple[float, float]] = {
     "total_platform_conversions": (0, 1e9), "total_mta_conversions": (0, 1e9), "total_holdout_conversions": (0, 1e9),
     "total_platform_revenue": (0, 1e10), "total_mta_revenue": (0, 1e10), "total_holdout_revenue": (-1e10, 1e10),
     "strict_incremental_revenue": (-1e10, 1e10), "has_holdout_coverage": (0, 1), "has_mta_coverage": (0, 1),
-    "divergence_warning": (0, 1), "margin": (0, 1), "breakeven_iroas": (0, 1000), "profit_per_dollar": (-1000, 1000),
+    "divergence_warning": (0, 1), "cannibalization_pct": (0, 100), "cannibalized_revenue": (0, 1e10), "margin": (0, 1), "breakeven_iroas": (0, 1000), "profit_per_dollar": (-1000, 1000),
 }
 NUMERIC_METRICS = sorted(NUMERIC_BOUNDS)
-STRING_METRICS = ["tier", "channel", "campaign_id"]
+STRING_METRICS = ["tier", "channel", "campaign_id", "tier_name"]
 ALL_NAMES = NUMERIC_METRICS + STRING_METRICS
 CONDITION_METRICS = NUMERIC_METRICS + ["tier"]
 NUMERIC_OPS = [">", ">=", "<", "<=", "==", "between"]

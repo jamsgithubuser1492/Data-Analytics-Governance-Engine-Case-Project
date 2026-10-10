@@ -10,6 +10,7 @@ This table is meant for recruiters and hiring managers. Each row says what a rol
 | Telling real results from platform claims | The Dashboard headline and the "two ways of counting" note |
 | Understanding controlled tests and uncertainty | [docs/METHODOLOGY.md](METHODOLOGY.md), the confidence cards and quality checks under Sources |
 | Planning the next test | The Research next page |
+| Finding where ad money buys sales that would have happened anyway | The Audience tiers section on the Dashboard |
 | Explaining measurement to non specialists | [docs/GLOSSARY.md](GLOSSARY.md), the Advisory council |
 
 ## Analytics governance, risk and data quality roles

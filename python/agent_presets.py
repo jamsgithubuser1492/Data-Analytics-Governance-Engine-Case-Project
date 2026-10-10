@@ -50,7 +50,24 @@ PRESETS: List[Dict[str, Any]] = [
         "callout": ("{channel} earns a strong return, and the platform's own numbers line up with our tests. Given that, perhaps we should think about raising this budget by a quarter, "
                     "which would add about {m3} of revenue if today's return holds."),
     },
+    {
+        "id": "AUDIENCE_CANNIBALIZATION_AGENT", "name": "Platform credit for sales that would happen anyway", "persona": PERSONA_CFO, "severity": "CRITICAL",
+        "description": "An audience tier is credited with revenue that a control comparison shows would have happened without the ads.",
+        "priority": 15, "action": "REDUCE_TIER_SPEND", "requires_min_tier": "DIRECTIONAL", "min_spend": 10000.0,
+        "trigger": {"all": [{"metric": "cannibalization_pct", "op": ">=", "value": 75.0}]},
+        "value_add": [
+            {"label": "Spend paying for sales that would have happened anyway", "format": "usd", "expression": "total_spend * cannibalization_pct / 100"},
+            {"label": "Share of credited sales that ads did not cause", "format": "pct1", "expression": "cannibalization_pct"},
+            {"label": "Revenue credited here that would have happened anyway", "format": "usd", "expression": "cannibalized_revenue"},
+            {"label": "Return caused by ads per $1", "format": "x2", "expression": "strict_iroas"},
+        ],
+        "title": "{channel}, {tier_name}: {m1} of spend is paying for sales that would have happened anyway",
+        "callout": ("{channel} credits {tier_name} with a {reported_roas:.2f}x return, but our control comparison shows only {strict_iroas:.2f}x was caused by the ads. "
+                    "Given that {cannibalization_pct:.1f}% of the revenue credited here would have happened anyway, perhaps we should think about reducing spend on this audience tier "
+                    "and testing the savings on a broader audience."),
+    },
 ]
+AUDIENCE_RULE_IDS = ["AUDIENCE_CANNIBALIZATION_AGENT"]
 
 
 def preset_ids() -> List[str]:

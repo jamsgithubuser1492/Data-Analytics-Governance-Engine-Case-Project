@@ -77,6 +77,7 @@ class SourceTables:
     mta: pd.DataFrame
     holdout: pd.DataFrame
     benchmarks: pd.DataFrame
+    audience: Optional[Dict[str, pd.DataFrame]] = None  # optional aggregate audience layer (see audience_tiers.py)
 
     def as_dict(self) -> Dict[str, pd.DataFrame]:
         return dict(zip(TABLE_NAMES, (self.platform, self.mta, self.holdout, self.benchmarks)))
@@ -87,12 +88,30 @@ class SourceTables:
         for name, df in self.as_dict().items():
             canon = df.reindex(sorted(df.columns), axis=1).sort_values(sorted(df.columns)).reset_index(drop=True)
             out[name] = hashlib.sha256(canon.to_csv(index=False).encode()).hexdigest()[:16]
+        for name, df in sorted((self.audience or {}).items()):
+            canon = df.reindex(sorted(df.columns), axis=1).sort_values(sorted(df.columns)).reset_index(drop=True)
+            out[name] = hashlib.sha256(canon.to_csv(index=False).encode()).hexdigest()[:16]
         return out
 
     @classmethod
-    def from_directory(cls, directory: Path = DATA_DIR) -> "SourceTables":
+    def from_directory(cls, directory: Path = DATA_DIR, with_audience: bool = False) -> "SourceTables":
         d = Path(directory)
-        return cls(*(pd.read_csv(d / f"{n}.csv") for n in TABLE_NAMES))
+        t = cls(*(pd.read_csv(d / f"{n}.csv") for n in TABLE_NAMES))
+        if with_audience:
+            from audience_tiers import load_demo_audience
+            t.audience = load_demo_audience()
+        return t
+
+    @classmethod
+    def from_store(cls, load: Any) -> "SourceTables":
+        """Rebuild the inputs of a stored run from a loader ``load(table_name)`` (used to re-run under another policy)."""
+        t = cls(*(load(f"INPUT_{n}") for n in TABLE_NAMES))
+        from schemas import AUDIENCE_TABLES
+        try:
+            t.audience = {n: load(f"INPUT_{n}") for n in AUDIENCE_TABLES}
+        except Exception:
+            t.audience = None
+        return t
 
 
 @dataclass
@@ -105,6 +124,41 @@ class RunResult:
     settings: PolicySettings
     declarations: Dict[str, Any] = field(default_factory=dict)
     code_version: str = ""
+
+
+def audience_packets(definitions: List[Dict[str, Any]], aud: Dict[str, pd.DataFrame], settings: PolicySettings,
+                     previously_active: Optional[Set[Tuple[str, str]]] = None) -> List[Dict[str, Any]]:
+    """Guardrail packets for audience tiers. Thresholds come from the policy settings so Settings is the single source of truth."""
+    import copy
+    from agent_presets import AUDIENCE_RULE_IDS
+    from audience_tiers import tier_facts
+    defs = []
+    for d in definitions:
+        if d["id"] in AUDIENCE_RULE_IDS:
+            d = copy.deepcopy(d)
+            d["min_spend"] = settings.tier_min_spend
+            for c in d["trigger"]["all"]:
+                if c["metric"] == "cannibalization_pct":
+                    c["value"] = settings.cannibalization_critical_threshold
+            defs.append(d)
+    table = aud["AUDIENCE_TIER_RESULTS"]
+    if not defs or table.empty:
+        return []
+    out = evaluate_agents(defs, tier_facts(table), previously_active)
+    keyed = table.assign(_key=table["campaign_id"] + "|" + table["tier_name"]).set_index("_key")
+    for p in out:
+        r = keyed.loc[p["campaign_id"]]
+        match = aud["AUDIENCE_MATCH_QUALITY"]
+        mrow = match[match["channel"] == r["channel"]]
+        p["tier_name"], p["audience_tier"], p["campaign_ref"] = r["tier_name"], True, r["campaign_id"]
+        p["audience_checks"] = [
+            ["Enough people and conversions were measured in both the test and control markets", bool(r["sample_ok"])],
+            ["The share caused by ads is known within a narrow range", bool(r["range_width"] <= settings.tier_max_range_width)],
+            ["The control markets match the test markets on sales history and audience mix", bool(len(mrow) and mrow.iloc[0]["passed"])],
+            ["Spend is large enough to be worth acting on", bool(r["spend"] >= settings.tier_min_spend)]]
+        p["audience_range"] = [float(r["strict_iroas_low"]), float(r["strict_iroas_high"])]
+        p["reported_roas"], p["strict_iroas"] = float(r["reported_roas"]), float(r["strict_iroas"])
+    return out
 
 
 def run_key(inputs: SourceTables, settings: PolicySettings, declarations: Optional[Dict[str, Any]] = None,
@@ -145,6 +199,18 @@ def run_pipeline(inputs: SourceTables, settings: Optional[PolicySettings] = None
         definitions = agent_definitions if agent_definitions is not None else default_definitions()
         facts = build_facts(tables["ANALYTICS_MEASUREMENT_RECONCILIATION"], audit, settings.headline_metric == HEADLINE_STRICT)
         packets = evaluate_agents(definitions, facts, previously_active)
+        if inputs.audience:
+            from audience_tiers import compute, summary, tier_facts, validate_audience
+            arep = validate_audience(inputs.audience, settings)
+            if not arep.ok:
+                raise ValidationBlocked(arep)
+            report.issues.extend(arep.issues)
+            econ = audit.get("economics") or {}
+            aud = compute(inputs.audience, settings, econ.get("breakeven_iroas") or 1.0)
+            tables.update(aud)
+            tables.update({f"INPUT_{k}": v for k, v in inputs.audience.items()})
+            audit["audience"] = {k: (float(v) if isinstance(v, (int, float)) else v) for k, v in summary(aud["AUDIENCE_TIER_RESULTS"], settings).items() if k != "top"}
+            packets = packets + audience_packets(definitions, aud, settings, previously_active)
     finally:
         mgr.close()
     audit["agent_context"] = {"fingerprint": fingerprint(definitions),

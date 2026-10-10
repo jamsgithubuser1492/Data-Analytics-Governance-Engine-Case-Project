@@ -29,6 +29,13 @@ See also `docs/DESIGN_SYSTEM.md` for colour, layout and components.
 | Capital preservation rule | Money not earned back |
 | Lean in / Hold / Re-test / Pull back / Get more evidence | Put more behind it / Keep as is / Test again before deciding / Reduce spend / Prove it before deciding |
 | REDUCE_BUDGET_50% | Reduce the budget by half |
+| Cannibalization, organic revenue | Sales that would have happened anyway |
+| Cannibalization index | Share of credited sales that ads did not cause |
+| Propensity decile, propensity tier | Audience tier: how likely people were to buy without an ad |
+| Synthetic control, donor markets | Control markets that did not see the ads |
+| Pre-period RMSPE, R squared | Pre launch error, share of pre launch sales movement explained |
+| Covariate or propensity overlap | Audience mix overlap |
+| Minimum sample guard | Not enough data to judge |
 | Override | Change to a decision of your own |
 | Dry run execution | Hand off to the team (nothing is sent to an ad platform) |
 | self_asserted | Typed in by user |

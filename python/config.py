@@ -42,6 +42,17 @@ class PolicySettings:
     gross_margin: Optional[float] = None  # contribution margin the user declares (0 to 1); None means unknown
     margin_industry: str = ""  # Damodaran industry used as a labeled upper-bound proxy when gross_margin is None
     seasonality_benchmark: bool = False  # adjust the control geo drift check by U.S. retail seasonality (opt in)
+    # audience layer (propensity weighted control matching and tier level incrementality)
+    propensity_weight_phi: float = 0.25  # how strongly control markets must also match the audience mix, not just sales history
+    cannibalization_warning_threshold: float = 50.0  # percent of credited revenue that would have happened anyway: review
+    cannibalization_critical_threshold: float = 75.0  # percent: the guardrail raises a recommendation to reduce tier spend
+    tier_min_users: float = 10_000.0  # minimum people reached in each arm (test and control) before a tier is judged
+    tier_min_conversions: float = 100.0  # minimum conversions in each arm before a tier is judged
+    tier_min_spend: float = 10_000.0  # a tier below this spend never raises a money recommendation
+    tier_max_range_width: float = 0.30  # widest 95% range on the share caused by ads that still counts as a firm result
+    match_min_r2: float = 0.85  # control match: minimum share of pre-period sales movement explained
+    match_min_overlap: float = 0.90  # control match: minimum overlap of the audience mix
+    match_max_rmspe_pct: float = 5.0  # control match: maximum pre-period prediction error, percent of average sales
 
     def __post_init__(self) -> None:
         def bound(name: str, lo: float, hi: float) -> None:
@@ -63,10 +74,22 @@ class PolicySettings:
         bound("trust_directional_min", 0, 100)
         bound("spec_vs_strict_warning_ratio", 1.0, 100.0)
         bound("gross_margin", 0.01, 1.0)
+        bound("propensity_weight_phi", 0.0, 2.0)
+        bound("cannibalization_warning_threshold", 0.0, 100.0)
+        bound("cannibalization_critical_threshold", 0.0, 100.0)
+        bound("tier_min_users", 0, 100_000_000)
+        bound("tier_min_conversions", 0, 10_000_000)
+        bound("tier_min_spend", 0, 1_000_000_000)
+        bound("tier_max_range_width", 0.01, 1.0)
+        bound("match_min_r2", 0.0, 1.0)
+        bound("match_min_overlap", 0.0, 1.0)
+        bound("match_max_rmspe_pct", 0.1, 100.0)
         if not isinstance(self.margin_industry, str) or not isinstance(self.seasonality_benchmark, bool):
             raise SettingsError("margin_industry must be text and seasonality_benchmark true or false")
         if self.inflation_moderate >= self.inflation_critical:
             raise SettingsError("inflation_moderate must be below inflation_critical")
+        if self.cannibalization_warning_threshold >= self.cannibalization_critical_threshold:
+            raise SettingsError("cannibalization_warning_threshold must be below cannibalization_critical_threshold")
         if self.trust_directional_min >= self.trust_verified_min:
             raise SettingsError("trust_directional_min must be below trust_verified_min")
         if self.headline_metric not in HEADLINE_CHOICES:

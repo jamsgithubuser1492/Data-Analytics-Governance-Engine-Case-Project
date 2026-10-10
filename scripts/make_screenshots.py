@@ -69,6 +69,8 @@ def main() -> None:
             pg.get_by_role("tab", name="CFO / Finance").first.click() if pg.get_by_role("tab", name="CFO / Finance").count() else pg.get_by_text("CFO / Finance").first.click()
             pg.wait_for_timeout(3500); scroll_to(pg, "Capital destruction leaderboard"); snap(pg, "01b_cfo_view.png", keep=True)
             pg.get_by_text("Everyone").first.click(); pg.wait_for_timeout(2500)
+            scroll_to(pg, "Audience tiers: who the money"); snap(pg, "08_audience_tiers.png", keep=True)
+            scroll_to(pg, "How well the control markets match"); snap(pg, "09_control_match.png")
             scroll_to(pg, "The advisory council"); snap(pg, "02_council.png", keep=True)
             scroll_to(pg, "The charts behind the answer")
             if pg.get_by_text("Table", exact=True).count():

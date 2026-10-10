@@ -73,6 +73,12 @@ else:
         ui.stat_row([dict(label="How sure we are", value=voice.conf_phrase(tier).split(":")[0], sub=g["label"], kind={"VERIFIED": "ok", "DIRECTIONAL": "warn"}.get(tier, "bad")),
                      dict(label="Counting method", value=v.basis), dict(label="Reference", value=item["run_id"][:8])], compact=True)
         _c = next((c for c in v.report["campaigns"] if c["campaign_id"] == p["campaign_id"]), None)
+        if p.get("audience_tier"):
+            _lo, _hi = p.get("audience_range", [float("nan")] * 2)
+            ui.stat_row([dict(label="Platform credit per $1", value=f"{p.get('reported_roas', float('nan')):.2f}x"),
+                         dict(label="Caused by the ads per $1", value=f"{p.get('strict_iroas', float('nan')):.2f}x", sub=f"95% range {_lo:.2f}x to {_hi:.2f}x", kind="ok"),
+                         dict(label="Audience tier", value=str(p.get("tier_name", "")))], compact=True)
+            st.caption("Audience tiers always count only the extra conversions the ads caused (strict lift).")
         _r = v.cd.set_index("campaign_id") if "campaign_id" in v.cd.columns else v.cd
         if p["campaign_id"] in _r.index:
             _x = lambda v: "n/a" if pd.isna(v) else f"{v:.2f}x"  # noqa: E731
@@ -88,6 +94,9 @@ else:
         ui.stat_row([dict(label=ui.scrub(k), value=str(x)) for k, x in p["value_add_metrics"].items()], compact=True)
         st.markdown("##### Why it was raised")
         st.markdown(ui.safe(p["strategic_callout"]))
+        if p.get("audience_tier") and p.get("audience_checks"):
+            st.markdown("##### Governance checks")
+            ui.governance_status([(label, bool(ok)) for label, ok in p["audience_checks"]])
         if _c:
             _names = {1: "Test and comparison markets moved together beforehand", 2: "The test was large enough", 3: "The likely range is narrow enough",
                       5: "Seasonality is not distorting the result", 6: "Our sources agree", 8: "The result is clear enough to base a decision on"}

@@ -320,3 +320,64 @@ def allocation_chart(table: pd.DataFrame, headline: str) -> go.Figure:
     fig.update_yaxes(range=[0, max(1.0, float(d["share"].max())) * 1.15], tickformat=".0%", title_text="Share of spend")
     fig.update_layout(barmode="group", bargap=0.3)
     return _layout(fig, headline, "Where today's spend sits by evidence and return tier, against the target mix you set.", 380)
+
+
+# ------------------------------------------------------------------------------------------------ audience tiers
+def tier_rollup(tab: pd.DataFrame) -> pd.DataFrame:
+    """Audience tiers with enough data to be judged, combined across campaigns (spend weighted)."""
+    j = tab[tab["evidence_tier"] != "NOT_DECISION_GRADE"]
+    if j.empty:
+        return pd.DataFrame()
+    g = j.groupby("tier_name", as_index=False).agg(spend=("spend", "sum"), reported_revenue=("reported_revenue", "sum"), strict=("strict_incremental_revenue", "sum"),
+                                                   low=("strict_revenue_low", "sum"), high=("strict_revenue_high", "sum"),
+                                                   organic_spend=("spend_for_organic_sales", "sum"), start=("decile_start", "min"))
+    s = g["spend"].where(g["spend"] > 0)
+    g["reported_roas"], g["strict_iroas"] = g["reported_revenue"] / s, g["strict"] / s
+    g["lo"], g["hi"] = g["low"] / s, g["high"] / s
+    g["cannibalization_pct"] = (1 - g["strict"] / g["reported_revenue"].where(g["reported_revenue"] > 0)) * 100
+    g["net_new_spend"] = g["spend"] - g["organic_spend"]
+    return g.sort_values("start").reset_index(drop=True)
+
+
+def tier_headline(roll: pd.DataFrame, breakeven: float) -> str:
+    if roll.empty:
+        return "No audience tier has enough data to judge yet"
+    worst = roll.sort_values("cannibalization_pct", ascending=False).iloc[0]
+    return (f"{worst['tier_name']} is credited with {worst['reported_roas']:.2f}x but ads caused {worst['strict_iroas']:.2f}x; "
+            f"{worst['cannibalization_pct']:.0f}% of its credited revenue would have happened anyway")
+
+
+def tier_chart(roll: pd.DataFrame, breakeven: float, breakeven_label: str, headline: str) -> go.Figure:
+    """Credited versus caused return for each audience tier, with the 95% range on the caused return."""
+    t = _THEME
+    fig = go.Figure()
+    fig.add_bar(x=roll["tier_name"], y=roll["reported_roas"], name="Credited by the platform", marker_color=t["claimed"], text=roll["reported_roas"].map(_x), textposition="outside",
+                cliponaxis=False, hovertemplate="%{x}<br>Credited by the platform: %{y:.2f}x<extra></extra>")
+    fig.add_bar(x=roll["tier_name"], y=roll["strict_iroas"], name="Caused by the ads", marker_color=t["proven"], text=roll["strict_iroas"].map(_x), textposition="outside", cliponaxis=False,
+                error_y=dict(type="data", symmetric=False, array=(roll["hi"] - roll["strict_iroas"]).clip(lower=0).fillna(0), arrayminus=(roll["strict_iroas"] - roll["lo"]).clip(lower=0).fillna(0),
+                             color=t["ink"], thickness=1.4, width=5), hovertemplate="%{x}<br>Caused by the ads: %{y:.2f}x<extra></extra>")
+    lo, hi = padded_range(list(roll["reported_roas"]) + list(roll["hi"].dropna()), include=[breakeven], pad=0.2)
+    fig.update_yaxes(range=[lo, hi], title_text="Revenue per $1 of ad spend", ticksuffix="x")
+    _breakeven_line(fig, breakeven, breakeven_label)
+    fig.update_layout(barmode="group", bargap=0.3)
+    return _layout(fig, headline, "Bars above the dashed line earn back their cost. The gap between the blue and green bars is revenue credited to ads that would have happened anyway. Whiskers show the 95% range.", 420)
+
+
+def tier_split_headline(roll: pd.DataFrame) -> str:
+    if roll.empty:
+        return "No audience tier has enough data to judge yet"
+    tot, org = float(roll["spend"].sum()), float(roll["organic_spend"].sum())
+    return f"${org:,.0f} of ${tot:,.0f} judged spend ({org / tot:.0%}) is paying for sales that would have happened anyway" if tot else "No spend to judge"
+
+
+def tier_split_chart(roll: pd.DataFrame, headline: str) -> go.Figure:
+    """Where each tier's spend goes: paying for sales that would have happened anyway, or driving new sales. Stacked, one axis."""
+    fig = go.Figure()
+    fig.add_bar(y=roll["tier_name"], x=roll["organic_spend"], orientation="h", name="Paying for sales that would have happened anyway", marker_color=danger(),
+                text=roll["organic_spend"].map(lambda v: f"${v:,.0f}"), textposition="inside", hovertemplate="%{y}<br>Paying for sales that would have happened anyway: $%{x:,.0f}<extra></extra>")
+    fig.add_bar(y=roll["tier_name"], x=roll["net_new_spend"], orientation="h", name="Driving new sales", marker_color=good(),
+                text=roll["net_new_spend"].map(lambda v: f"${v:,.0f}"), textposition="inside", hovertemplate="%{y}<br>Driving new sales: $%{x:,.0f}<extra></extra>")
+    fig.update_layout(barmode="stack")
+    fig.update_xaxes(title_text="Ad spend (dollars)", tickprefix="$", showgrid=True, gridcolor=_THEME["grid"])
+    fig.update_yaxes(autorange="reversed")
+    return _layout(fig, headline, "Each bar is a tier's total spend, split by whether the sales it paid for would have happened without the ads.", 300)

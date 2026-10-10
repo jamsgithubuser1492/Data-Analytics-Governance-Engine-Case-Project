@@ -243,3 +243,55 @@ def convene(ch: pd.DataFrame, cd: pd.DataFrame, tot: Dict[str, Any], breakeven: 
                 groups.setdefault(s, []).append(name)
             split.append(f"{ch_name}: " + "; ".join(f"{_names(v)} would {STANCE_VERB[k]} it" for k, v in groups.items()) + ".")
     return Council(readings, agree, split, "Strict lift" if is_strict else "Reported by spec")
+
+
+# ------------------------------------------------------------------------------------------------ audience tiers
+def tier_readings(tab: pd.DataFrame, match: pd.DataFrame, summ: Dict[str, Any], scenario: Optional[Dict[str, Any]], critical: float) -> List[Dict[str, str]]:
+    """What each advisor sees in the audience tier results. A fact sentence first, then one tentative suggestion.
+
+    Every figure comes from the tier table. Suggestions open with one of the allowed forms.
+    """
+    judged = tab[tab["evidence_tier"] != "NOT_DECISION_GRADE"]
+    unjudged = tab[tab["evidence_tier"] == "NOT_DECISION_GRADE"]
+    flagged = judged[judged["cannibalization_pct"] >= critical]
+    failed = match[~match["passed"]] if len(match) else match
+    n_f = len(flagged)
+    out: List[Dict[str, str]] = []
+    # The Steward: protect capital
+    if n_f:
+        top = flagged.sort_values("spend_for_organic_sales", ascending=False).iloc[0]
+        fact = (f"{_usd(flagged['spend_for_organic_sales'].sum())} of spend across {n_f} audience tier{'s' if n_f != 1 else ''} is paying for sales that would have happened anyway. "
+                f"The largest is {top['channel']}, {top['tier_name']}, at {_usd(top['spend_for_organic_sales'])}.")
+        tip = ("Given that this money buys sales the business would have made regardless, perhaps we should think about reducing spend on those tiers and confirming the savings "
+               "with a fresh test before the next budget cycle.")
+    else:
+        fact = f"No audience tier has crossed the {critical:g}% line for sales that would have happened anyway."
+        tip = "Consider keeping the audience view as a standing check each quarter, since the share of credited sales that ads did not cause can change as audiences saturate."
+    out.append({"persona": "STEWARD", "headline": fact, "suggestion": tip})
+    # The Builder: growth
+    if scenario:
+        d, s = scenario["to"], scenario["from"]
+        fact = (f"{d['channel']}, {d['tier_name']} returns {d['strict_iroas']:.2f}x for every $1 that ads actually caused, while {s['channel']}, {s['tier_name']} returns {s['strict_iroas']:.2f}x. "
+                f"At today's tier returns, moving {_usd(scenario['amount'])} would add about {_usd(scenario['net'])} of revenue.")
+        tip = "Given that returns usually fall as a tier takes more money, perhaps we should think about a staged shift with a checkpoint rather than a single move."
+    else:
+        fact = "No audience tier shows a clearly stronger caused return than the tiers it could be funded from, so the data does not yet make a growth case for shifting budget between tiers."
+        tip = "In order to find room to grow, we might want to think about testing a broader audience on a small budget and measuring what it actually causes."
+    out.append({"persona": "BUILDER", "headline": fact, "suggestion": tip})
+    # The Translator: client conversation
+    rep, caused = float(judged["reported_revenue"].sum()), float(judged["strict_incremental_revenue"].sum())
+    fact = (f"Across the audience tiers we can judge, platforms credit {_usd(rep)} of revenue and the control comparison shows ads caused {_usd(caused)}. "
+            f"The {_usd(rep - caused)} difference is where client and platform reports will disagree.")
+    tip = "In order to address that difference, we might want to think about showing the client the tier view next to the platform report, so both sides work from the same facts."
+    out.append({"persona": "TRANSLATOR", "headline": fact, "suggestion": tip})
+    # The Mechanic: measurement quality
+    bits = []
+    if len(unjudged):
+        bits.append(f"{len(unjudged)} tier{'s' if len(unjudged) != 1 else ''} cannot be judged yet because too few people or conversions were measured")
+    if len(failed):
+        bits.append(f"the control markets for {', '.join(failed['channel'])} do not yet meet the match standard")
+    fact = ("Measurement quality: " + " and ".join(bits) + ".") if bits else "Measurement quality: every tier has enough data and every control market group meets the match standard."
+    tip = ("In order to address this, we might want to think about extending the test or adding control markets whose audience mix is closer to the test markets."
+           if bits else "Consider keeping the same markets and tracking setup through the next test so results stay comparable.")
+    out.append({"persona": "MECHANIC", "headline": fact, "suggestion": tip})
+    return out

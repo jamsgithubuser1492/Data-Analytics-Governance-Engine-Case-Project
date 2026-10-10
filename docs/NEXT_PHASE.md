@@ -8,6 +8,13 @@
 * Automation blueprint (design and documentation only): `docs/ARCHITECTURE_MCP.md`.
 * Plain language pass on the Dashboard, Advisory council and Sign-off desk (see `docs/VOICE_GUIDE.md`).
 
+* Audience tier layer: propensity weighted control matching, tier level incrementality with ranges and a sample guard, a guardrail and the "Reduce audience tier spend" action, dashboard section, settings and upload controls.
+
+## Not built, audience layer
+* **A propensity scoring model** (training on individual level features, for example gradient boosting) is deliberately outside the engine: it needs person level or enriched data that the privacy design excludes. Only the aggregated decile counts enter.
+* **A media mix model with a separate saturation curve for each audience tier.** The tier results are a natural input to it; the model itself is future work.
+* **Sending bid caps or budgets to ad platforms.** Reductions stay a signed hand off to the team that makes the change.
+
 ## In progress
 * Module by module language review of Strategy, AI brief, Research next, Automation, Memos, Benchmarks and Settings.
 

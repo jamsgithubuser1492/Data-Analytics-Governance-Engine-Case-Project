@@ -24,3 +24,10 @@
 | **Signed decision record** | A permanent list of signed decisions in which each entry is linked to the one before, so tampering is visible. |
 | **Synthetic data** | Made up data that behaves like real data. Used here so results are repeatable and no real company is involved. |
 | **Hand off** | Recording that an approved change is ready for the team that makes it. In this project nothing is sent anywhere. |
+| **Audience tier** | A group of people ranked by how likely they were to buy even without seeing an ad. Tier 1 is the most likely buyers (for example past visitors), Tier 3 is a broad audience. |
+| **Sales that would have happened anyway** | Revenue a platform credits to ads that the comparison with control markets shows would have arrived without them. Analysts call this cannibalization. |
+| **Spend paying for sales that would have happened anyway** | The part of a tier's spend that bought those sales: spend times the share of credited sales the ads did not cause. |
+| **Share caused by ads** (lift) | How much higher the conversion rate is in the test markets than in the matched control markets, as a share of the test rate. |
+| **Control market match** | How well the markets that did not see the ads resemble the test markets, in past sales and in the mix of people. Reported as Match passed or Review required. |
+| **Audience mix overlap** | How closely two sets of markets have the same share of residents in each likelihood to buy group. 100% means identical. |
+| **Not enough data** | A tier with too few people or conversions to judge. It never raises a recommendation. |

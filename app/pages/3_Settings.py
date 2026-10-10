@@ -63,6 +63,24 @@ with st.form("settings"):
     i1, i2 = st.columns(2)
     t_ver = i1.number_input("Trust score for Verified (and up)", 1.0, 100.0, float(settings.trust_verified_min))
     t_dir = i2.number_input("Trust score for Directional (and up)", 0.0, 100.0, float(settings.trust_directional_min))
+    st.subheader("Audience tiers and control markets")
+    st.caption("These settings decide how the audience tier view judges results. Tiers that fall short of the sample rules are reported as 'not enough data' and never raise a recommendation.")
+    k1, k2 = st.columns(2)
+    phi = k1.slider("Weight on matching the audience mix (not just sales history)", 0.0, 2.0, float(settings.propensity_weight_phi), 0.05,
+                    help="Higher values force the control markets to resemble the test markets in who lives there, not only in how much they sold before launch.")
+    c_warn = k2.number_input("Review a tier when this share of credited sales was not caused by ads (%)", 0.0, 100.0, float(settings.cannibalization_warning_threshold), 1.0)
+    k3, k4 = st.columns(2)
+    c_crit = k3.number_input("Recommend reducing tier spend at this share not caused by ads (%)", 0.0, 100.0, float(settings.cannibalization_critical_threshold), 1.0,
+                             help="Raises a recommendation on the Sign-off desk. It never acts on its own, and needs at least a Leaning (Directional) evidence level.")
+    t_spend = k4.number_input("Smallest tier spend that can raise a recommendation ($)", 0.0, 1_000_000_000.0, float(settings.tier_min_spend), 1000.0)
+    k5, k6, k7 = st.columns(3)
+    t_users = k5.number_input("Minimum people reached per arm", 0.0, 100_000_000.0, float(settings.tier_min_users), 1000.0)
+    t_convs = k6.number_input("Minimum conversions per arm", 0.0, 10_000_000.0, float(settings.tier_min_conversions), 10.0)
+    t_width = k7.number_input("Widest 95% range on the share caused by ads (0 to 1)", 0.01, 1.0, float(settings.tier_max_range_width), 0.01)
+    m1, m2, m3 = st.columns(3)
+    mm_r2 = m1.number_input("Control match: minimum sales history explained", 0.0, 1.0, float(settings.match_min_r2), 0.01)
+    mm_ov = m2.number_input("Control match: minimum audience mix overlap", 0.0, 1.0, float(settings.match_min_overlap), 0.01)
+    mm_err = m3.number_input("Control match: maximum pre-period error (% of sales)", 0.1, 100.0, float(settings.match_max_rmspe_pct), 0.5)
     st.subheader("Economics and benchmarks")
     st.caption("A revenue return of 1.0x is only breakeven at a 100% margin. Declare your contribution margin (revenue minus product, shipping, fees and returns) "
                "to see profit aware returns. Nothing is assumed unless you choose it.")
@@ -97,7 +115,9 @@ if submitted:
                              inflation_moderate=infl_m, inflation_critical=infl_c, trust_verified_min=t_ver,
                              trust_directional_min=t_dir, headline_metric=headline,
                              gross_margin=(margin_pct / 100.0) if known else None, margin_industry="" if known or industry == "(none)" else industry,
-                             seasonality_benchmark=bool(seasonal))
+                             seasonality_benchmark=bool(seasonal), propensity_weight_phi=float(phi), cannibalization_warning_threshold=float(c_warn),
+                             cannibalization_critical_threshold=float(c_crit), tier_min_users=float(t_users), tier_min_conversions=float(t_convs), tier_min_spend=float(t_spend),
+                             tier_max_range_width=float(t_width), match_min_r2=float(mm_r2), match_min_overlap=float(mm_ov), match_max_rmspe_pct=float(mm_err))
         fips = [f.strip() for f in fips_text.replace("\n", ",").split(",") if f.strip()]
         if fips and _reg is not None:
             share = _reg.population_share(fips)

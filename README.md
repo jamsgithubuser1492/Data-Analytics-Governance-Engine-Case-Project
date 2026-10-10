@@ -40,6 +40,7 @@ It then explains the answer the way a colleague would, shows how sure it is, let
 | Revenue platforms claimed that the tests do not support | **$399,188** |
 | Campaigns with strong enough evidence for a confident recommendation | **6 of 8** |
 | The same portfolio counting only the extra revenue the ads caused | about **0.57x**, so spending does not pay back at that stricter count |
+| Spend in the four most affected audience tiers paying for sales that would have happened anyway (synthetic audience example) | **$91,288** |
 
 The two ways of counting disagree by up to 32 times on some campaigns. The dashboard says so openly and explains which count is safer for budget decisions.
 
@@ -60,6 +61,7 @@ Having trouble or seeing an old version? See [docs/GETTING_STARTED.md](docs/GETT
 | --- | --- |
 | ![Dashboard](docs/img/01_dashboard.png) **The answer first.** A plain headline, the gap between claims and proof, and how sure we are. | ![Advisory council](docs/img/02_council.png) **Four advisors** read the same results as a finance chief, a growth lead, an agency head and a measurement specialist. |
 | ![Charts and tables](docs/img/03_chart_table.png) **Every chart has a table view** you can copy into a spreadsheet. | ![Sign-off desk](docs/img/04_signoff.png) **The sign-off desk.** Every decision is signed and recorded. |
+| ![Audience tiers](docs/img/08_audience_tiers.png) **Audience tiers.** Which groups of people the money reaches, and how much of the spend is paying for sales that would have happened anyway. | ![Control market match](docs/img/09_control_match.png) **A fair comparison.** Each group of control markets is checked against the test markets before its results are trusted. |
 | ![Strategy](docs/img/05_strategy.png) **Strategy.** What a budget move would change, best case and worst case. | ![Dark mode and mobile](docs/img/06_dashboard_dark.png) **Dark mode** and a phone friendly layout. |
 
 Every page is explained in plain words in the [page by page guide](docs/PAGE_GUIDE.md).
@@ -300,6 +302,7 @@ The app is written for business leaders, not analysts. Design system in `app/ui.
 * **Uncertainty is shown.** The caused revenue count carries a 95% likely range; the other does not. Quality checks and sources are in the last section.
 * **Every chart** states its finding and has a Chart or Table toggle. No dual axes. Axes are sized to the data, breakeven and thresholds.
 * **Plain labels with an always-on glossary.** No emojis: status uses a distinct shape plus a text label. Light and dark themes follow the system or the Streamlit menu.
+* **Audience tiers.** A section that shows which groups of people the money reaches, how much of each tier's spend is paying for sales that would have happened anyway, and whether the comparison markets are a fair match. It uses aggregate counts only.
 * **Honest benchmarks.** No channel return band is drawn because no verified comparable one exists; see the Benchmarks page.
 * **Decisions are signed.** Decision cards lead to the Sign-off desk, where every decision is signed and recorded in a tamper evident log.
 

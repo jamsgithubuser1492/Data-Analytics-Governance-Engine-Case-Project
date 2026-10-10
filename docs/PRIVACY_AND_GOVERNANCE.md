@@ -2,6 +2,9 @@
 
 This document describes how the Media Measurement and Governance Engine protects the data it works with, protects company resources, and keeps its recommendations objective. It describes design intent and the safeguards built into the code. It is not legal advice, and it does not replace your own legal, privacy and security review.
 
+## 0. The audience layer
+The optional audience tier view accepts three **aggregate** tables only: per day, campaign and tier counts of people reached and conversions in test and control markets; one sales series per market; and one audience mix per market (ten shares that add to 100%). Any column whose name looks like personal or person level data (email, phone, address, user or customer identifiers, device or cookie identifiers, age, gender, income, postal code, or a feature column) is refused at upload and blocks the run. Scoring individual people into likelihood to buy groups happens outside the system, if at all, and only the aggregated group counts come in. No raw feature matrices ever enter the engine. The example files are synthetic.
+
 ## 1. What data the system uses
 
 The system works on **aggregate marketing measurements**: daily spend, impressions, clicks and conversions by campaign, attribution model output by campaign, and geo level experiment counts. It does not need, and must not receive, information about individual people.

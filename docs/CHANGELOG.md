@@ -1,6 +1,13 @@
 # Changelog
 
-## Design system refresh (latest)
+## Audience tier layer (latest)
+* Propensity weighted control matching (sales history plus audience mix) with computed match quality, a pass or review verdict against policy thresholds, and a visible comparison with a history only match.
+* Audience tier incrementality: share of credited sales caused by ads, revenue and spend paying for sales that would have happened anyway, 95% ranges, a minimum sample guard and evidence levels.
+* Aggregate only data contract (decile mix, tier performance, market sales), a staging view in `sql/audience_tier_views.sql`, and synthetic example data in `data/audience/`.
+* New policy settings, a new guardrail ("platform credit for sales that would happen anyway") and a "Reduce audience tier spend" action, limited to Leaning evidence or better and always signed by a person.
+* New Dashboard section with a dollar first summary per perspective, cannibalization meters, tier charts with table views, control match cards and a view from each advisor; Sign-off desk governance checks for tier decisions; Settings and Upload controls.
+
+## Design system refresh
 * Written style guide: `docs/DESIGN_SYSTEM.md` (north star, colour meaning, type, layout, components, language, motion, imagery).
 * New navy and green palette on a light page with white cards, Inter with a Georgia headline, subtle borders and shadows, 150 to 250 ms motion, and a branching leaf brand mark.
 * New components: executive briefing with impact panel, measurement validity ring, platform, attribution model and holdout comparison, governance checks, and a decision flow that shows where the human approval sits.

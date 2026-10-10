@@ -42,6 +42,12 @@ def test_headline_numbers_match_the_run(totals) -> None:
     assert f"about **{strict['proven']:.2f}x**" in README
 
 
+def test_audience_example_figure_matches_the_computed_summary() -> None:
+    import audience_tiers as at
+    s = at.summary(at.compute(at.load_demo_audience())["AUDIENCE_TIER_RESULTS"])
+    assert f"${s['critical_spend_for_organic']:,.0f}" in README
+
+
 def test_honest_limits_are_on_the_first_screen() -> None:
     first_screen = README[:3500].lower()
     for phrase in ("synthetic", "illustrative", "no affiliation", "nothing here moves real money", "portfolio project"):

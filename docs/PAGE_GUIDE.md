@@ -13,12 +13,13 @@ The left menu groups the pages by what you are trying to do: **Understand**, **I
 * A headline such as "$105,158 of ad spend has not been earned back", with a short summary underneath.
 * A row of four confidence cards: how sure we are, how many campaigns have clearly real results, how many are ready for a decision, and how much of the spend was tested.
 * A plain note when the two ways of counting results disagree.
-* Six sections: The answer, The advisory council, The evidence (charts), Decisions for your sign-off, A "what if" scenario, and Sources.
+* Seven sections: The answer; Audience tiers; The advisory council; The evidence (charts); Decisions for your sign-off; A "what if" scenario; and Sources.
+* **Audience tiers** shows which groups of people the money reaches, and how much of the spend in each is paying for sales that would have happened anyway. It opens with a dollar figure, shows a bar for the worst tiers, two charts you can switch to tables, a card for each group of control markets saying whether the comparison is fair, and what each of the four advisors sees.
 **Try this:** switch "Viewing as" to CFO / Finance and look at the list of campaigns ranked by money not earned back. Then use the sidebar to change how the return is counted and watch the numbers change.
 
 ### Upload data
 **What it is for:** bringing your own data in five guided steps (declare, upload, map columns, check, run).
-**What you will see:** friendly checks that point to the exact rows with problems, and a rule that nothing runs until blockers are fixed.
+**What you will see:** friendly checks that point to the exact rows with problems, and a rule that nothing runs until blockers are fixed. An optional section lets you add the three aggregate audience files (or the synthetic example); files with person level or personal columns are refused.
 **On the public demo:** switched off, so nobody shares company files on a public server.
 
 ### Runs
@@ -26,7 +27,7 @@ The left menu groups the pages by what you are trying to do: **Understand**, **I
 **Try this:** open the list and note that each run carries a short reference code. That code appears on decisions so you can trace them back.
 
 ### Settings
-**What it is for:** the company's own rules in one place: the profit margin (so "breakeven" is real), how strict to be about evidence, and which counting method to lead with.
+**What it is for:** the company's own rules in one place: the profit margin (so "breakeven" is real), how strict to be about evidence, which counting method to lead with, and how the audience view judges results (how many people are needed before a tier is judged, the share of credited sales at which a recommendation appears, and how closely control markets must match).
 **On the public demo:** read only.
 
 ## Interpret
@@ -59,7 +60,7 @@ The left menu groups the pages by what you are trying to do: **Understand**, **I
 
 ### Sign-off desk
 **What it is for:** the last step before anything changes. Every suggestion becomes a "decision packet" that a named person approves, changes or rejects.
-**What you will see:** a queue of decisions, a plain summary of each (what is proposed, why, what is at stake, how sure we are), and a signing form with a written note, your email, your role and four confirmations.
+**What you will see:** a queue of decisions (including audience tier decisions such as "consider reducing spend on this audience tier"), a plain summary of each (what is proposed, why, what is at stake, how sure we are, and which governance checks passed), and a signing form with a written note, your email, your role and four confirmations.
 **What happens next:** the signature goes into a permanent record in which every entry is linked to the one before, so any later edit or deletion shows up. You can download a signed receipt.
 **On the public demo:** signing is simulated.
 **Try this:** pick a decision, choose "Approve as suggested", fill in the form and sign. Then open the record at the bottom and see the "Log intact" check.

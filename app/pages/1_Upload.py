@@ -95,6 +95,40 @@ for table, (title, blurb) in LABELS.items():
             if info.get("duplicate_headers"):
                 st.warning(f"Duplicate column names were renamed: {info['duplicate_headers']}")
 
+# ------------------------------------------------------------------ optional audience layer
+audience_ok = True
+st.session_state["aud_attach"] = None
+with st.expander("Optional: add audience tier data (aggregate files only)"):
+    st.caption("Shows which audience tiers are paying for sales that would have happened anyway. Aggregate counts only: one row per day, campaign and tier, one sales series per market, "
+               "and one audience mix per market. Files with person level or personal columns are refused.")
+    from audience_tiers import load_demo_audience, validate_audience
+    from schemas import AUDIENCE_SCHEMAS, AUDIENCE_TABLES
+    use_demo_aud = st.checkbox("Use the synthetic example audience data that ships with the project", key="aud_demo")
+    aud_frames = {}
+    if use_demo_aud:
+        aud_frames = load_demo_audience()
+    else:
+        for name in AUDIENCE_TABLES:
+            cols = st.columns([3, 1])
+            up = cols[0].file_uploader(name.replace("_", " ").capitalize(), type=["csv"], key=f"up_{name}")
+            cols[1].download_button("Template", pd.DataFrame(columns=[f.name for f in AUDIENCE_SCHEMAS[name]]).to_csv(index=False), f"{name}_template.csv", key=f"tp_{name}")
+            if up is not None:
+                aud_frames[name] = pd.read_csv(up)
+    if aud_frames:
+        if len(aud_frames) < len(AUDIENCE_TABLES):
+            st.warning("Add all three audience files, or none.")
+            audience_ok = False
+        else:
+            arep = validate_audience(aud_frames, settings)
+            for i in arep.blockers:
+                st.markdown(f"**Blocker.** **{i.rule}** ({i.table}): {i.message}")
+            for i in arep.warnings:
+                st.markdown(f"**Warning.** **{i.rule}** ({i.table}): {i.message}")
+            audience_ok = arep.ok
+            if arep.ok:
+                st.success("The audience files passed the checks and will be included in the run.")
+                st.session_state["aud_attach"] = aud_frames
+
 if len(uploads) < 4:
     st.info(f"Upload all four files to continue ({len(uploads)} of 4 ready). No files handy? Use the demo data above, or download a template for each file.")
     st.stop()
@@ -186,8 +220,9 @@ ack = True
 if report.warnings:
     ack = st.checkbox("I have read the warnings above and want to continue", key="ack")
 label = st.text_input("Name this run", value="Uploaded data")
-if st.button("Run measurement", type="primary", disabled=bool(report.blockers) or not ack):
+if st.button("Run measurement", type="primary", disabled=bool(report.blockers) or not ack or not audience_ok):
     try:
+        tables.audience = st.session_state.get("aud_attach")
         rid = runner.submit(ws, tables, settings, decl, label)
         status = wait_for_run(ws, rid)
         if status == "succeeded":

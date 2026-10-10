@@ -48,5 +48,24 @@ SCHEMAS: Dict[str, List[Field]] = {
     ],
 }
 
+# Optional audience layer: aggregate inputs only. Raw feature matrices and person level rows are never accepted.
+DECILE_COLUMNS = [f"decile_{i}_pct" for i in range(1, 11)]
+AUDIENCE_SCHEMAS: Dict[str, List[Field]] = {
+    "AUDIENCE_DMA_PROPENSITY": [Field("dma_code", "str"), Field("dma_name", "str", required=False)] + [Field(c, "float", min_value=0) for c in DECILE_COLUMNS],
+    "AUDIENCE_DMA_SERIES": [Field("date", "date"), Field("dma_code", "str"), Field("role", "str"), Field("channel", "str", required=False),
+                            Field("revenue", "float", min_value=0)],
+    "AUDIENCE_TIER_PERFORMANCE": [
+        Field("date", "date"), Field("channel", "str"), Field("campaign_id", "str"), Field("tier_name", "str"),
+        Field("tier_decile_start", "int", min_value=1), Field("tier_decile_end", "int", min_value=1),
+        Field("spend", "float", min_value=0), Field("reported_revenue", "float", min_value=0),
+        Field("treatment_conversions", "float", min_value=0), Field("treatment_users", "float", min_value=0),
+        Field("control_conversions", "float", min_value=0), Field("control_users", "float", min_value=0),
+    ],
+}
+AUDIENCE_TABLES = tuple(AUDIENCE_SCHEMAS)
+# A column whose name contains any of these words (split on underscores) is refused: no person level or feature level data.
+AUDIENCE_FORBIDDEN_TOKENS = ("email", "phone", "firstname", "lastname", "first", "last", "address", "ssn", "ip", "userid", "user", "customer", "customerid",
+                             "device", "deviceid", "cookie", "feature", "features", "age", "gender", "income", "zip", "postal", "name_first")
+
 # Columns that look like personal data and must never be uploaded.
 PII_HINTS = ("email", "phone", "first_name", "last_name", "address", "ssn", "ip_address")

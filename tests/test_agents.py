@@ -49,7 +49,7 @@ def good() -> dict:
 
 
 def test_presets_validate() -> None:
-    assert set(DEFS) == {"CAPITAL_PRESERVATION_AGENT", "ATTRIBUTION_SHIELD_AGENT", "SCALE_OPPORTUNITY_AGENT"}
+    assert set(DEFS) == {"CAPITAL_PRESERVATION_AGENT", "ATTRIBUTION_SHIELD_AGENT", "SCALE_OPPORTUNITY_AGENT", "AUDIENCE_CANNIBALIZATION_AGENT"}
 
 
 @pytest.mark.parametrize("mutate,fragment", [
@@ -225,7 +225,7 @@ def store(tmp_path):
 
 def test_store_versions_presets_and_custom(store) -> None:
     ws = store.get_or_create_workspace("acme")
-    assert [d["version"] for d in store.get_agent_definitions(ws)] == [1, 1, 1]
+    assert [d["version"] for d in store.get_agent_definitions(ws)] == [1, 1, 1, 1]
     edited = copy.deepcopy(DEFS["SCALE_OPPORTUNITY_AGENT"])
     edited["trigger"]["all"][0]["value"] = 4.0
     v, errs = store.save_agent_definition(ws, edited, "jim")
@@ -233,7 +233,7 @@ def test_store_versions_presets_and_custom(store) -> None:
     got = {d["id"]: d for d in store.get_agent_definitions(ws)}
     assert got["SCALE_OPPORTUNITY_AGENT"]["version"] == 2 and got["SCALE_OPPORTUNITY_AGENT"]["trigger"]["all"][0]["value"] == 4.0
     v2, _ = store.save_agent_definition(ws, custom(), "jim")
-    assert v2 == 1 and len(store.get_agent_definitions(ws)) == 4
+    assert v2 == 1 and len(store.get_agent_definitions(ws)) == 5
     bad = good()
     bad["action"] = "NOPE"
     assert store.save_agent_definition(ws, bad)[0] == 0

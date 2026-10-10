@@ -46,6 +46,22 @@ SECTIONS: List[Tuple[str, str]] = [
     ("Risk appetite: Conservative, Balanced or Aggressive",
      "A risk appetite sets all three guardrails at once. **Conservative** wants stronger proof before money moves and reacts to smaller problems. **Balanced** is the standard case study setting. "
      "**Aggressive** acts on earlier signals and tolerates more noise. The page shows how many campaigns each appetite would flag on your current run before you apply it. Every change is saved as a new version."),
+    ("Audience tiers: who the money actually reaches",
+     "Ad platforms are rewarded for conversions, so they naturally reach people who were already likely to buy, such as past visitors. That produces a high reported return, but much of that revenue would have arrived anyway. "
+     "The audience view separates the two.\n\n"
+     "People are grouped into tiers by how likely they were to buy without seeing an ad (for example Tier 1 is the most likely buyers, Tier 3 is a broad audience). For each tier we compare the conversion rate in the test markets with the rate in the matched control markets. "
+     "The share of conversions the ads caused is the gap between the two, divided by the test rate. Reported revenue times that share is the revenue the ads caused; the rest would have happened anyway. "
+     "Spend is split the same way, which gives the headline figure: how many dollars of a tier's spend are paying for sales that would have happened anyway.\n\n"
+     "Each tier carries a 95% range. A tier is only judged when both the test and control markets reached enough people and produced enough conversions (you set the minimums in Settings). "
+     "Tiers below that bar show \"not enough data\" and never raise a recommendation. Evidence is Confident when the range is narrow and the control markets match well, and Leaning when either falls short. "
+     "When the share of credited sales that ads did not cause passes your line (75% by default) and the evidence is at least Leaning, a recommendation to consider reducing spend on that tier appears on the Sign-off desk. A person decides.\n\n"
+     "This layer always counts only the extra conversions the ads caused (strict lift). It uses aggregate counts only: no person level rows and no personal data. The example files are synthetic."),
+    ("Control markets: how well the comparison is matched",
+     "A comparison is only as fair as the markets it is made against. Each group of test markets is matched to a blend of control markets that did not see the ads. "
+     "The match uses two things: the sales history of the markets before launch, and the mix of people in them (the share of residents in each of ten likelihood to buy groups). "
+     "Matching on both avoids choosing markets that sold similar amounts but are home to different kinds of people.\n\n"
+     "Three measures describe the match: how much of the pre launch movement in sales the blend explains, how much the audience mixes overlap, and how large the pre launch error is as a share of average sales. "
+     "Each is compared with a standard you can change in Settings, and the card says Match passed or Review required. The match quality is computed from the data, and the page also shows what a history only match would have scored, so the benefit of matching on audience is visible rather than assumed."),
     ("The advisory council",
      "The council is four seasoned advisors who read the same results through their own priorities: **The Steward** (CFO, conservative), **The Builder** (CMO, aggressive), "
      "**The Translator** (agency director, moderate) and **The Mechanic** (platform lead, moderate). Each has their own bar for proof, their own idea of what counts as clearly profitable, "

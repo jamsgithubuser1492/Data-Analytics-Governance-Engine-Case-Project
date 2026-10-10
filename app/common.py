@@ -102,7 +102,7 @@ def safe_csv(df: pd.DataFrame) -> bytes:
 
 
 def demo_tables() -> SourceTables:
-    return SourceTables.from_directory()
+    return SourceTables.from_directory(with_audience=True)
 
 
 def wait_for_run(workspace_id: str, run_id: str, label: str = "Running the measurement pipeline...") -> str:

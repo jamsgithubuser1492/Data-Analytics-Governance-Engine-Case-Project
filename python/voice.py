@@ -11,11 +11,11 @@ STANCE_VERB = {"Lean in": "put more behind", "Hold": "keep as is", "Re-test": "t
 ACTION_WORDS = {"REDUCE_BUDGET_50%": "Reduce the budget by half", "SCALE_BUDGET_25%": "Increase the budget by a quarter",
                 "CLIENT_GOVERNANCE_AUDIT": "Review the reporting with the client", "HOLD_SCALE_REQUESTS": "Pause requests to spend more",
                 "RERUN_HOLDOUT": "Run a longer test", "REVIEW_MEASUREMENT": "Review how results are being measured",
-                "REALLOCATE_BUDGET": "Move budget between channels", "AUTHORIZE_RESEARCH": "Approve a research test"}
+                "REDUCE_TIER_SPEND": "Reduce spend on this audience tier", "REALLOCATE_BUDGET": "Move budget between channels", "AUTHORIZE_RESEARCH": "Approve a research test"}
 
 # Phrases that describe how the product was built. They must never appear on screen.
 BANNED_ON_SCREEN = ("screen reader", "shape and", "shape plus", "REQ-", "FR-", "design principle", "never an AI", "persona", "deliberately do not",
-                    "self_asserted", "iROAS", "MDE", "spec basis")
+                    "self_asserted", "iROAS", "MDE", "spec basis", "cannibaliz", "propensity", "decile", "donor", "RMSPE")
 
 
 def conf_phrase(tier: str) -> str:

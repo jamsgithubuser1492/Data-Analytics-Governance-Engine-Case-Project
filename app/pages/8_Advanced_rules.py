@@ -165,7 +165,7 @@ if s1.button("Save as new version", type="primary", disabled=bool(errors)):
 if runs and s2.button("Re-evaluate the selected run's data with the saved agents (creates a new run)"):
     rid = st.session_state.get("preview_run") or runs[0]["id"]
     run = store.get_run(ws, rid)
-    inputs = SourceTables(*(store.load_table(ws, rid, f"INPUT_{n}") for n in ("RAW_PLATFORM_DATA", "RAW_MTA_OUTPUT", "RAW_HOLDOUT_DATA", "BUSINESS_BENCHMARKS")))
+    inputs = SourceTables.from_store(lambda n: store.load_table(ws, rid, n))
     new_id = runner.submit(ws, inputs, PolicySettings(**run["settings"]), run["declarations"], (run["label"] or "Run") + " (agents updated)")
     status = wait_for_run(ws, new_id, "Re-evaluating agents...")
     st.success(f"Run {status}. Open the Dashboard to see the packets.") if status == "succeeded" else st.error(store.get_run(ws, new_id)["error"])

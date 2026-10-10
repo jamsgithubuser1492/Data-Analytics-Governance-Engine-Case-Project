@@ -32,6 +32,8 @@ Light and predominantly white. No large blocks of saturated colour.
 
 **Meaning of colour.** Green means "the evidence supports action", not merely "success". Blue is analytical, purple is an alternate method, amber is review, red is risk, navy is the decision and navigation layer.
 
+**Audience tier charts** use blue for what the platform credits and green for what ads caused, with a stacked red and green bar for the spend split. Red marks spend paying for sales that would have happened anyway.
+
 **The three measurement methods** keep the same colours everywhere: platform reported is blue, attribution model is purple, holdout proven is green. They are shown as complementary parts of one story, never as rival products.
 
 Status is never shown by colour alone. Each status pill carries a distinct shape and a text label.
@@ -61,6 +63,8 @@ Dark mode exists for people whose system uses it. It keeps the same navy based p
 | **Recommendation card** | A decision memo: action, expected impact, evidence, confidence, reason and the human controls |
 | **Governance status** | A short list of checks passed for this decision, drawn with check marks and shapes, never emoji |
 | **Human decision flow** | Evidence analyzed, recommendation prepared, person reviews, person signs, hand off. The current step is highlighted |
+| **Cannibalization meter** | A bar showing how much of a tier's spend pays for sales that would have happened anyway, with the dollar split and the 95% range beneath it. Red, amber or green follows the policy thresholds, and the figure is always printed |
+| **Control match card** | The comparison markets' quality: Match passed or Review required, three measures against their standards, the markets used and what matching on audience added. Technical terms stay out of the card |
 | **Status pills** | Small, subtle, shape plus text |
 | **Buttons** | Primary: navy fill, white text, 7 to 9 px radius. Secondary: white with a light border and navy text |
 | **Charts** | Flat, minimal, lightly gridded, annotated where it matters. No 3D, gradients, glow or decorative animation |

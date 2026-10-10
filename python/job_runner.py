@@ -38,6 +38,11 @@ class JobRunner:
         report = validate_inputs(inputs.platform, inputs.mta, inputs.holdout, inputs.benchmarks, settings, declarations, registry)
         if not report.ok:
             raise ValidationBlocked(report)
+        if inputs.audience:
+            from audience_tiers import validate_audience
+            arep = validate_audience(inputs.audience, settings)
+            if not arep.ok:
+                raise ValidationBlocked(arep)
         definitions = agent_definitions if agent_definitions is not None else self.store.get_agent_definitions(workspace_id)
         uses_deadband = any(d.get("enabled", True) and d.get("deadband_pct", 0) > 0 for d in definitions)
         prev_id, active = self.store.latest_active_set(workspace_id) if uses_deadband else (None, set())
