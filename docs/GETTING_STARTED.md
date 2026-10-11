@@ -40,6 +40,7 @@ pytest                         # full test suite
 | --- | --- |
 | How numbers are produced and what they mean | `docs/METHODOLOGY.md` (also the How it works page) |
 | Privacy and governance | `docs/PRIVACY_AND_GOVERNANCE.md` |
+| Feeding a media mix model and other systems | `docs/MMM_INTEGRATION_ARCHITECTURE.md` |
 | Writing rules | `docs/VOICE_GUIDE.md` |
 | Colour, type and components | `docs/DESIGN_SYSTEM.md` |
 | Automation design | `docs/ARCHITECTURE_MCP.md` |

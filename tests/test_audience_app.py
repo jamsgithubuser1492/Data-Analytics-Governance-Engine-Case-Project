@@ -104,3 +104,12 @@ def test_upload_page_offers_the_optional_aggregate_audience_files() -> None:
     at = AppTest.from_file(str(ROOT / "app" / "pages" / "1_Upload.py"), default_timeout=T).run(timeout=T)
     assert not at.exception, [e.value for e in at.exception]
     assert "Optional: add audience tier data" in " ".join(e.label for e in at.expander) or "Optional: add audience tier data" in text(at)
+
+
+def test_research_page_offers_the_evidence_pack_for_other_systems() -> None:
+    at = AppTest.from_file(str(ROOT / "app" / "pages" / "11_Research.py"), default_timeout=T).run(timeout=T)
+    assert not at.exception, [e.value for e in at.exception]
+    t = text(at)
+    assert "Evidence pack for your media mix model and other systems" in t and "Ready to inform a model" in t
+    assert len(at.get("download_button")) >= 3  # the priors code, the evidence pack and the evidence table
+    assert not EMOJI.search(t)

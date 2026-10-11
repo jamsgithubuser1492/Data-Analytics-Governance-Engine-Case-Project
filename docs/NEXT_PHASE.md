@@ -10,6 +10,11 @@
 
 * Audience tier layer: propensity weighted control matching, tier level incrementality with ranges and a sample guard, a guardrail and the "Reduce audience tier spend" action, dashboard section, settings and upload controls.
 
+* Evidence pack (`python/calibration_pack.py`): priors with exclusion and widening rules, lineage, hash, validation, JSON and CSV download on the Research page.
+
+## Designed, not built (feeding models and other systems)
+Warehouse tables, a signed release workflow, MMM toolkit adapters and a backtest harness, results flowing back (response curves, research priorities, divergence guardrail), MCP tools for the pack, notifications and connectors. See `docs/MMM_INTEGRATION_ARCHITECTURE.md` (sections 10, 15 and 17).
+
 ## Not built, audience layer
 * **A propensity scoring model** (training on individual level features, for example gradient boosting) is deliberately outside the engine: it needs person level or enriched data that the privacy design excludes. Only the aggregated decile counts enter.
 * **A media mix model with a separate saturation curve for each audience tier.** The tier results are a natural input to it; the model itself is future work.

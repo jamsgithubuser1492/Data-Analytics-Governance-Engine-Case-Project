@@ -66,44 +66,52 @@ A comparison is only as fair as the markets it is made against. Each group of te
 
 Three measures describe the match: how much of the pre launch movement in sales the blend explains, how much the audience mixes overlap, and how large the pre launch error is as a share of average sales. Each is compared with a standard you can change in Settings, and the card says Match passed or Review required. The match quality is computed from the data, and the page also shows what a history only match would have scored, so the benefit of matching on audience is visible rather than assumed.
 
-## 11. The advisory council
+## 11. Feeding a media mix model and other systems
+
+A media mix model looks at years of spending and sales to estimate what each channel contributes. It covers every channel and every week, but it works from correlation, so it can credit ads with sales they did not cause. Controlled tests are narrow but show what the ads actually caused. The Research next page packages this system's tests into an **evidence pack** so the model can start from proof.
+
+Each result becomes a record with its estimate, 95% range, evidence level, test window and, when reliable enough, a starting belief (a prior) for the model. Weaker evidence, older tests and poorly matched control markets make the belief wider and humbler; unreliable evidence is never used and the reason is listed. Only results that count just the revenue the ads caused can be used, because only they have a range. The pack never carries person level data, and a tamper evident hash shows any later edit.
+
+Share the pack with a production model only after a person has reviewed and signed it. The architecture guide describes how model results could come back to improve the Strategy page and the research priorities, and how other teams can read the same evidence.
+
+## 12. The advisory council
 
 The council is four seasoned advisors who read the same results through their own priorities: **The Steward** (CFO, conservative), **The Builder** (CMO, aggressive), **The Translator** (agency director, moderate) and **The Mechanic** (platform lead, moderate). Each has their own bar for proof, their own idea of what counts as clearly profitable, and their own tolerance for platforms claiming more than the tests confirm. Their stances read Put more behind it, Keep as is, Test again before deciding, Reduce spend and Prove it before deciding. They disagree on purpose: the disagreement shows where judgement, not data alone, decides.
 
 The council is the **interpretation layer**. Everything else in the app states facts. The advisors speak in revenue, budget and client terms, and offer possibilities in tentative language ("Consider...", "Given that..., perhaps we should think about...", "In order to address..., we might want to think about...") and always show the numbers behind a view and what would change their mind. The decision stays with the executive.
 
-## 12. Business strategy: from results to company decisions
+## 13. Business strategy: from results to company decisions
 
 The Strategy page works from the same run. It shows what moving budget would change and how sure that is (a best and worst case on the strict basis), a modeled value of waiting per week, and a sensitivity that answers the usual objection: **how much lower could the return on the new money be before the move stops adding revenue?**
 
 It then lists, for Finance, Marketing and creative, Agencies, Data and engineering, and Legal, what changes and what would need to be found out. The system computes what the data supports and leaves the rest (costs, hours, contract terms) blank for you, so it never states an unsourced figure as fact. A change plan suggests who may care about what and a phased path. An optional budget lens compares today's spend with a tiered target mix you set. A monitor shows whether returns are holding and which campaigns would meet a capital protection rule; it is information only.
 
-## 13. The AI brief and the answer check
+## 14. The AI brief and the answer check
 
 The AI brief turns a run into a prompt you can paste into your company's approved AI service. Every number is a numbered fact [F#] computed from the run, an interval appears only when the run computed one, and the rules ask the assistant to cite facts, label assumptions, argue both sides and never tell you to move money. Raw rows and personal data are never included, anything you type is scanned and redacted, and you can replace channel and campaign names with aliases. Exports are recorded by fingerprint only.
 
 Paste the assistant's answer into **Check an AI answer** and every figure is compared with the facts. A figure that is not in the facts may be an assumption or an invention. The check looks at numbers and overconfident phrasing; it cannot judge whether the reasoning is sound.
 
-## 14. Research next: what to test after a result
+## 15. Research next: what to test after a result
 
 A result is one measurement of one period. The Research page looks at what the run leaves uncertain and ranks tests to consider: a longer test with a synthetic control when evidence is below Verified, a multi-cell step-up test when a strong channel's behavior at higher spend is unknown, a media mix model calibrated with the test result when platforms claim much more than the test confirms, a re-test around seasonality, and an audience split for strong channels. Test length, spend in the test markets and the minimum detectable effect are computed from your run; people, hours and contract terms are left blank for your teams. Two tools help design a test: a synthetic control matcher (a weighted blend of untreated markets that mimics the test markets before launch, with a fit check) and a calculator that turns a test result and its margin of error into a starting belief for a media mix model.
 
-## 15. The sign-off desk: every decision is signed
+## 16. The sign-off desk: every decision is signed
 
 Nothing changes without a signature. For every decision, whether you approve it, change it to a decision of your own or reject it, you write a note of at least 10 characters, give your email and role and tick four acknowledgements. The decision is written to a log in which each entry is chained to the one before, so a later edit or deletion is visible, and the store refuses to move any item to approved, executed or dismissed without that signature. A result that is not decision grade cannot be approved. A strong result does not skip the signature. Guardrail flags, strategy scenarios and research ideas all arrive in the same queue. Until single sign-on is set up, the email is typed by the signer and the log records it as typed in rather than verified. The hand off step only records the approved change for the team that makes it; nothing is sent to an ad platform.
 
-## 16. Automation: connecting AI models safely
+## 17. Automation: connecting AI models safely
 
 The Automation blueprint describes how AI models could connect to the engine through the Model Context Protocol so that data pipelines and proposals run continuously. It is a design, not a running server. A connected model would have six narrow tools: five that read and one that stages a proposal. There is no approve tool and no execute tool, the model can never supply its own trust score, and a staged proposal does nothing until a person signs it on the Sign-off desk.
 
-## 17. What the system will never do
+## 18. What the system will never do
 
 - It never moves money. Every action needs a human signature, and changes of decision need a written reason that is saved in a tamper evident log.
 - It never invents numbers. Every figure comes from the run. Written memos are checked so that any number not tied to a verified fact is rejected.
 - It never tells you what to do. Headlines state findings. The advisors and strategy notes suggest ideas to consider.
 - It never hides uncertainty. Results carry confidence ranges, confidence levels and the way they were counted.
 
-## 18. Limits and honest caveats
+## 19. Limits and honest caveats
 
 - The demo data is synthetic and built so that the case study is repeatable. Real data will be noisier. Platform names such as Google, Meta, TikTok and Netflix are illustrative labels with no affiliation to those companies.
 - Signing and hand off are simulated. Nothing is sent to an ad platform and no real money moves. This is a portfolio demonstration, not production software or financial advice.

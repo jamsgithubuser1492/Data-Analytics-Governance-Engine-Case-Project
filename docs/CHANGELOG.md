@@ -1,6 +1,11 @@
 # Changelog
 
-## Audience tier layer (latest)
+## Model and system integration (latest)
+* `docs/MMM_INTEGRATION_ARCHITECTURE.md`: how holdout, geo test and audience tier evidence feeds a larger media mix model and other growth and data systems (principles, evidence inventory, prior rules, integration patterns, loop back, architecture, interface catalog, data contracts, governance, risks, validation, rollout, open decisions).
+* `python/calibration_pack.py`: the evidence pack, with log normal priors, exclusion and widening rules, lineage, hash and validation; downloadable as JSON and CSV from the Research next page.
+* Glossary, page guide, methodology, privacy and roadmap updated.
+
+## Audience tier layer
 * Propensity weighted control matching (sales history plus audience mix) with computed match quality, a pass or review verdict against policy thresholds, and a visible comparison with a history only match.
 * Audience tier incrementality: share of credited sales caused by ads, revenue and spend paying for sales that would have happened anyway, 95% ranges, a minimum sample guard and evidence levels.
 * Aggregate only data contract (decile mix, tier performance, market sales), a staging view in `sql/audience_tier_views.sql`, and synthetic example data in `data/audience/`.

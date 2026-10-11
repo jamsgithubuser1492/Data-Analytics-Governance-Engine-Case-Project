@@ -16,6 +16,7 @@ import plotly.graph_objects as go  # noqa: E402
 import streamlit as st  # noqa: E402
 
 import charts  # noqa: E402
+import calibration_pack as cpk  # noqa: E402
 import mmm_priors as mp  # noqa: E402
 import research_engine as rx  # noqa: E402
 import synthetic_control as scm  # noqa: E402
@@ -179,3 +180,40 @@ with tab_mmm:
         st.code(code, language="python", wrap_lines=True)
         st.download_button("Download the code", code, "mmm_priors.py", "text/x-python", key="dl_priors")
     st.caption("Assumption: the test's standard error is taken from its 95% interval, and the return is positive. Carry over and saturation curves still need to be chosen for each channel (see the reference functions in the code).")
+
+    st.markdown("---")
+    st.markdown("#### Evidence pack for your media mix model and other systems")
+    st.caption("Everything this run has proven, in one file your modeling and data teams can load: each result with its range, evidence level, test window and starting belief. "
+               "Results that are not reliable enough are listed with the reason and never turned into a prior.")
+    try:
+        tabs_ = {n: store.load_table(ws, run_id, n) for n in ("INPUT_RAW_HOLDOUT_DATA",)}
+        for n_ in ("AUDIENCE_TIER_RESULTS", "AUDIENCE_MATCH_QUALITY"):
+            try:
+                tabs_[n_] = store.load_table(ws, run_id, n_)
+            except Exception:
+                pass
+        pack = cpk.build_pack(tabs_, v.report, v.settings, run_id=run_id)
+        problems = cpk.validate_pack(pack)
+    except Exception as exc:  # a run without the needed tables
+        pack, problems = None, [str(exc)]
+    if pack is None or problems:
+        ui.callout("The evidence pack could not be built for this run. " + " ".join(problems), "warn")
+    else:
+        sm = pack["summary"]
+        ui.stat_row([dict(label="Results listed", value=str(sm["records"]), sub="Campaigns, channels and audience tiers"),
+                     dict(label="Ready to inform a model", value=str(sm["included"]), sub="Reliable, with a range and a starting belief", kind="ok"),
+                     dict(label="Listed but not used", value=str(sm["excluded"]), sub="With the reason shown in the file", kind="warn" if sm["excluded"] else "ok"),
+                     dict(label="Counting method", value="Strict lift", sub="Only the revenue the ads caused")], compact=True)
+        led = cpk.to_frame(pack)
+        view = led[led["level"] == "channel"][["channel", "estimate", "lower95", "upper95", "evidence_level", "prior_mean", "prior_sd", "included", "exclusion_reason"]].copy()
+        view["evidence_level"] = view["evidence_level"].map(lambda x: ui.TIER_LABEL.get(x, (x,))[0])
+        view.columns = ["Channel", "Proven return per $1", "Low (95%)", "High (95%)", "Confidence", "Starting belief, average", "Starting belief, spread", "Ready to use", "Why not"]
+        st.dataframe(view.round(3), hide_index=True, width="stretch")
+        d1, d2 = st.columns(2)
+        import json as _json
+        d1.download_button("Download the evidence pack (JSON)", _json.dumps(pack, indent=2, default=str), f"mmge_evidence_pack_{run_id[:8]}.json", "application/json", key="dl_pack")
+        d2.download_button("Download the evidence table (CSV)", led.to_csv(index=False), f"mmge_evidence_table_{run_id[:8]}.csv", "text/csv", key="dl_ledger")
+        with st.expander("What your modeling team should know before using it"):
+            for note in pack["usage_notes"]:
+                st.markdown(f"- {ui.esc(note)}")
+        st.caption("Share the pack with a production model only after a person has reviewed it. See the architecture guide for how it connects to other systems.")

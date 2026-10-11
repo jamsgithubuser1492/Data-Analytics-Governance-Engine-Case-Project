@@ -62,6 +62,12 @@ SECTIONS: List[Tuple[str, str]] = [
      "Matching on both avoids choosing markets that sold similar amounts but are home to different kinds of people.\n\n"
      "Three measures describe the match: how much of the pre launch movement in sales the blend explains, how much the audience mixes overlap, and how large the pre launch error is as a share of average sales. "
      "Each is compared with a standard you can change in Settings, and the card says Match passed or Review required. The match quality is computed from the data, and the page also shows what a history only match would have scored, so the benefit of matching on audience is visible rather than assumed."),
+    ("Feeding a media mix model and other systems",
+     "A media mix model looks at years of spending and sales to estimate what each channel contributes. It covers every channel and every week, but it works from correlation, so it can credit ads with sales they did not cause. "
+     "Controlled tests are narrow but show what the ads actually caused. The Research next page packages this system's tests into an **evidence pack** so the model can start from proof.\n\n"
+     "Each result becomes a record with its estimate, 95% range, evidence level, test window and, when reliable enough, a starting belief (a prior) for the model. Weaker evidence, older tests and poorly matched control markets make the belief wider and humbler; unreliable evidence is never used and the reason is listed. "
+     "Only results that count just the revenue the ads caused can be used, because only they have a range. The pack never carries person level data, and a tamper evident hash shows any later edit.\n\n"
+     "Share the pack with a production model only after a person has reviewed and signed it. The architecture guide describes how model results could come back to improve the Strategy page and the research priorities, and how other teams can read the same evidence."),
     ("The advisory council",
      "The council is four seasoned advisors who read the same results through their own priorities: **The Steward** (CFO, conservative), **The Builder** (CMO, aggressive), "
      "**The Translator** (agency director, moderate) and **The Mechanic** (platform lead, moderate). Each has their own bar for proof, their own idea of what counts as clearly profitable, "

@@ -23,6 +23,10 @@
 | **Decision packet** | A one page proposal that a person approves, changes or rejects. |
 | **Signed decision record** | A permanent list of signed decisions in which each entry is linked to the one before, so tampering is visible. |
 | **Synthetic data** | Made up data that behaves like real data. Used here so results are repeatable and no real company is involved. |
+| **Prior** (starting belief) | What a model is told to expect before it looks at its own data. A test result with its range becomes a prior, so the model starts from proof. |
+| **Evidence pack** | A file that packages every result this system has proven, with its range, evidence level, test window and prior, for a modeling or data team. |
+| **Media mix model (MMM)** | A statistical model that uses years of spending and sales to estimate what each channel contributes. Broad, but it works from correlation. |
+| **Response curve** (saturation) | How a channel's return falls as spend rises. |
 | **Hand off** | Recording that an approved change is ready for the team that makes it. In this project nothing is sent anywhere. |
 | **Audience tier** | A group of people ranked by how likely they were to buy even without seeing an ad. Tier 1 is the most likely buyers (for example past visitors), Tier 3 is a broad audience. |
 | **Sales that would have happened anyway** | Revenue a platform credits to ads that the comparison with control markets shows would have arrived without them. Analysts call this cannibalization. |

@@ -56,6 +56,8 @@ The left menu groups the pages by what you are trying to do: **Understand**, **I
 **What it is for:** after a result, the honest question is "what should we test next?" This page ranks tests worth running (a longer test, a bigger test, a re-test around seasonality).
 **What you will see:** a ranked list with computed test lengths and spend, plus two helper tools: one that finds look alike markets to compare against, and one that turns a test result into a starting belief for a more advanced model.
 
+**Evidence pack (on this page):** under Media mix model priors, a download of everything the run has proven, with ranges, evidence levels and starting beliefs, for a modeling or data team. Results that are not reliable are listed with the reason and never used. See `docs/MMM_INTEGRATION_ARCHITECTURE.md`.
+
 ## Decide
 
 ### Sign-off desk

@@ -5,6 +5,9 @@ This document describes how the Media Measurement and Governance Engine protects
 ## 0. The audience layer
 The optional audience tier view accepts three **aggregate** tables only: per day, campaign and tier counts of people reached and conversions in test and control markets; one sales series per market; and one audience mix per market (ten shares that add to 100%). Any column whose name looks like personal or person level data (email, phone, address, user or customer identifiers, device or cookie identifiers, age, gender, income, postal code, or a feature column) is refused at upload and blocks the run. Scoring individual people into likelihood to buy groups happens outside the system, if at all, and only the aggregated group counts come in. No raw feature matrices ever enter the engine. The example files are synthetic.
 
+## 0b. The evidence pack
+The evidence pack that feeds media mix models and other systems carries aggregate results only (estimates, ranges, evidence levels, windows and priors). It is refused if any field name looks like person level data, it records the run, settings and policy that produced it, and a hash exposes any later edit. Releasing it to a production model is designed as a signed decision. See `docs/MMM_INTEGRATION_ARCHITECTURE.md`.
+
 ## 1. What data the system uses
 
 The system works on **aggregate marketing measurements**: daily spend, impressions, clicks and conversions by campaign, attribution model output by campaign, and geo level experiment counts. It does not need, and must not receive, information about individual people.

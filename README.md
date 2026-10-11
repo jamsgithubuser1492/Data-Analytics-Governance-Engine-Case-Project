@@ -114,6 +114,7 @@ I acted as the product owner and orchestrator. I set the goals, made the decisio
 | How the numbers are produced | [docs/METHODOLOGY.md](docs/METHODOLOGY.md) |
 | Privacy and governance | [docs/PRIVACY_AND_GOVERNANCE.md](docs/PRIVACY_AND_GOVERNANCE.md) |
 | How AI tools could connect safely (design only) | [docs/ARCHITECTURE_MCP.md](docs/ARCHITECTURE_MCP.md) |
+| How test results feed a larger media mix model and other systems | [docs/MMM_INTEGRATION_ARCHITECTURE.md](docs/MMM_INTEGRATION_ARCHITECTURE.md) |
 | How to put it online | [docs/DEPLOY.md](docs/DEPLOY.md) |
 | Writing rules | [docs/VOICE_GUIDE.md](docs/VOICE_GUIDE.md) |
 | What changed and what is next | [docs/CHANGELOG.md](docs/CHANGELOG.md), [docs/NEXT_PHASE.md](docs/NEXT_PHASE.md) |
@@ -164,6 +165,7 @@ The sections below are for engineers.
 | `python/governance_checker.py`, `report_generator.py` | 8-point audit, JSON and markdown reports |
 | `python/agent_orchestrator.py` | Three persona agents and simulated Snowflake action log |
 | `python/propensity_scm.py` | Propensity weighted synthetic control: matches control markets on sales history and audience mix, with computed match quality |
+| `python/calibration_pack.py`, `mmm_priors.py` | The evidence pack (priors, exclusions, lineage, hash) and prior helpers for media mix models |
 | `python/audience_tiers.py` | Audience tier incrementality, sample guard, 95% ranges, aggregate data contract and match quality table |
 | `python/signoff.py`, `overrides.py`, `run_store.py` | Signed decisions, the tamper evident log and the run store |
 | `app/app.py` | Streamlit executive dashboard (pages in `app/pages/`) |
