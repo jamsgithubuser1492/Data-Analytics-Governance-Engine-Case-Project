@@ -73,23 +73,23 @@ Every page is explained in plain words in the [page by page guide](docs/PAGE_GUI
 A marketing leader reports to a finance chief who asks one question: "Did this spend earn its money back?" The ad platforms answer yes. The finance team's own numbers often say otherwise. Nobody in the room can tell which is right, so decisions turn into arguments, and the arguments are hard to explain to a board.
 
 ### My approach
-I treated it as a product for busy executives, not a statistics tool.
-1. **Start from the decision.** What would a chief financial officer, a chief marketing officer, an agency director and a media lead each want to know first? Each gets their own view.
-2. **Show proof, not opinion.** Results come from a controlled test, shown with a 95% likely range and quality checks, and every number can be traced to its source.
-3. **Keep people in charge.** The system suggests in cautious language ("Consider...") and never acts alone. Each decision is signed with a note, an email and a role.
-4. **Protect the data and the company.** Personal data is blocked or removed, the AI assistant only ever sees summary totals, and the design for connecting AI tools gives the AI no power to approve or spend.
+I treated this as a product for busy executives, rather than a simple statistics tool.
+1. **Start from the decision.** What would a chief financial officer, a chief marketing officer, an agency director and a media lead each want to know first? Each gets their own view, with the advisors providing key recommendations tailored to the role that it's build for.
+2. **Show proof, grounded in data.** Results come from a controlled test, shown with a 95% likely range and quality checks, and every number can be traced to its source. This also includes confidence ranges, likelihood thresholds, and key tradeoffs and implications to consider.
+3. **Keep people in charge.** Our recommendation engine is framed to provide objective insights to help executives think thoroughly through problems to consider all of the tradeoffs ("Consider..."). Each decision is signed with a note, an email and a role to ensure that the insights and trade-offs are fully accounted for.
+4. **Protect the data and the company.** Personal data is blocked or removed, the AI assistant only ever sees summary totals, and the design for connecting AI tools gives the AI no power to approve or spend. This ensures the leaders are always in the loop, even when automation is enabled.
 5. **Look below the average.** An overall return can hide that a platform is mostly reaching people who would have bought anyway. The audience tier view splits spend by how likely people were to buy without an ad, compares test and control markets, and shows how many dollars of each tier are paying for sales that would have happened anyway. It only judges tiers with enough data, and checks that the control markets are a fair match first.
 6. **Write it so a non specialist understands it.** A written voice guide keeps jargon off the screen, and an automated test fails if building notes or jargon leak into the pages.
 
 ### The result
-A working product with 13 pages, a verified sample dataset, an audience tier view that shows which groups of people the money reaches, and nearly 500 automated tests. On the sample data it shows that the platforms' claims and the controlled tests differ by hundreds of thousands of dollars, that most of the money not earned back sits in one channel, and which campaigns are strong enough to act on.
+I shipped a live executive-ready decision-making system, a verified sample dataset, an analysis to prove out the utility, an audience tier view that shows which groups of people the money reaches, and nearly 500 automated tests. On the sample data it shows that the platforms' claims and the controlled tests differ by hundreds of thousands of dollars, that most of the money not earned back sits in one channel, and which campaigns are strong enough to act on. This proves out how valuable a system like this can actually be, when working with the most important budgets at the scale of large platforms and key brands. 
 
 ### Trade-offs I made, and why
-* **Plain language over precision on screen.** Technical names move to a sources section. The cost is that experts must look one level deeper; the gain is that executives actually read it.
-* **Two ways of counting, both shown.** The simple count looks better and the strict count is safer. I show both and explain the gap, rather than hiding the unflattering one.
-* **Suggestions, not instructions.** The advisors say "Consider...". It is less punchy, but a tool that tells leaders what to do invites blind trust.
-* **Simulated actions.** Nothing connects to a real ad platform. That keeps the demo safe, and the design document describes how a real connection would be made safely.
-* **Synthetic data.** It makes results repeatable and avoids privacy issues, but it is cleaner than real life.
+* **Strategic framing over precision** Technical terms are only included in the sources section. The cost is that data experts must look one level deeper to fully understand the granularity; the gain is that executives actually read it, understand it, and can make faster and more effective decision-making on it.
+* **Data Integrity.** Oftentimes a simple count looks better and the strict count is safer. I built this tool to show both and explain the gap, helping the decision-making weigh the options, risks, and potential return.
+* **Suggestions, grounded in objective insights.** We provide insights grounded in objective findings and statistics, but the actual strategic implications must require a human-in-the-loop for the final strategic decision.
+* **Simulated actions.** Nothing connects to a real ad platform. That keeps the demo safe, and the design document describes how a real connection would be made safely if we were to implement that.
+* **Synthetic data.** Using synthetic data through multiple tests ensure that the results are repeatable and avoids privacy issues. This also proves out the efficacy of the system and the way it handles messy data.
 
 ### What I would do differently next
 * Test the engine on messy or public real world data and on simulated data with a known planted result, to show how often it finds the truth and how often it is fooled.
