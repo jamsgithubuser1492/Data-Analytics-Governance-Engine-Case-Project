@@ -75,3 +75,11 @@ def test_licence_and_supporting_files_exist() -> None:
     for line in (ROOT / "requirements.txt").read_text().splitlines():
         if line and not line.startswith("#"):
             assert "==" in line, f"not pinned: {line}"
+
+
+def test_video_script_quotes_only_numbers_the_project_computes() -> None:
+    script = (ROOT / "docs" / "VIDEO_SCRIPT.md").read_text(encoding="utf-8")
+    for figure in ("$748,140", "3.33x", "$105,158", "$399,188", "6 of 8", "32.1 times", "about 0.57x", "$91,288"):
+        assert figure in script, figure
+        assert figure.replace("about ", "") in README or figure in ("32.1 times",), figure
+    assert "Part A" in script and "Part B" in script and "Questions you may be asked" in script
