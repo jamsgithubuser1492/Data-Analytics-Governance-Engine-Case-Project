@@ -2,19 +2,19 @@
 
 **Status:** the evidence pack (section 5) is built and tested. Everything marked Designed or Future is a design, not running software. All figures in worked examples come from the synthetic demo data.
 
-## 1. In one page, for non specialists
+## 1. System Design Overview
 
-A media mix model (MMM) is a statistical model that looks at years of spending and sales and estimates what each channel contributes. It is powerful, because it covers every channel and every week, but it works from correlation. When two things move together (an ad campaign and a sales peak that was coming anyway), it can credit the ads with sales they did not cause.
+The performance outcomes from this system are intended to be flexible in how they are used and deployed, including leveraged as informed priors in a media mix model (MMM). This is a robust statistical model that looks at years of spending, sales, and estimates what each channel contributes. It is powerful, because it covers every channel and every week, but it ultimately identifies patterns grounded in correlation. When two things move together (such as an ad campaign and a sales peak that occured due to seasonality), it can credit the ads with sales they did not cause.
 
-Controlled tests (geo holdouts) are the opposite. They are narrow, covering one channel, one place and a few weeks, but they show what the ads actually caused.
+Controlled tests (geo holdouts) are the opposite. They are narrow, covering one channel, one place, and a few weeks, and they show what the ads actually caused with statistical significance.
 
-This system produces the tests. The idea is to let the tests keep the model honest:
+This system produces the tests. The idea is to let the tests keep the model honest by ensuring we are adjusting the weights on our MMM accordingly based on what we know to be true:
 
 1. **The tests become starting beliefs.** A result such as "this channel returned 0.57 for every $1, and we are 95% sure it is between 0.45 and 0.70" is turned into a starting belief (a prior) for that channel's contribution in the model. The model then starts from proof rather than from a blank page.
 2. **Weak evidence counts for less.** A result that is only "leaning", that is old, or whose comparison markets were a poor match, is given a wider, humbler belief. A result that is not reliable is never used, and the reason is written down.
 3. **The model's answers come back.** The model's saturation curves (how returns fall as spend rises) improve the Strategy page, point to where the next test would teach the most, and raise a flag when the model and the tests disagree.
 4. **Other teams use the same facts.** Finance planning, business intelligence, the experiment backlog, audience teams and ad operations can all read the same evidence instead of keeping their own versions of the truth.
-5. **A person signs every release.** Nothing flows into a production model or changes spend without a named person reviewing and signing it, and everything is traceable to the run, the settings and the data that produced it.
+5. **A person still signs every release.** Nothing flows into a production model or changes spend without a named person reviewing and signing it, and everything is traceable to the run, the settings and the data that produced it.
 
 ## 2. Design principles
 
@@ -29,19 +29,35 @@ This system produces the tests. The idea is to let the tests keep the model hone
 | Reproducible | Same run, settings and code give the same pack, with a hash that exposes any edit |
 | Honest about assumptions | Any default that is a design assumption, not a research finding, is labelled and adjustable |
 
-## 3. The evidence this system produces
+## 3. The Informed Priors & Empirical Evidence Architecture for MMM
 
-| Evidence | Level | What it measures | Source in MMGE | Quality gate | Status |
+To prevent Media Mix Models (MMM) from over-attributing credit to high-intent or self-claiming channels, the system generates empirical evidence from lower-level causal experiments and feeds them into the MMM as **Informative Priors**.
+
+Below is the specification of the evidence produced by the engine, its hierarchical level, quality gating criteria, and how each piece of data is used to calibrate the Media Mix Model.
+
+---
+
+## Evidence Hierarchy & Calibration Matrix
+
+| Evidence Artifact | Level | What It Measures | Source in MMGE | Quality Gate / Trust Threshold | Usage in MMM Prior Calibration |
 | --- | --- | --- | --- | --- | --- |
-| Campaign test | Campaign | Incremental return per $1 (strict lift), 95% range | Geo holdout, synthetic control | Trust checks, evidence level (Confident, Leaning, Not yet reliable) | Built |
-| Channel test result | Channel | The campaign results combined, weighted by their precision | Derived from campaign tests | Lowest evidence level among the campaigns used | Built |
-| Audience tier result | Audience tier | Share of credited sales the ads caused, return caused by ads, 95% range | Tier conversion rates, test versus control | Sample guard, range width, control market match | Built |
-| Control market match | Per test group | How fair the comparison was (history explained, audience overlap, error) | Propensity weighted control matching | Policy thresholds, pass or review | Built |
-| Platform and attribution claims | Campaign | What platforms and the attribution model say | Source files | Never used as a prior; used only to show the gap | Built |
-| Signed decisions | Decision | What a person approved, changed or rejected, and why | Sign-off desk and its log | Hash chained record | Built |
-| Test designs and backlog | Idea | What to test next, with computed sizes and durations | Research next | Priority computed from spend and uncertainty | Built |
+| **Campaign Test** | Campaign | Incremental return per $1 spent (Strict Lift) with 95% Confidence Interval. | Geo-Holdout Test via Synthetic Control | Trust score checks; Evidence level (**Confident**, **Leaning**, **Not Yet Reliable**). | Sets campaign-level LogNormal prior distributions $(\mu, \sigma)$ for channel effectiveness parameters ($\beta_m$). |
+| **Channel Test Result** | Channel | Combined campaign results weighted by statistical precision. | Precision-weighted aggregation of Campaign Tests | Inherits the lowest evidence level among included campaigns. | Sets the channel-level efficiency priors in macro portfolio allocation models. |
+| **Audience Tier Result** | Audience Tier | Share of credited sales caused by ads vs. organic baseline; 95% CI range. | Tier-level conversion rate differential (Test vs. Control) | Sample size guardrails, CI range width limits, and control market match quality. | Informs tier-disaggregated Hill saturation curves ($K_{m,k}$) to account for high-intent cannibalization. |
+| **Control Market Match** | Per Test Group | Fair-comparison validation (pre-period history fit, population overlap, RMSPE). | Propensity-Weighted Synthetic Control Matching | Policy thresholds (Pass or Review Required; $R^2 \ge 0.85$, $p > 0.05$). | Determines the variance/uncertainty ($\sigma^2$) applied to the Bayesian prior. Low fit expands prior uncertainty. |
+| **Platform & Attribution Claims** | Campaign | Gross self-reported returns and Multi-Touch Attribution (MTA) credit allocations. | Ingested platform and MTA source files | **Never used as a prior.** Used exclusively to display reporting gaps and over-claims. | Excluded from prior generation to prevent self-attribution bias from contaminating model weights. |
+| **Signed Decisions** | Decision | Executive approvals, overrides, and business rationales. | Sign-Off Desk & Audit Log | Cryptographically hash-chained record (`run_audit_log.json`). | Logs human override events when operational constraints diverge from statistical MMM priors. |
+| **Test Designs & Backlog** | Strategic Idea | Recommended future experiments with calculated sample sizes and durations. | Research Next Engine | Priority score computed from channel spend volume and variance/uncertainty. | Schedules future geo-holdouts to refresh outdated or wide priors in the MMM Bayesian stack. |
 
-Only the strict lift basis has an interval, so only strict lift evidence can produce a prior. The counting method that credits all test market revenue is listed for comparison and never used.
+---
+
+## Core Principles for MMM Integration
+
+1. **Strict Separation of Claims and Priors:** Self-reported platform attribution is strictly isolated and **never** injected into the MMM as a prior, preventing self-fulfilling attribution loops.
+2. **Quality-Weighted Prior Variance:** The uncertainty ($\sigma$) of an MMM prior is directly inversely proportional to the **Control Market Match** fit ($R^2$) and **Trust Score** of the underlying geo-holdout test.
+3. **Cannibalization Disaggregation:** Audience Tier results modify the MMM's saturation parameters ($K$) to reflect that retargeting channels hit marginal decay much earlier than broad prospecting channels.
+
+Only the strict lift basis has an interval, so only strict lift evidence can produce a prior. The counting method that credits all test market revenue is listed for comparison.
 
 ## 4. From evidence to informed priors
 
