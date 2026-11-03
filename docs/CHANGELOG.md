@@ -1,6 +1,11 @@
 # Changelog
 
-## Light mode refinement (latest)
+## Legibility pass (latest)
+* A full scan of every page at desktop and phone width, in light and dark, for contrast, size and clipping. Fixes: captions and notes no longer faded (they measured about 2.6 to 1, now above 5 to 1); status pill green darkened; sidebar group labels and the brand subtitle enlarged; slider labels, alerts and disabled buttons made readable; chart annotations enlarged; unselected radio buttons, checkboxes, inputs and dropdowns now have a visible border; placeholders strengthened; markdown tables scroll inside their frame on phones; dark mode buttons keep readable text.
+* Smoothness: smooth scrolling and a stable scrollbar gutter, charts reserve height, softer refresh state, larger touch targets on phones.
+* A contrast test now guards the colour tokens in both themes.
+
+## Light mode refinement
 * Light palette retuned (cooler page, hairline borders, a stronger input border, a softer amber for review states) and a faint top right glow for depth.
 * Sidebar navigation tightened with hover states; segmented controls are one rounded group with a raised selection; tabs use a green underline; inputs, selects, tags, buttons and expanders share radius, border and focus styling; the demo notice is a slim quiet strip.
 * Executive briefing impact panel and confidence line tidied; tables get a framed container and row hover; chart bars have rounded corners with lighter axis text and styled tooltips.

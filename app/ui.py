@@ -15,11 +15,11 @@ import streamlit as st
 
 # ------------------------------------------------------------------------------------------- tokens
 LIGHT: Dict[str, str] = dict(bg="#F6F8FB", card="#FFFFFF", surface="#F1F5F9", surface2="#EDF3FA", border="#E0E7EF", border_strong="#C7D2DF", ink="#10284A", muted="#52627A",
-                             accent="#18345B", accent2="#24466F", accent_soft="#E8F0FA", ok="#087F6A", ok_bg="#E4F5F0", ok_mid="#159A83", warn="#96500A", warn_bg="#FFF4DB",
+                             accent="#18345B", on_accent="#FFFFFF", accent2="#24466F", accent_soft="#E8F0FA", ok="#087F6A", ok_text="#06705D", ok_bg="#E4F5F0", ok_mid="#159A83", warn="#96500A", warn_bg="#FFF4DB",
                              bad="#B3333B", bad_bg="#FDEAEB", grid="#EBF0F5", claimed="#4E8FE7", model="#8D82D8", proven="#159A83",
                              hero_a="#EFF5FB", hero_b="#FFFFFF", shadow="rgba(16,40,74,.06)", shadow2="rgba(16,40,74,.10)", ring="rgba(21,154,131,.32)", glow="#E6F0FB")
 DARK: Dict[str, str] = dict(bg="#0E1A2E", card="#14233B", surface="#122038", surface2="#1A2C47", border="#27395A", border_strong="#3A5078", ink="#E6EDF7", muted="#9FB0C6",
-                            accent="#8FB0FF", accent2="#B4CAFF", accent_soft="#1B2E52", ok="#5FD1B3", ok_bg="#10332D", ok_mid="#43B69F", warn="#F0C25E", warn_bg="#3A2F12",
+                            accent="#8FB0FF", on_accent="#0E1A2E", accent2="#B4CAFF", accent_soft="#1B2E52", ok="#5FD1B3", ok_text="#5FD1B3", ok_bg="#10332D", ok_mid="#43B69F", warn="#F0C25E", warn_bg="#3A2F12",
                             bad="#FF9AA0", bad_bg="#3D1A1E", grid="#233450", claimed="#6FA5F0", model="#A89FE6", proven="#43B69F",
                             hero_a="#16263F", hero_b="#0E1A2E", shadow="rgba(0,0,0,.25)", shadow2="rgba(0,0,0,.35)", ring="rgba(95,209,179,.40)", glow="#132238")
 # Okabe-Ito based channel colors: distinguishable under the common forms of color blindness
@@ -84,7 +84,7 @@ h5 {{font-weight: 600; font-size: 1.08rem; margin-bottom: .1rem;}}
 .brand {{display: flex; align-items: center; gap: 10px; padding: 4px 0 6px;}}
 .brand svg {{flex: none;}}
 .brand .wm {{font-size: 1.35rem; font-weight: 700; letter-spacing: .02em; color: {t['ink']}; line-height: 1;}}
-.brand .sub {{font-size: .68rem; line-height: 1.25; color: {t['muted']}; margin-top: 3px;}}
+.brand .sub {{font-size: .75rem; line-height: 1.25; color: {t['muted']}; margin-top: 3px;}}
 .hero {{position: relative; overflow: hidden; border: 1px solid {t['border']}; border-radius: 14px; padding: 40px 44px 32px;
   background: linear-gradient(180deg, {t['hero_a']}, {t['hero_b']}); box-shadow: 0 1px 3px {t['shadow']};}}
 .kicker {{font-size: .74rem; letter-spacing: .1em; text-transform: uppercase; color: {t['muted']}; font-weight: 600;}}
@@ -105,7 +105,7 @@ h5 {{font-weight: 600; font-size: 1.08rem; margin-bottom: .1rem;}}
 .brief .impact .big.neutral {{color: {t['ink']};}}
 .brief .facts {{display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; border-top: 1px solid {t['border']}; margin-top: 16px; padding-top: 14px;}}
 .brief .facts .v {{font-size: 1.12rem; font-weight: 600; color: {t['ink']}; font-variant-numeric: tabular-nums;}}
-.brief .facts .l {{font-size: .74rem; color: {t['muted']}; line-height: 1.35; margin-top: 2px;}}
+.brief .facts .l {{font-size: .78rem; color: {t['muted']}; line-height: 1.35; margin-top: 2px;}}
 .brief .conf {{margin-top: auto; padding-top: 14px; border-top: 1px solid {t['border']}; font-size: .84rem; color: {t['muted']}; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;}}
 .brief .conf span:nth-child(2) {{flex: 1 1 170px;}}
 .brief .conf a {{flex-basis: 100%; margin: 2px 0 0 24px; color: {t['accent']}; font-weight: 600; text-decoration: none;}}
@@ -118,7 +118,7 @@ h5 {{font-weight: 600; font-size: 1.08rem; margin-bottom: .1rem;}}
 .pill {{display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px 2px 8px; border-radius: 999px; font-size: .76rem; font-weight: 600;
   line-height: 1.5; border: 1px solid transparent; white-space: nowrap;}}
 .pill svg {{flex: none;}}
-.pill-ok {{background: {t['ok_bg']}; color: {t['ok']};}} .pill-warn {{background: {t['warn_bg']}; color: {t['warn']};}}
+.pill-ok {{background: {t['ok_bg']}; color: {t['ok_text']};}} .pill-warn {{background: {t['warn_bg']}; color: {t['warn']};}}
 .pill-bad {{background: {t['bad_bg']}; color: {t['bad']};}} .pill-info {{background: {t['accent_soft']}; color: {t['accent']};}}
 .pill-muted {{background: {t['surface2']}; color: {t['muted']};}}
 .stats {{display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; margin: 18px 0 8px;}}
@@ -156,7 +156,7 @@ h5 {{font-weight: 600; font-size: 1.08rem; margin-bottom: .1rem;}}
 .gov div {{display: flex; gap: 8px; align-items: center; font-size: .88rem; color: {t['ink']};}}
 .trio {{display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 10px 0;}}
 .trio .m {{border: 1px solid {t['border']}; border-top: 3px solid var(--c); border-radius: 10px; padding: 10px 12px; background: {t['card']};}}
-.trio .m .l {{font-size: .74rem; color: {t['muted']};}} .trio .m .v {{font-size: 1.3rem; font-weight: 600; font-variant-numeric: tabular-nums; color: {t['ink']};}}
+.trio .m .l {{font-size: .78rem; color: {t['muted']};}} .trio .m .v {{font-size: 1.3rem; font-weight: 600; font-variant-numeric: tabular-nums; color: {t['ink']};}}
 .ring {{display: flex; gap: 22px; align-items: center; flex-wrap: wrap;}}
 .ring .rows {{flex: 1 1 220px; display: grid; gap: 8px;}}
 .ring .row {{display: flex; justify-content: space-between; font-size: .88rem; border-bottom: 1px solid {t['border']}; padding-bottom: 6px;}}
@@ -172,7 +172,7 @@ h5 {{font-weight: 600; font-size: 1.08rem; margin-bottom: .1rem;}}
 .matchcard .mt {{font-weight: 600; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 8px;}}
 .page-head {{margin: .2rem 0 1.4rem;}} .page-head h1 {{font-size: 2.1rem; margin: .2rem 0 .3rem; font-weight: 600;}}
 .page-head p {{color: {t['muted']}; font-size: 1.02rem; max-width: 760px; line-height: 1.55; margin: 0;}}
-table.mm {{border-collapse: collapse; width: 100%; font-size: .9rem;}} table.mm th {{text-align: left; color: {t['muted']}; font-weight: 600; font-size: .74rem;
+table.mm {{border-collapse: collapse; width: 100%; font-size: .9rem;}} table.mm th {{text-align: left; color: {t['muted']}; font-weight: 600; font-size: .76rem;
   letter-spacing: .05em; text-transform: uppercase; border-bottom: 1px solid {t['border']}; padding: 8px 10px;}}
 table.mm td {{padding: 9px 10px; border-bottom: 1px solid {t['border']}; font-variant-numeric: tabular-nums;}}
 @media (max-width: 760px) {{ .hero {{padding: 26px 20px;}} .sec h2 {{font-size: 1.4rem;}} .trio {{grid-template-columns: 1fr;}} .brief .facts {{grid-template-columns: 1fr;}} }}
@@ -187,7 +187,7 @@ html {{-webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;}
 [data-testid="stSidebar"] [data-testid="stPageLink-NavLink"] {{border-radius: 10px; padding: .2rem .6rem; margin: 0; min-height: 2.1rem; transition: background-color .18s ease-out, transform .18s ease-out;}}
 [data-testid="stSidebar"] [data-testid="stPageLink-NavLink"]:hover {{background: {t['surface']}; transform: translateX(1px);}}
 [data-testid="stSidebar"] [data-testid="stPageLink-NavLink"] p {{font-size: .92rem; font-weight: 500; letter-spacing: -0.005em;}}
-[data-testid="stSidebar"] .kicker {{font-size: .68rem; letter-spacing: .12em; color: {t['muted']}; opacity: .85;}}
+[data-testid="stSidebar"] .kicker {{font-size: .75rem; letter-spacing: .1em; color: {t['muted']};}}
 [data-testid="stMain"] [data-testid="stPageLink-NavLink"] {{display: inline-flex; border: 1px solid {t['border']}; border-radius: 10px; padding: .4rem .8rem; background: {t['card']}; transition: border-color .18s ease-out, box-shadow .18s ease-out;}}
 [data-testid="stMain"] [data-testid="stPageLink-NavLink"]:hover {{border-color: {t['ok_mid']}; box-shadow: 0 2px 8px {t['shadow']};}}
 [data-testid="stButtonGroup"] [role="radiogroup"] {{background: {t['surface']}; border: 1px solid {t['border']}; border-radius: 12px; padding: 3px; gap: 2px; display: inline-flex;}}
@@ -201,11 +201,9 @@ html {{-webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;}
 [data-testid="stExpander"] {{background: {t['card']}; box-shadow: 0 1px 2px {t['shadow']}; transition: box-shadow .18s ease-out;}}
 [data-testid="stExpander"]:hover {{box-shadow: 0 2px 8px {t['shadow']};}}
 [data-testid="stExpander"] summary {{font-weight: 500;}}
-[data-testid="stSelectbox"] [data-baseweb="select"] > div, [data-testid="stTextInput"] [data-baseweb="input"], [data-testid="stNumberInput"] [data-baseweb="input"],
-[data-testid="stTextArea"] [data-baseweb="textarea"] {{background: {t['card']}; border-color: {t['border_strong']}; border-radius: 10px; transition: border-color .18s ease-out, box-shadow .18s ease-out;}}
-[data-testid="stSelectbox"] [data-baseweb="select"] > div:hover, [data-testid="stTextInput"] [data-baseweb="input"]:hover {{border-color: {t['accent2']};}}
-[data-testid="stSelectbox"] [data-baseweb="select"] > div:focus-within, [data-testid="stTextInput"] [data-baseweb="input"]:focus-within, [data-testid="stNumberInput"] [data-baseweb="input"]:focus-within,
-[data-testid="stTextArea"] [data-baseweb="textarea"]:focus-within {{border-color: {t['ok_mid']}; box-shadow: 0 0 0 3px {t['ring']};}}
+[data-testid="stTextInputRootElement"], [data-testid="stTextAreaRootElement"], [data-testid="stNumberInputContainer"], [data-testid="stSelectbox"] [role="group"], [data-testid="stMultiSelect"] [role="group"] {{background: {t['card']} !important; border: 1px solid {t['border_strong']} !important; border-radius: 10px !important; transition: border-color .18s ease-out, box-shadow .18s ease-out;}}
+[data-testid="stTextInputRootElement"]:hover, [data-testid="stTextAreaRootElement"]:hover, [data-testid="stNumberInputContainer"]:hover, [data-testid="stSelectbox"] [role="group"]:hover, [data-testid="stMultiSelect"] [role="group"]:hover {{border-color: {t['accent2']} !important;}}
+[data-testid="stTextInputRootElement"]:focus-within, [data-testid="stTextAreaRootElement"]:focus-within, [data-testid="stNumberInputContainer"]:focus-within, [data-testid="stSelectbox"] [role="group"]:focus-within, [data-testid="stMultiSelect"] [role="group"]:focus-within {{border-color: {t['ok_mid']} !important; box-shadow: 0 0 0 3px {t['ring']};}}
 [data-testid="stWidgetLabel"] p {{font-weight: 500; font-size: .9rem;}}
 [data-testid="stMultiSelect"] [data-tag] {{background: {t['accent_soft']} !important; color: {t['accent']} !important; border: 1px solid {t['border']}; border-radius: 8px !important; font-weight: 500;}}
 [data-testid="stMultiSelect"] [data-tag] span, [data-testid="stMultiSelect"] [data-tag] svg {{color: {t['accent']} !important;}}
@@ -236,6 +234,32 @@ table.mm tr:last-child td {{border-bottom: 0;}}
 .sec p {{max-width: 72ch;}}
 .hero {{box-shadow: 0 1px 2px {t['shadow']}, 0 6px 20px {t['shadow']};}}
 @media (max-width: 760px) {{ [data-testid="stButtonGroup"] [role="radiogroup"] {{display: flex; flex-wrap: wrap;}} .block-container {{padding-left: 1rem; padding-right: 1rem;}} }}
+
+/* ---- legibility and smoothness ---- */
+html {{scroll-behavior: smooth;}}
+[data-testid="stMain"] {{scroll-behavior: smooth; scrollbar-gutter: stable; scrollbar-width: thin; scrollbar-color: {t['border_strong']} transparent;}}
+[data-testid="stSidebar"] * {{scrollbar-width: thin;}}
+[data-stale="true"] {{opacity: .62 !important; transition: opacity .2s ease-out;}}
+[data-testid="stPlotlyChart"] {{min-height: 260px;}}
+[data-testid="stSliderTickBar"] p, [data-testid="stSliderTickBarMin"], [data-testid="stSliderTickBarMax"] {{color: {t['muted']} !important;}}
+[data-testid="stSliderThumbValue"] {{color: {t['ink']} !important; font-weight: 600;}}
+.stButton > button:disabled, .stDownloadButton > button:disabled {{background: {t['surface']} !important; color: {t['muted']} !important; border: 1px solid {t['border']} !important; box-shadow: none !important; cursor: not-allowed;}}
+[data-testid="stAlert"] p, [data-testid="stAlert"] li, [data-testid="stAlert"] strong {{color: {t['ink']} !important;}}
+[data-testid="stCaptionContainer"] {{color: {t['muted']};}}
+.note, .src {{color: {t['muted']};}}
+@media (max-width: 760px) {{ [data-testid="stButtonGroup"] button[data-variant="segmented_control"] {{min-height: 2.6rem;}} .stButton > button {{min-height: 2.75rem;}} }}
+[data-testid="stMarkdownContainer"] table {{display: block; max-width: 100%; overflow-x: auto; border-collapse: collapse; font-size: .9rem; border: 1px solid {t['border']}; border-radius: 10px; background: {t['card']};}}
+[data-testid="stMarkdownContainer"] table th {{background: {t['surface']}; color: {t['ink']}; font-weight: 600; text-align: left; padding: .5rem .7rem; border-bottom: 1px solid {t['border']};}}
+[data-testid="stMarkdownContainer"] table td {{padding: .5rem .7rem; border-bottom: 1px solid {t['border']}; vertical-align: top;}}
+[data-testid="stMarkdownContainer"] table tr:last-child td {{border-bottom: 0;}}
+.stButton > button[kind="primary"] p, .stDownloadButton > button[kind="primary"] p {{color: {t['on_accent']} !important;}}
+.stButton > button[kind="secondary"] p, .stDownloadButton > button[kind="secondary"] p {{color: {t['ink']} !important;}}
+.stButton > button[kind]:disabled p, .stDownloadButton > button[kind]:disabled p {{color: {t['muted']} !important;}}
+[data-testid="stCaptionContainer"], [data-testid="stCaptionContainer"] p, [data-testid="stCaptionContainer"] span {{opacity: 1 !important; color: {t['muted']} !important;}}
+::placeholder {{color: {t['muted']} !important; opacity: .85 !important;}}
+[data-testid="stCheckbox"] label:not(:has(input:checked)) > span + div, [data-testid="stRadioOption"]:not(:has(input:checked)) > span + div > div:first-child {{border: 1.5px solid {t['border_strong']} !important; background: {t['card']} !important;}}
+[data-testid="stCheckbox"] label:hover:not(:has(input:checked)) > span + div, [data-testid="stRadioOption"]:hover:not(:has(input:checked)) > span + div > div:first-child {{border-color: {t['accent2']} !important;}}
+[data-testid="stButton"] {{margin-top: .35rem;}}
 @media (prefers-reduced-motion: reduce) {{ * {{transition: none !important; animation: none !important;}} }}
 </style>
 """
@@ -393,7 +417,7 @@ def validity_ring(score: float, rows: Sequence[Tuple[str, str]]) -> None:
     svg = (f'<svg width="130" height="130" viewBox="0 0 130 130" role="img" aria-label="Measurement score {score:.0f} out of 100"><circle cx="65" cy="65" r="52" fill="none" stroke="{t["border"]}" stroke-width="12"/>'
            f'<circle cx="65" cy="65" r="52" fill="none" stroke="{t["ok_mid"]}" stroke-width="12" stroke-linecap="round" stroke-dasharray="{circ * pct:.1f} {circ:.1f}" transform="rotate(-90 65 65)"/>'
            f'<text x="65" y="64" text-anchor="middle" font-size="26" font-weight="600" fill="{t["ink"]}">{score:.0f}</text>'
-           f'<text x="65" y="84" text-anchor="middle" font-size="11" fill="{t["muted"]}">out of 100</text></svg>')
+           f'<text x="65" y="84" text-anchor="middle" font-size="12" fill="{t["muted"]}">out of 100</text></svg>')
     body = "".join(f'<div class="row"><span>{html.escape(l)}</span><b>{html.escape(v)}</b></div>' for l, v in rows)
     st.markdown(f'<div class="ring">{svg}<div class="rows">{body}</div></div>', unsafe_allow_html=True)
 

@@ -88,6 +88,13 @@ Light mode is the primary experience and follows five research backed habits of 
 4. **Visible focus and calm motion.** A 2 px green focus ring and a soft focus halo on inputs support keyboard use; transitions are 150 to 250 ms and switch off for people who prefer reduced motion.
 5. **Rhythm and measure.** Generous spacing, line lengths capped near 70 characters, tabular figures for numbers, and a larger gap before each numbered section.
 
+## 6c. Legibility and smoothness standards
+* **Contrast:** all body text and labels meet at least 4.5 to 1 against their surface (large text and chart marks 3 to 1), in light and dark. A test checks the token pairs, and the check scans every page for text below the standard, including text dimmed by opacity.
+* **Size:** nothing renders below about 12 px. Captions, notes and source lines use the muted colour at full opacity, not a faded one.
+* **Form controls:** inputs, selects, radio buttons and checkboxes have a visible border before they are used; disabled buttons stay readable.
+* **No sideways scrolling:** tables, including those inside the guides, scroll within their own frame at phone width.
+* **Smoothness:** anchor links and scrolling are smooth with a stable scrollbar gutter (no layout jump), charts reserve their height while loading, content that is refreshing fades gently instead of flashing, and motion switches off for people who prefer reduced motion.
+
 ## 7. Motion
 150 to 250 ms, ease out, for card expansion, navigation, dropdowns and chart changes. No particles, glow, animated gradients, bouncing or typing effects.
 

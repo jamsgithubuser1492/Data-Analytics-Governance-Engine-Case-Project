@@ -203,7 +203,7 @@ def overclaim_chart(inf: pd.DataFrame, moderate: float, critical: float, headlin
     fig.update_yaxes(showgrid=False, autorange=True)
     for x, label, color, shift in ((moderate, f"Review above {moderate:g}x", caution(), 0), (critical, f"Critical above {critical:g}x", danger(), 16)):
         fig.add_vline(x=x, line_dash="dot", line_color=color, line_width=1.5)
-        fig.add_annotation(x=x, yref="paper", y=1.0, yshift=shift, text=label, showarrow=False, yanchor="bottom", xanchor="left", font=dict(color=color, size=11))
+        fig.add_annotation(x=x, yref="paper", y=1.0, yshift=shift, text=label, showarrow=False, yanchor="bottom", xanchor="left", font=dict(color=color, size=12))
     fig.update_layout(barmode="overlay")
     return _layout(fig, headline, "A value of 1.0x means the platform claims exactly what the test confirms. Higher means more over-claiming.", bar_height(len(d)) + 40, bottom=96)
 
@@ -307,7 +307,7 @@ def sensitivity_chart(table: pd.DataFrame, break_even: float, headline: str) -> 
     fig.update_xaxes(title_text="How much lower the return on the new money is than its average", ticksuffix="%")
     if pd.notna(break_even) and 0 < break_even < table["haircut"].max() * 2:
         fig.add_vline(x=break_even * 100, line_dash="dot", line_color=caution(), line_width=1.5)
-        fig.add_annotation(x=break_even * 100, yref="paper", y=1.0, text=f"Net change reaches zero at {break_even:.0%}", showarrow=False, yanchor="bottom", font=dict(color=caution(), size=11))
+        fig.add_annotation(x=break_even * 100, yref="paper", y=1.0, text=f"Net change reaches zero at {break_even:.0%}", showarrow=False, yanchor="bottom", font=dict(color=caution(), size=12))
     return _layout(fig, headline, "If returns fall as spend rises, the net gain shrinks. The dashed line marks where the move stops adding revenue.", 400, bottom=90)
 
 
