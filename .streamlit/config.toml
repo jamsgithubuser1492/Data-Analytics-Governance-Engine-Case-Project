@@ -3,10 +3,10 @@ font = "sans serif"
 
 [theme.light]
 primaryColor = "#18345B"
-backgroundColor = "#F8FAFC"
+backgroundColor = "#F6F8FB"
 secondaryBackgroundColor = "#FFFFFF"
 textColor = "#10284A"
-borderColor = "#DDE5ED"
+borderColor = "#E0E7EF"
 
 [theme.dark]
 primaryColor = "#8FB0FF"

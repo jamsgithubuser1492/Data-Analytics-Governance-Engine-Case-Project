@@ -14,14 +14,14 @@ import pandas as pd
 import streamlit as st
 
 # ------------------------------------------------------------------------------------------- tokens
-LIGHT: Dict[str, str] = dict(bg="#F8FAFC", card="#FFFFFF", surface="#F4F7FA", surface2="#F1F6FB", border="#DDE5ED", ink="#10284A", muted="#5B6B80",
-                             accent="#18345B", accent2="#24466F", accent_soft="#EAF2FC", ok="#087F6A", ok_bg="#E5F5F0", ok_mid="#159A83", warn="#8A5A00", warn_bg="#FFF5DE",
-                             bad="#B23B43", bad_bg="#FDEBEC", grid="#E6ECF2", claimed="#4E8FE7", model="#8D82D8", proven="#159A83",
-                             hero_a="#F1F6FB", hero_b="#FFFFFF", shadow="rgba(16,40,74,.06)")
-DARK: Dict[str, str] = dict(bg="#0E1A2E", card="#14233B", surface="#122038", surface2="#1A2C47", border="#27395A", ink="#E6EDF7", muted="#9FB0C6",
+LIGHT: Dict[str, str] = dict(bg="#F6F8FB", card="#FFFFFF", surface="#F1F5F9", surface2="#EDF3FA", border="#E0E7EF", border_strong="#C7D2DF", ink="#10284A", muted="#52627A",
+                             accent="#18345B", accent2="#24466F", accent_soft="#E8F0FA", ok="#087F6A", ok_bg="#E4F5F0", ok_mid="#159A83", warn="#96500A", warn_bg="#FFF4DB",
+                             bad="#B3333B", bad_bg="#FDEAEB", grid="#EBF0F5", claimed="#4E8FE7", model="#8D82D8", proven="#159A83",
+                             hero_a="#EFF5FB", hero_b="#FFFFFF", shadow="rgba(16,40,74,.06)", shadow2="rgba(16,40,74,.10)", ring="rgba(21,154,131,.32)", glow="#E6F0FB")
+DARK: Dict[str, str] = dict(bg="#0E1A2E", card="#14233B", surface="#122038", surface2="#1A2C47", border="#27395A", border_strong="#3A5078", ink="#E6EDF7", muted="#9FB0C6",
                             accent="#8FB0FF", accent2="#B4CAFF", accent_soft="#1B2E52", ok="#5FD1B3", ok_bg="#10332D", ok_mid="#43B69F", warn="#F0C25E", warn_bg="#3A2F12",
                             bad="#FF9AA0", bad_bg="#3D1A1E", grid="#233450", claimed="#6FA5F0", model="#A89FE6", proven="#43B69F",
-                            hero_a="#16263F", hero_b="#0E1A2E", shadow="rgba(0,0,0,.25)")
+                            hero_a="#16263F", hero_b="#0E1A2E", shadow="rgba(0,0,0,.25)", shadow2="rgba(0,0,0,.35)", ring="rgba(95,209,179,.40)", glow="#132238")
 # Okabe-Ito based channel colors: distinguishable under the common forms of color blindness
 CHANNEL_COLORS = {"Google Ads": "#E69F00", "Meta Ads": "#0072B2", "TikTok Ads": "#009E73", "Netflix Ads": "#CC79A7"}
 FALLBACK = ["#56B4E9", "#D55E00", "#F0E442", "#999999"]
@@ -108,7 +108,7 @@ h5 {{font-weight: 600; font-size: 1.08rem; margin-bottom: .1rem;}}
 .brief .facts .l {{font-size: .74rem; color: {t['muted']}; line-height: 1.35; margin-top: 2px;}}
 .brief .conf {{margin-top: auto; padding-top: 14px; border-top: 1px solid {t['border']}; font-size: .84rem; color: {t['muted']}; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;}}
 .brief .conf span:nth-child(2) {{flex: 1 1 170px;}}
-.brief .conf a {{margin-left: auto; color: {t['accent']}; font-weight: 600; text-decoration: none;}}
+.brief .conf a {{flex-basis: 100%; margin: 2px 0 0 24px; color: {t['accent']}; font-weight: 600; text-decoration: none;}}
 .brief .conf a:hover {{text-decoration: underline;}}
 @media (max-width: 900px) {{ .brief {{grid-template-columns: 1fr;}} .brief .main {{padding: 22px 22px;}} }}
 .sec {{margin: 3.6rem 0 1rem; scroll-margin-top: 70px;}}
@@ -176,6 +176,67 @@ table.mm {{border-collapse: collapse; width: 100%; font-size: .9rem;}} table.mm 
   letter-spacing: .05em; text-transform: uppercase; border-bottom: 1px solid {t['border']}; padding: 8px 10px;}}
 table.mm td {{padding: 9px 10px; border-bottom: 1px solid {t['border']}; font-variant-numeric: tabular-nums;}}
 @media (max-width: 760px) {{ .hero {{padding: 26px 20px;}} .sec h2 {{font-size: 1.4rem;}} .trio {{grid-template-columns: 1fr;}} .brief .facts {{grid-template-columns: 1fr;}} }}
+
+/* ---- light refinement: depth, rhythm, controls, focus ---- */
+html {{-webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;}}
+.stApp {{background: radial-gradient(1100px 440px at 78% -10%, {t['glow']} 0%, transparent 62%), {t['bg']};}}
+::selection {{background: {t['ring']};}}
+:focus-visible {{outline: 2px solid {t['ok_mid']}; outline-offset: 2px; border-radius: 8px;}}
+[data-testid="stSidebar"] {{background: {t['card']}; box-shadow: 1px 0 0 {t['border']};}}
+[data-testid="stSidebar"] hr {{border-color: {t['border']}; margin: 1rem 0;}}
+[data-testid="stSidebar"] [data-testid="stPageLink-NavLink"] {{border-radius: 10px; padding: .2rem .6rem; margin: 0; min-height: 2.1rem; transition: background-color .18s ease-out, transform .18s ease-out;}}
+[data-testid="stSidebar"] [data-testid="stPageLink-NavLink"]:hover {{background: {t['surface']}; transform: translateX(1px);}}
+[data-testid="stSidebar"] [data-testid="stPageLink-NavLink"] p {{font-size: .92rem; font-weight: 500; letter-spacing: -0.005em;}}
+[data-testid="stSidebar"] .kicker {{font-size: .68rem; letter-spacing: .12em; color: {t['muted']}; opacity: .85;}}
+[data-testid="stMain"] [data-testid="stPageLink-NavLink"] {{display: inline-flex; border: 1px solid {t['border']}; border-radius: 10px; padding: .4rem .8rem; background: {t['card']}; transition: border-color .18s ease-out, box-shadow .18s ease-out;}}
+[data-testid="stMain"] [data-testid="stPageLink-NavLink"]:hover {{border-color: {t['ok_mid']}; box-shadow: 0 2px 8px {t['shadow']};}}
+[data-testid="stButtonGroup"] [role="radiogroup"] {{background: {t['surface']}; border: 1px solid {t['border']}; border-radius: 12px; padding: 3px; gap: 2px; display: inline-flex;}}
+[data-testid="stButtonGroup"] button[data-variant="segmented_control"] {{border: 0 !important; background: transparent !important; border-radius: 9px !important; font-weight: 500; color: {t['muted']}; padding: .3rem .9rem; transition: background-color .18s ease-out, color .18s ease-out, box-shadow .18s ease-out;}}
+[data-testid="stButtonGroup"] button[data-variant="segmented_control"]:hover {{color: {t['ink']};}}
+[data-testid="stButtonGroup"] button[data-variant="segmented_control"][data-selected="true"] {{background: {t['card']} !important; color: {t['ink']}; font-weight: 600; box-shadow: 0 1px 3px {t['shadow2']};}}
+[data-testid="stTab"] {{font-weight: 500; color: {t['muted']}; transition: color .18s ease-out;}}
+[data-testid="stTab"]:hover {{color: {t['ink']};}}
+[data-testid="stTab"][aria-selected="true"] {{color: {t['ink']}; font-weight: 600;}}
+[data-testid="stTab"] .react-aria-SelectionIndicator {{background: {t['ok_mid']} !important; height: 3px !important; border-radius: 3px 3px 0 0;}}
+[data-testid="stExpander"] {{background: {t['card']}; box-shadow: 0 1px 2px {t['shadow']}; transition: box-shadow .18s ease-out;}}
+[data-testid="stExpander"]:hover {{box-shadow: 0 2px 8px {t['shadow']};}}
+[data-testid="stExpander"] summary {{font-weight: 500;}}
+[data-testid="stSelectbox"] [data-baseweb="select"] > div, [data-testid="stTextInput"] [data-baseweb="input"], [data-testid="stNumberInput"] [data-baseweb="input"],
+[data-testid="stTextArea"] [data-baseweb="textarea"] {{background: {t['card']}; border-color: {t['border_strong']}; border-radius: 10px; transition: border-color .18s ease-out, box-shadow .18s ease-out;}}
+[data-testid="stSelectbox"] [data-baseweb="select"] > div:hover, [data-testid="stTextInput"] [data-baseweb="input"]:hover {{border-color: {t['accent2']};}}
+[data-testid="stSelectbox"] [data-baseweb="select"] > div:focus-within, [data-testid="stTextInput"] [data-baseweb="input"]:focus-within, [data-testid="stNumberInput"] [data-baseweb="input"]:focus-within,
+[data-testid="stTextArea"] [data-baseweb="textarea"]:focus-within {{border-color: {t['ok_mid']}; box-shadow: 0 0 0 3px {t['ring']};}}
+[data-testid="stWidgetLabel"] p {{font-weight: 500; font-size: .9rem;}}
+[data-testid="stMultiSelect"] [data-tag] {{background: {t['accent_soft']} !important; color: {t['accent']} !important; border: 1px solid {t['border']}; border-radius: 8px !important; font-weight: 500;}}
+[data-testid="stMultiSelect"] [data-tag] span, [data-testid="stMultiSelect"] [data-tag] svg {{color: {t['accent']} !important;}}
+.stButton > button[kind="primary"], .stDownloadButton > button[kind="primary"] {{box-shadow: 0 1px 2px {t['shadow2']};}}
+.stButton > button[kind="primary"]:hover {{box-shadow: 0 4px 12px {t['shadow2']};}}
+.stButton > button[kind="secondary"], .stDownloadButton > button {{background: {t['card']}; border: 1px solid {t['border_strong']}; color: {t['ink']};}}
+.stButton > button[kind="secondary"]:hover, .stDownloadButton > button:hover {{border-color: {t['ok_mid']}; color: {t['ink']};}}
+[data-testid="stAlert"] {{border-radius: 10px; border: 1px solid {t['border']};}}
+[data-testid="stDataFrame"] {{border: 1px solid {t['border']}; border-radius: 12px; overflow: hidden;}}
+[data-testid="stProgress"] > div > div {{border-radius: 999px;}}
+.stat {{box-shadow: 0 1px 2px {t['shadow']};}}
+.stat:hover {{box-shadow: 0 4px 14px {t['shadow']};}}
+.callout {{border-left-width: 3px; background: {t['surface2']}; font-size: .97rem;}}
+.banner {{display: flex; gap: 10px; align-items: flex-start; border: 1px solid {t['border']}; background: {t['card']}; border-radius: 10px; padding: 9px 14px; font-size: .86rem; line-height: 1.5; color: {t['muted']}; margin-bottom: 14px;}}
+.banner svg {{flex: none; margin-top: 3px; color: {t['accent2']};}}
+table.mm tbody tr {{transition: background-color .15s ease-out;}}
+table.mm tbody tr:hover {{background: {t['surface']};}}
+.tblwrap {{border: 1px solid {t['border']}; border-radius: 12px; background: {t['card']};}}
+table.mm th {{background: {t['surface']}; border-bottom: 1px solid {t['border']};}}
+table.mm tr:last-child td {{border-bottom: 0;}}
+.brief .impact {{justify-content: space-between; gap: 14px;}}
+.brief .main, .brief .impact {{box-shadow: 0 1px 2px {t['shadow']}, 0 6px 20px {t['shadow']};}}
+.brief .conf {{align-items: flex-start;}}
+.brief .conf svg {{margin-top: 2px;}}
+.page-head .kicker {{color: {t['ok']};}}
+.page-head h1 {{letter-spacing: -0.025em;}}
+.page-head p {{color: {t['muted']}; max-width: 70ch;}}
+.sec p {{max-width: 72ch;}}
+.hero {{box-shadow: 0 1px 2px {t['shadow']}, 0 6px 20px {t['shadow']};}}
+@media (max-width: 760px) {{ [data-testid="stButtonGroup"] [role="radiogroup"] {{display: flex; flex-wrap: wrap;}} .block-container {{padding-left: 1rem; padding-right: 1rem;}} }}
+@media (prefers-reduced-motion: reduce) {{ * {{transition: none !important; animation: none !important;}} }}
 </style>
 """
 
@@ -365,6 +426,12 @@ def stat_row(stats: Iterable[Dict[str, str]], compact: bool = False) -> None:
 
 def callout(text: str, kind: str = "") -> None:
     st.markdown(f'<div class="callout {kind}">{text}</div>', unsafe_allow_html=True)
+
+
+def banner(text: str) -> None:
+    """A quiet, slim notice (for example the public demo notice). Text is plain and escaped."""
+    st.markdown(f'<div class="banner"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.5"/>'
+                f'<path d="M8 7v4M8 5v.01" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><div>{html.escape(text)}</div></div>', unsafe_allow_html=True)
 
 
 def stepper(steps: Sequence[str], current: int) -> None:

@@ -1,6 +1,12 @@
 # Changelog
 
-## Model and system integration (latest)
+## Light mode refinement (latest)
+* Light palette retuned (cooler page, hairline borders, a stronger input border, a softer amber for review states) and a faint top right glow for depth.
+* Sidebar navigation tightened with hover states; segmented controls are one rounded group with a raised selection; tabs use a green underline; inputs, selects, tags, buttons and expanders share radius, border and focus styling; the demo notice is a slim quiet strip.
+* Executive briefing impact panel and confidence line tidied; tables get a framed container and row hover; chart bars have rounded corners with lighter axis text and styled tooltips.
+* No copy was changed.
+
+## Model and system integration
 * `docs/MMM_INTEGRATION_ARCHITECTURE.md`: how holdout, geo test and audience tier evidence feeds a larger media mix model and other growth and data systems (principles, evidence inventory, prior rules, integration patterns, loop back, architecture, interface catalog, data contracts, governance, risks, validation, rollout, open decisions).
 * `python/calibration_pack.py`: the evidence pack, with log normal priors, exclusion and widening rules, lineage, hash and validation; downloadable as JSON and CSV from the Research next page.
 * Glossary, page guide, methodology, privacy and roadmap updated.

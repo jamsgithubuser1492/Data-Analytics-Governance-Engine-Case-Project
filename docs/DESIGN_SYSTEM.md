@@ -19,11 +19,12 @@ Light and predominantly white. No large blocks of saturated colour.
 | Token | Value | Use |
 | --- | --- | --- |
 | `navy-950` / `navy-900` / `navy-800` | #10284A / #18345B / #24466F | Headlines, navigation, primary buttons, key controls. Trust and authority |
-| `background` | #F8FAFC | Page |
+| `background` | #F6F8FB | Page, with a faint cool glow at the top right |
 | `surface` | #FFFFFF | Cards |
-| `surface-subtle` | #F4F7FA | Quiet panels |
-| `surface-blue` | #F1F6FB | Callouts and highlighted panels |
-| `border` | #DDE5ED | Card and table borders |
+| `surface-subtle` | #F1F5F9 | Quiet panels, segmented controls |
+| `surface-blue` | #EDF3FA | Callouts and highlighted panels |
+| `border` | #E0E7EF | Hairline card and table borders |
+| `border-strong` | #C7D2DF | Inputs and secondary buttons |
 | `green-700` / `600` / `500` / `100` | #087F6A / #159A83 / #43B69F / #E5F5F0 | The decision colour: evidence supports action |
 | `blue-500` / `100` | #4E8FE7 / #EAF2FC | Analytical information, platform reported results |
 | `purple-500` / `100` | #8D82D8 / #F0EDFB | A second method, the attribution model |
@@ -78,6 +79,14 @@ Where a recommendation is shown, say where it came from: "Recommendation prepare
 The design guidance lists the trust labels Verified, Decision grade, Directional and Needs review. On screen the product uses plainer equivalents for non specialists: **Confident** (Verified), **Leaning** (Directional) and **Not yet reliable** (Needs review). The technical names remain in the Sources section and the methodology.
 
 AI is subordinate to the business decision. It is described as "Recommendations" and "Decision support", never as an autonomous agent. Specialist workers, where shown, read like review steps ("Measurement review: completed"), not characters.
+
+## 6b. Light mode refinement
+Light mode is the primary experience and follows five research backed habits of calm, trustworthy interfaces:
+1. **Depth through light, not lines.** A white card on a cool off white page, a hairline border and two soft shadows (a 1 px contact shadow and a larger diffuse one) separate surfaces without heavy outlines. Cards lift slightly on hover.
+2. **One clear action per area.** Primary buttons are navy and filled; secondary buttons are white with a stronger border; page links look like quiet buttons; the demo notice is a slim quiet strip rather than a heavy callout.
+3. **Controls that look like controls.** Segmented choices are a single rounded group with a raised selected option; tabs use a green underline; inputs share one radius and a stronger border; selected tags are soft blue chips.
+4. **Visible focus and calm motion.** A 2 px green focus ring and a soft focus halo on inputs support keyboard use; transitions are 150 to 250 ms and switch off for people who prefer reduced motion.
+5. **Rhythm and measure.** Generous spacing, line lengths capped near 70 characters, tabular figures for numbers, and a larger gap before each numbered section.
 
 ## 7. Motion
 150 to 250 ms, ease out, for card expansion, navigation, dropdowns and chart changes. No particles, glow, animated gradients, bouncing or typing effects.

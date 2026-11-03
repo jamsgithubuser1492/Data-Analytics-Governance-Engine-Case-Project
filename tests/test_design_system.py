@@ -26,7 +26,7 @@ def test_three_methods_have_fixed_distinct_colours() -> None:
 
 def test_streamlit_theme_uses_the_navy_primary() -> None:
     cfg = (ROOT / ".streamlit" / "config.toml").read_text()
-    assert "#18345B" in cfg and "#F8FAFC" in cfg
+    assert "#18345B" in cfg and "#F6F8FB" in cfg
 
 
 def test_components_render_without_emoji_or_dollar_escapes_breaking(monkeypatch) -> None:

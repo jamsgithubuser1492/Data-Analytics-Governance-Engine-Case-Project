@@ -34,15 +34,15 @@ def _dark() -> bool:
 
 
 def good() -> str:
-    return "#5fd1a0" if _dark() else "#15734d"
+    return "#5fd1a0" if _dark() else "#159A83"
 
 
 def caution() -> str:
-    return "#f0c25e" if _dark() else "#b87900"
+    return "#f0c25e" if _dark() else "#D89B28"
 
 
 def danger() -> str:
-    return "#ff8f84" if _dark() else "#c0392b"
+    return "#ff8f84" if _dark() else "#D95C63"
 
 
 def padded_range(values: Iterable[float], include: Sequence[float] = (), floor_zero: bool = True,
@@ -82,8 +82,10 @@ def _layout(fig: go.Figure, title: str, subtitle: str, height: Optional[int] = N
         margin=dict(t=30, b=bottom, l=8, r=right), height=height, hovermode="closest", showlegend=legend,
         legend=dict(orientation="h", yref="container", y=0, yanchor="bottom", x=0, title_text=""),
         paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
-    fig.update_xaxes(showgrid=False, linecolor=t["grid"], zeroline=False)
-    fig.update_yaxes(gridcolor=t["grid"], zeroline=False)
+    fig.update_xaxes(showgrid=False, linecolor=t["border"], zeroline=False, tickfont=dict(color=t["muted"], size=12), title_font=dict(color=t["muted"], size=12))
+    fig.update_yaxes(gridcolor=t["grid"], zeroline=False, tickfont=dict(color=t["muted"], size=12), title_font=dict(color=t["muted"], size=12))
+    fig.update_layout(hoverlabel=dict(bgcolor=t["card"], bordercolor=t["border_strong"], font=dict(color=t["ink"], size=12)), legend=dict(font=dict(color=t["muted"], size=12)))
+    fig.update_traces(marker_cornerradius=4, selector=dict(type="bar"))
     return fig
 
 

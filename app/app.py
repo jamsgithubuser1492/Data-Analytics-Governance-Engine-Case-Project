@@ -68,7 +68,7 @@ def names(rows) -> str:
 
 # ------------------------------------------------------------------------------ empty state (never a dead end)
 if demo_mode():
-    ui.callout(DEMO_NOTICE)
+    ui.banner(DEMO_NOTICE)
 if not runs:
     ui.hero("Media Measurement and Governance Engine", "Let's get your first measurement run started.",
             "Upload your platform and measurement files. MMGE will reconcile the inputs, check data quality and prepare the first analysis, "
